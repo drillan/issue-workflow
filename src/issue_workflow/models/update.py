@@ -1,0 +1,88 @@
+"""Data models for update command."""
+
+from dataclasses import dataclass, field
+from enum import Enum
+from pathlib import Path
+
+
+class FileChangeType(Enum):
+    """Type of file change."""
+
+    ADDED = "added"
+    UPDATED = "updated"
+    DELETED = "deleted"
+    UNCHANGED = "unchanged"
+
+
+@dataclass(frozen=True)
+class FileChangeInfo:
+    """Information about a file change.
+
+    Attributes:
+        path: Relative path (e.g., .claude/commands/start-issue.md)
+        change_type: Type of change
+        source_path: Source path for update (None for deleted files)
+    """
+
+    path: Path
+    change_type: FileChangeType
+    source_path: Path | None = None
+
+
+@dataclass
+class UpdateResult:
+    """Result of update operation.
+
+    Attributes:
+        commands_changes: List of changes to command files
+        skills_changes: List of changes to skill directories
+        errors: List of (path, error_message) tuples
+        dry_run: Whether this was a dry-run operation
+    """
+
+    commands_changes: list[FileChangeInfo] = field(default_factory=list)
+    skills_changes: list[FileChangeInfo] = field(default_factory=list)
+    errors: list[tuple[Path, str]] = field(default_factory=list)
+    dry_run: bool = False
+
+    @property
+    def added_count(self) -> int:
+        """Count of added files/directories."""
+        return sum(
+            1
+            for c in self.commands_changes + self.skills_changes
+            if c.change_type == FileChangeType.ADDED
+        )
+
+    @property
+    def updated_count(self) -> int:
+        """Count of updated files/directories."""
+        return sum(
+            1
+            for c in self.commands_changes + self.skills_changes
+            if c.change_type == FileChangeType.UPDATED
+        )
+
+    @property
+    def deleted_count(self) -> int:
+        """Count of files/directories marked for deletion (warning only)."""
+        return sum(
+            1
+            for c in self.commands_changes + self.skills_changes
+            if c.change_type == FileChangeType.DELETED
+        )
+
+    @property
+    def has_changes(self) -> bool:
+        """Whether there are any changes (added or updated)."""
+        return self.added_count > 0 or self.updated_count > 0
+
+    @property
+    def has_errors(self) -> bool:
+        """Whether there are any errors."""
+        return len(self.errors) > 0
+
+    @property
+    def success(self) -> bool:
+        """Whether the update was successful (no errors)."""
+        return not self.has_errors

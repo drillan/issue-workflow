@@ -41,8 +41,10 @@ def main(
 def _register_commands() -> None:
     """Register CLI commands."""
     from issue_workflow.cli.commands import init as init_cmd
+    from issue_workflow.cli.commands import update as update_cmd
 
     app.add_typer(init_cmd.app, name="init")
+    app.add_typer(update_cmd.app, name="update")
 
 
 _register_commands()
