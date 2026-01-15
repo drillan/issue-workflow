@@ -55,17 +55,10 @@ class PullRequest:
         state_str = str(data.get("state", "OPEN")).upper()
         mergeable_str = str(data.get("mergeable", "UNKNOWN")).upper()
 
-        try:
-            state = PRState(state_str)
-        except ValueError:
-            state = PRState.OPEN
+        state = PRState(state_str)
+        mergeable = MergeState(mergeable_str)
 
-        try:
-            mergeable = MergeState(mergeable_str)
-        except ValueError:
-            mergeable = MergeState.UNKNOWN
-
-        number_val = data.get("number", 0)
+        number_val = data["number"]
         return cls(
             number=int(number_val) if isinstance(number_val, (int, str)) else 0,
             title=str(data.get("title", "")),
