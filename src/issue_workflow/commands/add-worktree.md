@@ -1,18 +1,18 @@
 # /add-worktree
 
-Issue用のワークツリーを新規作成する。
+Create a new worktree for an Issue.
 
 ## Usage
 
 ```
-/add-worktree <issue番号>
+/add-worktree <issue-number>
 ```
 
 ## Arguments
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
-| `issue番号` | integer | Yes | GitHub Issue番号 |
+| `issue-number` | integer | Yes | GitHub Issue number |
 
 ## Instructions
 
@@ -74,13 +74,13 @@ This creates:
 ### Step 6: Report Success
 
 ```
-✅ ワークツリーを作成しました
+✅ Worktree created successfully
 
 Issue: #200 - [Issue title]
-ブランチ: feat/200-add-feature
-ディレクトリ: ../my-project-feat-200-add-feature
+Branch: feat/200-add-feature
+Directory: ../my-project-feat-200-add-feature
 
-作業を開始するには:
+To start working:
   cd ../my-project-feat-200-add-feature
 ```
 
@@ -89,25 +89,25 @@ Issue: #200 - [Issue title]
 ### Success
 
 ```
-✅ ワークツリーを作成しました
+✅ Worktree created successfully
 
 Issue: #<number> - <title>
-ブランチ: <branch-name>
-ディレクトリ: <worktree-path>
+Branch: <branch-name>
+Directory: <worktree-path>
 
-作業を開始するには:
+To start working:
   cd <worktree-path>
 ```
 
 ### Already Exists
 
 ```
-⚠️ ワークツリーが既に存在します
+⚠️ Worktree already exists
 
 Issue: #<number> - <title>
-既存パス: <existing-path>
+Existing path: <existing-path>
 
-既存のワークツリーで作業を続けるには:
+To continue working in the existing worktree:
   cd <existing-path>
 ```
 
@@ -115,11 +115,11 @@ Issue: #<number> - <title>
 
 | Error | Action |
 |-------|--------|
-| Issue not found | エラーメッセージを表示 |
-| Branch exists (no worktree) | 既存ブランチで worktree 作成を提案 |
-| Worktree exists | 既存パスを表示 |
-| Directory creation failed | 原因を表示（権限、パス等） |
-| Git not in repo | リポジトリ外であることを通知 |
+| Issue not found | Display error message |
+| Branch exists (no worktree) | Suggest creating worktree with existing branch |
+| Worktree exists | Show existing path |
+| Directory creation failed | Show cause (permissions, path, etc.) |
+| Git not in repo | Notify user they're outside a repository |
 
 ## Worktree Management Tips
 

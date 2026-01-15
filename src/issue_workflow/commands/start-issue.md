@@ -1,19 +1,19 @@
 # /start-issue
 
-GitHub Issueを読み込み、ブランチを作成し、実装計画を立案する。
+Load a GitHub Issue, create a branch, and develop an implementation plan.
 
 ## Usage
 
 ```
-/start-issue <issue番号> [--force]
+/start-issue <issue-number> [--force]
 ```
 
 ## Arguments
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
-| `issue番号` | integer | Yes | GitHub Issue番号 |
-| `--force` | flag | No | 確認なしで実装を開始 |
+| `issue-number` | integer | Yes | GitHub Issue number |
+| `--force` | flag | No | Start implementation without confirmation |
 
 ## Instructions
 
@@ -73,16 +73,16 @@ Unless `--force` is specified, enter plan mode and create an implementation plan
 Post the plan as a comment on the issue using issue-reporter skill:
 
 ```markdown
-## 📋 実装計画
+## Implementation Plan
 
-**作業内容**: [Issue title]
+**Task**: [Issue title]
 
-### 計画
+### Plan
 1. [Step 1]
 2. [Step 2]
 ...
 
-### 予想される課題
+### Expected Challenges
 - [Challenge 1]
 
 ---
@@ -94,19 +94,19 @@ Post the plan as a comment on the issue using issue-reporter skill:
 ```
 ## Issue #<number>: <title>
 
-### 要件
+### Requirements
 [Requirements extracted from issue body]
 
-### 実装計画
+### Implementation Plan
 1. [Step 1]
 2. [Step 2]
 ...
 
-### テスト計画
+### Test Plan
 - [Test case 1]
 - [Test case 2]
 
-### 検証方法
+### Verification
 [Verification steps]
 ```
 

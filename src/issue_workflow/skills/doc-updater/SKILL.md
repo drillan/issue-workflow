@@ -1,22 +1,22 @@
 # doc-updater
 
-関連ドキュメントの更新が必要な変更を検出し、更新を提案・実行する。
+Detect changes that require documentation updates and suggest/execute updates.
 
 ## Overview
 
-このスキルは、コード変更に伴うドキュメントの更新漏れを防ぎます。API変更、設定オプション追加、機能追加などを検出し、関連するREADME、API仕様、設定ガイドなどの更新を提案します。
+This skill prevents documentation update oversights when code changes occur. It detects API changes, configuration option additions, feature additions, etc., and suggests updates to related READMEs, API specs, configuration guides, and more.
 
 ## Trigger
 
-- コード変更がドキュメント影響を持つ可能性がある場合
-- ユーザーが明示的にドキュメント更新を要求した場合
-- PR作成前のチェックリスト実行時
+- When code changes may impact documentation
+- When user explicitly requests documentation updates
+- During pre-PR creation checklist execution
 
 ## Instructions
 
 ### Step 1: Analyze Changes
 
-変更内容を分析してドキュメント影響を判定:
+Analyze changes to determine documentation impact:
 
 ```bash
 # Get changed files
@@ -28,7 +28,7 @@ git diff HEAD~1
 
 ### Step 2: Identify Documentation Impact
 
-以下のパターンを検出:
+Detect the following patterns:
 
 | Change Type | Documentation Impact |
 |-------------|---------------------|
@@ -48,24 +48,24 @@ find . -name "README*" -type f
 find docs/ -type f 2>/dev/null
 ```
 
-ドキュメントの場所を特定:
-- `README.md` - プロジェクト概要
-- `docs/` - 詳細ドキュメント
-- `CHANGELOG.md` - 変更履歴
-- `API.md` - API仕様
-- `CONTRIBUTING.md` - 貢献ガイド
+Identify documentation locations:
+- `README.md` - Project overview
+- `docs/` - Detailed documentation
+- `CHANGELOG.md` - Change history
+- `API.md` - API specification
+- `CONTRIBUTING.md` - Contribution guide
 
 ### Step 4: Generate Update Suggestions
 
-変更タイプに応じた更新提案を生成:
+Generate update suggestions based on change type:
 
 #### CLI Option Added
 
 ```markdown
-## 📝 ドキュメント更新提案
+## Documentation Update Suggestion
 
 ### README.md
-`--new-option` オプションの説明を追加:
+Add description for `--new-option` option:
 
 ```diff
 + ### New Option
@@ -75,10 +75,10 @@ find docs/ -type f 2>/dev/null
 ### Configuration Change
 
 ```markdown
-## 📝 ドキュメント更新提案
+## Documentation Update Suggestion
 
 ### docs/configuration.md
-新しい設定オプションを追加:
+Add new configuration option:
 
 ```diff
 + ## new_setting
@@ -91,11 +91,11 @@ find docs/ -type f 2>/dev/null
 
 ### Step 5: Execute Updates
 
-ユーザーの承認後、ドキュメントを更新:
+After user approval, update documentation:
 
-1. 対象ファイルを編集
-2. 変更をステージング
-3. 変更内容をプレビュー
+1. Edit target files
+2. Stage changes
+3. Preview changes
 
 ```bash
 # Stage documentation changes
@@ -128,9 +128,9 @@ r"environ\[.(\w+).\]"
 
 ### Changelog Detection
 
-以下の変更はCHANGELOG更新を提案:
+Suggest CHANGELOG updates for the following changes:
 
-- Breaking changes (API signature変更)
+- Breaking changes (API signature changes)
 - New features
 - Bug fixes
 - Security patches
@@ -140,34 +140,34 @@ r"environ\[.(\w+).\]"
 ### Documentation Impact Report
 
 ```
-## 📄 ドキュメント更新チェック
+## Documentation Update Check
 
-### 検出された変更
-| 種類 | 影響 | 対象ドキュメント |
-|------|------|------------------|
-| CLI オプション追加 | `--format` | README.md |
-| 環境変数追加 | `API_KEY` | docs/setup.md |
-| API変更 | `/users` endpoint | docs/api.md |
+### Detected Changes
+| Type | Impact | Target Document |
+|------|--------|-----------------|
+| CLI option added | `--format` | README.md |
+| Environment variable added | `API_KEY` | docs/setup.md |
+| API change | `/users` endpoint | docs/api.md |
 
-### 推奨アクション
-1. README.md に新しいオプションの説明を追加
-2. docs/setup.md に環境変数の設定方法を追加
-3. docs/api.md にエンドポイントの変更を反映
+### Recommended Actions
+1. Add description of new option to README.md
+2. Add environment variable setup instructions to docs/setup.md
+3. Reflect endpoint changes in docs/api.md
 
-更新を実行しますか？ [y/N]
+Execute updates? [y/N]
 ```
 
 ### Success
 
 ```
-✅ ドキュメントを更新しました
+✅ Documentation updated
 
-更新ファイル:
+Updated files:
   - README.md (+15 lines)
   - docs/setup.md (+8 lines)
   - CHANGELOG.md (+5 lines)
 
-次のステップ:
+Next step:
   git commit -m "docs: update documentation for new features"
 ```
 
@@ -175,21 +175,21 @@ r"environ\[.(\w+).\]"
 
 | Error | Action |
 |-------|--------|
-| No docs found | `ℹ️ ドキュメントファイルが見つかりません` |
-| Doc not writable | `⚠️ ファイルの書き込み権限がありません` |
-| Pattern not found | 手動での確認を提案 |
+| No docs found | `ℹ️ No documentation files found` |
+| Doc not writable | `⚠️ No write permission for file` |
+| Pattern not found | Suggest manual verification |
 
 ## Integration
 
-このスキルは以下と連携:
+This skill integrates with:
 
-1. **code-quality-gate** - コミット前のドキュメントチェック
-2. **issue-reporter** - ドキュメント更新の進捗報告
-3. **PR Template** - ドキュメント更新チェックリスト
+1. **code-quality-gate** - Documentation check before commit
+2. **issue-reporter** - Report documentation update progress
+3. **PR Template** - Documentation update checklist
 
 ## Best Practices
 
-1. **コード変更と同時に** - ドキュメント更新を後回しにしない
-2. **変更の影響範囲を明確に** - 何が変わったかを具体的に記載
-3. **例を含める** - コード例や使用例を追加
-4. **CHANGELOGを維持** - 重要な変更は履歴に残す
+1. **Update with code changes** - Don't postpone documentation updates
+2. **Clarify change scope** - Specifically describe what changed
+3. **Include examples** - Add code examples and usage examples
+4. **Maintain CHANGELOG** - Record important changes in history

@@ -1,73 +1,73 @@
 # TDD Workflow Skill
 
-TDDワークフローを強制し、Red-Green-Refactorサイクルを確実に実行する。
+Enforce TDD workflow and ensure proper execution of the Red-Green-Refactor cycle.
 
 ## Trigger Conditions
 
-- 新機能実装開始時
-- バグ修正開始時
-- リファクタリング開始時
+- When starting a new feature implementation
+- When starting a bug fix
+- When starting refactoring
 
 ## Phases
 
-### Phase 1: Red（テスト作成・失敗確認）
+### Phase 1: Red (Create test and confirm failure)
 
-1. **テストファイルの作成/特定**
-   - 命名規則: `test_<機能名>.py`
-   - 配置: `tests/`ディレクトリ
+1. **Create/identify test file**
+   - Naming convention: `test_<feature>.py`
+   - Location: `tests/` directory
 
-2. **テストケースの設計**
-   - 期待動作を明確に定義
-   - エッジケースを考慮
-   - テスト名規則: `test_<機能>_<状況>_<期待結果>`
+2. **Design test cases**
+   - Clearly define expected behavior
+   - Consider edge cases
+   - Test naming convention: `test_<feature>_<situation>_<expected_result>`
 
-3. **テスト実行と失敗確認**
+3. **Run test and confirm failure**
    ```bash
-   uv run pytest tests/test_<機能名>.py -v
+   uv run pytest tests/test_<feature>.py -v
    ```
 
-4. **ユーザー承認**（必須）
-   - テストケースを提示
-   - 承認を得てから次フェーズへ
+4. **User approval** (required)
+   - Present test cases
+   - Get approval before proceeding to next phase
 
-### Phase 2: Green（最小限の実装）
+### Phase 2: Green (Minimal implementation)
 
-1. **実装ファイルの作成**
-   - テストを通過させることのみに集中
-   - 過剰設計を避ける
+1. **Create implementation file**
+   - Focus only on making the test pass
+   - Avoid over-engineering
 
-2. **テスト実行と成功確認**
+2. **Run test and confirm success**
    ```bash
-   uv run pytest tests/test_<機能名>.py -v
+   uv run pytest tests/test_<feature>.py -v
    ```
 
-3. **品質チェック**
+3. **Quality checks**
    ```bash
    uv run ruff check --fix . && uv run ruff format . && uv run mypy .
    ```
 
-### Phase 3: Refactor（リファクタリング）
+### Phase 3: Refactor
 
-1. **コードの改善**
-   - 重複の除去
-   - 可読性の向上
+1. **Improve code**
+   - Remove duplication
+   - Improve readability
 
-2. **全テストの再実行**
+2. **Re-run all tests**
    ```bash
    uv run pytest
    ```
 
 ## File Mapping
 
-| 実装ファイル | テストファイル |
-|-------------|--------------|
+| Implementation File | Test File |
+|---------------------|-----------|
 | `src/auth.py` | `tests/test_auth.py` |
 | `src/article.py` | `tests/test_article.py` |
 | `src/services/user.py` | `tests/test_user.py` |
 
 ## Test Naming Convention
 
-`test_<機能>_<状況>_<期待結果>`
+`test_<feature>_<situation>_<expected_result>`
 
 Examples:
 - `test_login_with_valid_credentials_returns_session`
@@ -76,23 +76,23 @@ Examples:
 
 ## Enforcement Rules
 
-1. **テストファイルが存在しない場合**
-   - 実装を開始する前にテストファイルの作成を要求
-   - 実装ファイルの編集をブロック
+1. **If test file doesn't exist**
+   - Request test file creation before starting implementation
+   - Block implementation file edits
 
-2. **テストが失敗していない場合（Red）**
-   - テストが意図通り失敗することを確認
-   - 失敗しないテストは意味がないことを説明
+2. **If test is not failing (Red)**
+   - Confirm test fails as intended
+   - Explain that a test that doesn't fail is meaningless
 
-3. **テストが成功した後（Green）**
-   - リファクタリングフェーズへの移行を提案
-   - 追加のテストケースが必要か確認
+3. **After test succeeds (Green)**
+   - Suggest transition to refactoring phase
+   - Check if additional test cases are needed
 
 ## Quality Gates
 
-- すべてのテストが成功すること
-- カバレッジが基準を満たすこと
-- 静的解析でエラーがないこと
+- All tests must pass
+- Coverage must meet standards
+- No errors in static analysis
 
 ## Instructions for Claude
 
