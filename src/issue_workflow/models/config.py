@@ -33,6 +33,30 @@ class WorkflowSettings(BaseModel):
     auto_report: bool = Field(default=True, description="Enable automatic progress reporting")
 
 
+class DDDSettings(BaseModel):
+    """DDD (Documentation-Driven Development) settings."""
+
+    enabled: bool = Field(default=True, description="Enable DDD workflow")
+    retcon_writing: bool = Field(default=True, description="Enforce retcon writing style")
+
+
+class DocumentationSettings(BaseModel):
+    """Documentation configuration settings."""
+
+    paths: list[str] = Field(
+        default=["README.md", "docs/"],
+        description="Documentation file/directory paths",
+    )
+    changelog: str | None = Field(
+        default="CHANGELOG.md",
+        description="Changelog file path",
+    )
+    ddd: DDDSettings = Field(
+        default_factory=DDDSettings,
+        description="DDD workflow settings",
+    )
+
+
 class WorkflowConfig(BaseModel):
     """Project workflow configuration."""
 
@@ -41,6 +65,9 @@ class WorkflowConfig(BaseModel):
     quality: QualityCommands = Field(description="Quality check commands")
     workflow: WorkflowSettings = Field(
         default_factory=WorkflowSettings, description="Workflow settings"
+    )
+    documentation: DocumentationSettings = Field(
+        default_factory=DocumentationSettings, description="Documentation settings"
     )
 
     model_config = {

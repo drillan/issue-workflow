@@ -115,9 +115,30 @@ Claude Code内で使用するコマンド。推奨ワークフロー順に記載
     "quality_gate_required": true,
     "auto_report": true
   },
+  "documentation": {
+    "paths": ["README.md", "docs/"],
+    "changelog": "CHANGELOG.md",
+    "ddd": {
+      "enabled": true,
+      "retcon_writing": true
+    }
+  },
   "$schema": "https://raw.githubusercontent.com/drillan/issue-workflow/main/schemas/workflow-config.schema.json"
 }
 ```
+
+### ドキュメント設定
+
+`documentation`セクションはドキュメントパスとDDD（Documentation-Driven Development）ワークフローを設定します：
+
+| フィールド | 型 | デフォルト | 説明 |
+|-----------|---|-----------|------|
+| `paths` | `string[]` | `["README.md", "docs/"]` | 管理対象のドキュメントファイル/ディレクトリパス |
+| `changelog` | `string` | `"CHANGELOG.md"` | CHANGELOGファイルパス |
+| `ddd.enabled` | `boolean` | `true` | DDDワークフローを有効化 |
+| `ddd.retcon_writing` | `boolean` | `true` | レトコン記述スタイルを強制（機能が既に存在するかのように記述） |
+
+`issue-workflow init`実行時に、これらの設定を対話的にカスタマイズするか、`--non-interactive`でプリセットデフォルトを使用できます。
 
 ### Git規約 (`.claude/git-conventions.md`)
 

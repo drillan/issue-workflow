@@ -2,7 +2,11 @@
 
 from pydantic import BaseModel, Field
 
-from issue_workflow.models.config import LanguageName, QualityCommands
+from issue_workflow.models.config import (
+    DocumentationSettings,
+    LanguageName,
+    QualityCommands,
+)
 
 __all__ = ["FileTemplate", "LanguageName", "LanguagePreset"]
 
@@ -21,3 +25,7 @@ class LanguagePreset(BaseModel):
     display_name: str = Field(description="Display name for UI")
     quality: QualityCommands = Field(description="Default quality commands")
     files: list[FileTemplate] = Field(description="Files to generate")
+    documentation: DocumentationSettings = Field(
+        default_factory=DocumentationSettings,
+        description="Documentation settings",
+    )

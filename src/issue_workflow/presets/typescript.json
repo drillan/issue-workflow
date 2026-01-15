@@ -8,6 +8,14 @@
     "test": "npm test",
     "all": "npm run lint -- --fix && npm run format && npm run typecheck"
   },
+  "documentation": {
+    "paths": ["README.md", "docs/"],
+    "changelog": "CHANGELOG.md",
+    "ddd": {
+      "enabled": true,
+      "retcon_writing": true
+    }
+  },
   "files": [
     {
       "path": "workflow-config.json",

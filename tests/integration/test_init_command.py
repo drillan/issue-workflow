@@ -117,3 +117,41 @@ class TestInitCommand:
         result = runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
         # Should fail because config already exists and --force not specified
         assert result.exit_code != 0 or "exists" in result.output.lower()
+
+    def test_init_creates_documentation_settings(self, temp_project: Path) -> None:
+        """Test that init creates documentation settings in config."""
+        from issue_workflow.cli.main import app
+
+        runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
+
+        claude_dir = temp_project / ".claude"
+        config_file = claude_dir / "workflow-config.json"
+
+        if config_file.exists():
+            config = json.loads(config_file.read_text())
+            # Verify documentation section exists
+            assert "documentation" in config
+            assert "paths" in config["documentation"]
+            assert "changelog" in config["documentation"]
+            assert "ddd" in config["documentation"]
+            # Verify default values from python preset
+            assert config["documentation"]["paths"] == ["README.md", "docs/"]
+            assert config["documentation"]["changelog"] == "CHANGELOG.md"
+            assert config["documentation"]["ddd"]["enabled"] is True
+            assert config["documentation"]["ddd"]["retcon_writing"] is True
+
+    def test_init_non_interactive_uses_preset_documentation_defaults(
+        self, temp_project: Path
+    ) -> None:
+        """Test that non-interactive mode uses preset documentation defaults."""
+        from issue_workflow.cli.main import app
+
+        runner.invoke(app, ["init", "--language", "generic", "--non-interactive"])
+
+        claude_dir = temp_project / ".claude"
+        config_file = claude_dir / "workflow-config.json"
+
+        if config_file.exists():
+            config = json.loads(config_file.read_text())
+            # Generic preset has different defaults
+            assert config["documentation"]["paths"] == ["README.md"]
