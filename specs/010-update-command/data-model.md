@@ -17,7 +17,7 @@ class FileChangeType(Enum):
     """ファイル変更の種類"""
     ADDED = "added"      # 新規追加
     UPDATED = "updated"  # 内容更新
-    DELETED = "deleted"  # 削除（警告のみ）
+    # DELETED: 削除済み（Issue #15で無視に変更、後方互換性のため保持）
     UNCHANGED = "unchanged"  # 変更なし
 ```
 
@@ -68,13 +68,7 @@ class UpdateResult:
             if c.change_type == FileChangeType.UPDATED
         )
 
-    @property
-    def deleted_count(self) -> int:
-        """削除候補のファイル/ディレクトリ数（警告のみ）"""
-        return sum(
-            1 for c in self.commands_changes + self.skills_changes
-            if c.change_type == FileChangeType.DELETED
-        )
+    # deleted_count: Issue #15で廃止（後方互換性のため残存、常に0を返す）
 
     @property
     def has_changes(self) -> bool:
@@ -113,7 +107,7 @@ UpdateResult
 ### FileChangeInfo
 
 1. `path`は相対パスでなければならない
-2. `change_type`が`DELETED`の場合、`source_path`は`None`
+2. ~~`change_type`が`DELETED`の場合、`source_path`は`None`~~（Issue #15で廃止: 管理外ファイルは無視）
 3. `change_type`が`ADDED`または`UPDATED`の場合、`source_path`は必須
 
 ### UpdateResult

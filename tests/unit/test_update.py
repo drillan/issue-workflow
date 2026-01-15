@@ -19,10 +19,6 @@ class TestFileChangeType:
         """Test UPDATED enum value."""
         assert FileChangeType.UPDATED.value == "updated"
 
-    def test_deleted_value(self) -> None:
-        """Test DELETED enum value."""
-        assert FileChangeType.DELETED.value == "deleted"
-
     def test_unchanged_value(self) -> None:
         """Test UNCHANGED enum value."""
         assert FileChangeType.UNCHANGED.value == "unchanged"
@@ -30,16 +26,6 @@ class TestFileChangeType:
 
 class TestFileChangeInfo:
     """Tests for FileChangeInfo dataclass."""
-
-    def test_creation_with_required_fields(self) -> None:
-        """Test creating FileChangeInfo with required fields for DELETED type."""
-        info = FileChangeInfo(
-            path=Path(".claude/commands/test.md"),
-            change_type=FileChangeType.DELETED,
-        )
-        assert info.path == Path(".claude/commands/test.md")
-        assert info.change_type == FileChangeType.DELETED
-        assert info.source_path is None
 
     def test_added_requires_source_path(self) -> None:
         """Test that ADDED change type requires source_path (Important #2)."""
@@ -81,7 +67,7 @@ class TestFileChangeInfo:
         """Test FileChangeInfo is immutable."""
         info = FileChangeInfo(
             path=Path(".claude/commands/test.md"),
-            change_type=FileChangeType.DELETED,
+            change_type=FileChangeType.UNCHANGED,
         )
         with pytest.raises(AttributeError):
             info.path = Path("other.md")  # type: ignore[misc]
@@ -141,18 +127,6 @@ class TestUpdateResult:
         )
         assert result.updated_count == 1
 
-    def test_deleted_count(self) -> None:
-        """Test deleted_count property."""
-        result = UpdateResult(
-            commands_changes=[
-                FileChangeInfo(
-                    path=Path("a.md"),
-                    change_type=FileChangeType.DELETED,
-                ),
-            ],
-        )
-        assert result.deleted_count == 1
-
     def test_has_changes_true(self) -> None:
         """Test has_changes returns True when there are changes."""
         result = UpdateResult(
@@ -169,18 +143,6 @@ class TestUpdateResult:
     def test_has_changes_false_empty(self) -> None:
         """Test has_changes returns False when no changes."""
         result = UpdateResult()
-        assert result.has_changes is False
-
-    def test_has_changes_false_only_deleted(self) -> None:
-        """Test has_changes returns False when only deleted (warning only)."""
-        result = UpdateResult(
-            commands_changes=[
-                FileChangeInfo(
-                    path=Path("a.md"),
-                    change_type=FileChangeType.DELETED,
-                ),
-            ],
-        )
         assert result.has_changes is False
 
     def test_has_errors_true(self) -> None:
@@ -207,6 +169,95 @@ class TestUpdateResult:
         """Test dry_run flag is stored correctly."""
         result = UpdateResult(dry_run=True)
         assert result.dry_run is True
+
+
+class TestUnmanagedFilesIgnored:
+    """Tests for ignoring unmanaged files (#15).
+
+    Issue: update command was displaying "not in toolkit, manual deletion required"
+    for files that exist in target but not in source. These are user files or
+    files from other tools and should be silently ignored.
+    """
+
+    def test_commands_ignores_unmanaged_files(self, tmp_path: Path) -> None:
+        """Test that unmanaged command files are ignored."""
+        # Setup empty source (no commands from toolkit)
+        source_dir = tmp_path / "source_package" / "commands"
+        source_dir.mkdir(parents=True)
+
+        # Setup target with user's custom command
+        target_dir = tmp_path / ".claude"
+        commands_target = target_dir / "commands"
+        commands_target.mkdir(parents=True)
+        (commands_target / "my-custom-command.md").write_text("# My Custom Command")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_commands_source_dir
+        template_module.get_commands_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_commands(target_dir, dry_run=True)
+            # Should NOT detect unmanaged files - no changes should be detected
+            assert result.has_changes is False
+        finally:
+            template_module.get_commands_source_dir = original_func
+
+    def test_skills_ignores_unmanaged_directories(self, tmp_path: Path) -> None:
+        """Test that unmanaged skill directories are ignored."""
+        # Setup empty source (no skills from toolkit)
+        source_dir = tmp_path / "source_package" / "skills"
+        source_dir.mkdir(parents=True)
+
+        # Setup target with user's custom skill (e.g., from speckit)
+        target_dir = tmp_path / ".claude"
+        skills_target = target_dir / "skills"
+        (skills_target / "speckit.analyze").mkdir(parents=True)
+        (skills_target / "speckit.analyze" / "skill.md").write_text("# Speckit Skill")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_skills_source_dir
+        template_module.get_skills_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_skills(target_dir, dry_run=True)
+            # Should NOT detect unmanaged directories - no changes should be detected
+            assert result.has_changes is False
+        finally:
+            template_module.get_skills_source_dir = original_func
+
+    def test_mixed_managed_and_unmanaged_files(self, tmp_path: Path) -> None:
+        """Test that unmanaged files are ignored while managed files are detected."""
+        # Setup source with one command
+        source_dir = tmp_path / "source_package" / "commands"
+        source_dir.mkdir(parents=True)
+        (source_dir / "start-issue.md").write_text("# Start Issue")
+
+        # Setup target with toolkit command (updated) and user's custom command
+        target_dir = tmp_path / ".claude"
+        commands_target = target_dir / "commands"
+        commands_target.mkdir(parents=True)
+        (commands_target / "start-issue.md").write_text("# Old Start Issue")
+        (commands_target / "speckit.analyze.md").write_text("# Speckit Command")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_commands_source_dir
+        template_module.get_commands_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_commands(target_dir, dry_run=True)
+            # Should detect start-issue.md as updated
+            assert result.updated_count == 1
+            # Only one change (the update), unmanaged files are ignored
+            assert len(result.commands_changes) == 1
+            assert result.commands_changes[0].change_type == FileChangeType.UPDATED
+        finally:
+            template_module.get_commands_source_dir = original_func
 
 
 class TestUpdateCommands:
@@ -265,13 +316,17 @@ class TestUpdateCommands:
         finally:
             template_module.get_commands_source_dir = original_func
 
-    def test_detects_deleted_files(self, tmp_path: Path) -> None:
-        """Test detecting files in target but not in source."""
+    def test_ignores_unmanaged_files(self, tmp_path: Path) -> None:
+        """Test that files in target but not in source are ignored (#15).
+
+        Previously this test was 'test_detects_deleted_files' which expected
+        deleted files to be detected. As of #15, unmanaged files are ignored.
+        """
         # Setup empty source
         source_dir = tmp_path / "source_package" / "commands"
         source_dir.mkdir(parents=True)
 
-        # Setup target with extra file
+        # Setup target with extra file (unmanaged)
         target_dir = tmp_path / ".claude"
         commands_target = target_dir / "commands"
         commands_target.mkdir(parents=True)
@@ -285,8 +340,8 @@ class TestUpdateCommands:
 
         try:
             result = service.update_commands(target_dir, dry_run=True)
-            assert result.deleted_count == 1
-            assert result.commands_changes[0].change_type == FileChangeType.DELETED
+            # Unmanaged files are ignored - no changes detected
+            assert len(result.commands_changes) == 0
         finally:
             template_module.get_commands_source_dir = original_func
 
@@ -399,13 +454,17 @@ class TestUpdateSkills:
         finally:
             template_module.get_skills_source_dir = original_func
 
-    def test_detects_deleted_directories(self, tmp_path: Path) -> None:
-        """Test detecting directories in target but not in source."""
+    def test_ignores_unmanaged_directories(self, tmp_path: Path) -> None:
+        """Test that directories in target but not in source are ignored (#15).
+
+        Previously this test was 'test_detects_deleted_directories' which expected
+        deleted files to be detected. As of #15, unmanaged directories are ignored.
+        """
         # Setup empty source
         source_dir = tmp_path / "source_package" / "skills"
         source_dir.mkdir(parents=True)
 
-        # Setup target with extra directory
+        # Setup target with extra directory (unmanaged)
         target_dir = tmp_path / ".claude"
         skills_target = target_dir / "skills"
         (skills_target / "extra-skill").mkdir(parents=True)
@@ -419,8 +478,8 @@ class TestUpdateSkills:
 
         try:
             result = service.update_skills(target_dir, dry_run=True)
-            assert result.deleted_count == 1
-            assert result.skills_changes[0].change_type == FileChangeType.DELETED
+            # Unmanaged directories are ignored - no changes detected
+            assert len(result.skills_changes) == 0
         finally:
             template_module.get_skills_source_dir = original_func
 
@@ -854,7 +913,10 @@ class TestEdgeCases:
             template_module.get_commands_source_dir = original_func
 
     def test_multiple_changes_combined(self, tmp_path: Path) -> None:
-        """Test result correctly combines multiple change types."""
+        """Test result correctly combines multiple change types.
+
+        Note: As of #15, unmanaged files are ignored.
+        """
         source_dir = tmp_path / "source_package" / "commands"
         source_dir.mkdir(parents=True)
         (source_dir / "new.md").write_text("# New")
@@ -864,7 +926,7 @@ class TestEdgeCases:
         commands_target = target_dir / "commands"
         commands_target.mkdir(parents=True)
         (commands_target / "updated.md").write_text("# Old Content")
-        (commands_target / "deleted.md").write_text("# Deleted")
+        (commands_target / "unmanaged.md").write_text("# Unmanaged")
 
         service = TemplateService()
         import issue_workflow.services.template as template_module
@@ -876,7 +938,7 @@ class TestEdgeCases:
             result = service.update_commands(target_dir, dry_run=True)
             assert result.added_count == 1
             assert result.updated_count == 1
-            assert result.deleted_count == 1
+            # Unmanaged files are ignored (#15)
             assert result.has_changes is True
         finally:
             template_module.get_commands_source_dir = original_func

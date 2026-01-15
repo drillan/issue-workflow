@@ -122,8 +122,3 @@ def print_added(message: str) -> None:
 def print_updated(message: str) -> None:
     """Print message for updated item."""
     console.print(f"  [yellow]~[/yellow] {message}")
-
-
-def print_deleted(message: str) -> None:
-    """Print message for deleted item (warning)."""
-    console.print(f"  [red]-[/red] {message}")

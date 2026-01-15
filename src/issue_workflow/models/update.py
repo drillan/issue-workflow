@@ -10,7 +10,6 @@ class FileChangeType(Enum):
 
     ADDED = "added"
     UPDATED = "updated"
-    DELETED = "deleted"
     UNCHANGED = "unchanged"
 
 
@@ -70,15 +69,6 @@ class UpdateResult:
             1
             for c in self.commands_changes + self.skills_changes
             if c.change_type == FileChangeType.UPDATED
-        )
-
-    @property
-    def deleted_count(self) -> int:
-        """Count of files/directories marked for deletion (warning only)."""
-        return sum(
-            1
-            for c in self.commands_changes + self.skills_changes
-            if c.change_type == FileChangeType.DELETED
         )
 
     @property
