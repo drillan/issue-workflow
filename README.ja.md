@@ -2,38 +2,170 @@
 
 [English](README.md) | 日本語
 
-GitHub Issue駆動開発ワークフローツールキット for Claude Code。
+GitHub Issue駆動開発ワークフローツールキット for Claude Code。Issueの開始からPRのマージまで、開発ワークフロー全体を自動化・効率化します。
+
+## 特徴
+
+- **TDD強制ワークフロー** - Red-Green-Refactorサイクルによるテストファースト開発を強制
+- **品質ゲート** - コミット前に自動でlint、format、型チェックを実行
+- **進捗自動報告** - GitHub Issueに進捗を自動投稿
+- **多言語対応** - Python、TypeScript、Go、Rust、Generic用のプリセットを用意
 
 ## システム要件
 
 - Python 3.13+
 - [uv](https://docs.astral.sh/uv/) (パッケージマネージャー)
 - [gh CLI](https://cli.github.com/) (GitHub CLI)
+- [Claude Code](https://www.anthropic.com/claude-code) CLI
 
 ## インストール
 
 ```bash
-uv pip install -e .
+uv tool install git+https://github.com/drillan/issue-workflow.git
 ```
 
-## コマンド
+## クイックスタート
+
+```bash
+# 1. プロジェクトにワークフロー設定を初期化
+issue-workflow init
+
+# 2. または言語プリセットを指定して初期化
+issue-workflow init --language python
+```
+
+初期化後、Claude Codeのスラッシュコマンドでワークフローを管理：
+
+```
+/start-issue 123      # Issue #123の作業を開始
+/review-pr-comments   # PRレビューコメントに対応
+/merge-pr 456         # PR #456をマージ
+```
+
+## CLIコマンド
 
 | コマンド | 説明 |
 |---------|------|
 | `issue-workflow init` | プロジェクトにIssue Workflowを初期化 |
-| `issue-workflow init --language python` | 言語プリセットを指定して初期化 |
+| `issue-workflow init --language <lang>` | 言語プリセットを指定して初期化 |
+| `issue-workflow init --non-interactive` | 対話プロンプトなしで初期化（CI/CD用） |
 | `issue-workflow --version` | バージョンを表示 |
 | `issue-workflow --help` | ヘルプを表示 |
 
-## 使い方
+## プラグインコマンド（スラッシュコマンド）
+
+Claude Code内で使用するコマンド：
+
+| コマンド | 説明 |
+|---------|------|
+| `/start-issue <number>` | Issueを読み込み、ブランチを作成し、実装計画を策定 |
+| `/merge-pr <number>` | CIチェック完了を待機後、PRをマージ |
+| `/add-worktree <number>` | Issue用の新規ワークツリーを作成 |
+| `/review-pr-comments [number]` | PRレビューコメントを確認・対応 |
+
+## 自動起動スキル
+
+適切なコンテキストで自動的にトリガーされるスキル：
+
+| スキル | 説明 |
+|-------|------|
+| `tdd-workflow` | TDDワークフロー（Red-Green-Refactorサイクル）を強制 |
+| `code-quality-gate` | コミット前に品質チェックを実行 |
+| `issue-reporter` | Issueに進捗を投稿 |
+| `doc-updater` | ドキュメント更新が必要な変更を検知 |
+
+## 言語プリセット
+
+品質チェックコマンドが事前設定されたプリセット：
+
+| プリセット | 品質ツール |
+|-----------|-----------|
+| `python` | ruff, mypy, pytest |
+| `typescript` | npm run lint/format/typecheck（通常eslint, prettier, tsc） |
+| `go` | golangci-lint, go fmt, go vet |
+| `rust` | clippy, rustfmt, cargo check |
+| `generic` | カスタマイズ可能 |
+
+## 設定
+
+### ワークフロー設定 (`.claude/workflow-config.json`)
+
+```json
+{
+  "version": "1.0",
+  "language": "python",
+  "quality": {
+    "lint": "uv run ruff check --fix .",
+    "format": "uv run ruff format .",
+    "typecheck": "uv run mypy .",
+    "test": "uv run pytest",
+    "all": "uv run ruff check --fix . && uv run ruff format . && uv run mypy ."
+  },
+  "workflow": {
+    "tdd_required": true,
+    "quality_gate_required": true,
+    "auto_report": true
+  },
+  "$schema": "https://raw.githubusercontent.com/drillan/issue-workflow/main/schemas/workflow-config.schema.json"
+}
+```
+
+### Git規約 (`.claude/git-conventions.md`)
+
+ブランチ命名規則とコミットメッセージ規約を定義：
+
+- ブランチ形式: `<type>/<issue-number>-<description>`
+- タイプ: `feat/`, `fix/`, `refactor/`, `docs/`, `test/`, `chore/`
+- コミット形式: Conventional Commits
+
+## 開発
+
+### セットアップ
 
 ```bash
-# ワークフロー設定を初期化
-issue-workflow init
-
-# 特定の言語プリセットを指定
-issue-workflow init --language python
+git clone https://github.com/drillan/issue-workflow.git
+cd issue-workflow
+uv sync
 ```
+
+### テスト実行
+
+```bash
+uv run pytest
+```
+
+### 品質チェック
+
+```bash
+uv run ruff check --fix . && uv run ruff format . && uv run mypy .
+```
+
+## トラブルシューティング
+
+### gh CLI認証エラー
+
+`gh`で認証エラーが発生した場合：
+
+```bash
+gh auth login
+```
+
+### 既存設定の上書き
+
+既存プロジェクトで設定を再初期化する場合：
+
+```bash
+issue-workflow init --force
+```
+
+### よくある問題
+
+| 問題 | 解決方法 |
+|------|---------|
+| `gh: command not found` | [GitHub CLI](https://cli.github.com/)をインストール |
+| `uv: command not found` | [uv](https://docs.astral.sh/uv/)をインストール |
+| ブランチ作成に失敗 | `git status`で未コミットの変更を確認 |
+| Issueへのアクセス拒否 | `gh repo view`でリポジトリアクセスを確認 |
 
 ## ライセンス
 
