@@ -1,0 +1,18 @@
+{
+  "name": "issue-workflow",
+  "version": "1.0.0",
+  "description": "GitHub Issue-driven development workflow for Claude Code",
+  "author": "Issue Workflow Team",
+  "commands": [
+    "commands/start-issue.md",
+    "commands/merge-pr.md",
+    "commands/add-worktree.md",
+    "commands/review-pr-comments.md"
+  ],
+  "skills": [
+    "skills/tdd-workflow",
+    "skills/code-quality-gate",
+    "skills/issue-reporter",
+    "skills/doc-updater"
+  ]
+}

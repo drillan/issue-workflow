@@ -1,0 +1,21 @@
+{
+  "name": "python",
+  "display_name": "Python",
+  "quality": {
+    "lint": "uv run ruff check --fix .",
+    "format": "uv run ruff format .",
+    "typecheck": "uv run mypy .",
+    "test": "uv run pytest",
+    "all": "uv run ruff check --fix . && uv run ruff format . && uv run mypy ."
+  },
+  "files": [
+    {
+      "path": "workflow-config.json",
+      "template": "workflow-config.json.j2"
+    },
+    {
+      "path": "git-conventions.md",
+      "template": "git-conventions.md"
+    }
+  ]
+}

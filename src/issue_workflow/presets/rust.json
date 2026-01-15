@@ -1,0 +1,21 @@
+{
+  "name": "rust",
+  "display_name": "Rust",
+  "quality": {
+    "lint": "cargo clippy --fix --allow-dirty --allow-staged",
+    "format": "cargo fmt",
+    "typecheck": "cargo check",
+    "test": "cargo test",
+    "all": "cargo clippy --fix --allow-dirty --allow-staged && cargo fmt && cargo check"
+  },
+  "files": [
+    {
+      "path": "workflow-config.json",
+      "template": "workflow-config.json.j2"
+    },
+    {
+      "path": "git-conventions.md",
+      "template": "git-conventions.md"
+    }
+  ]
+}
