@@ -1,6 +1,6 @@
 [project]
 name = "issue-workflow"
-version = "1.0.0"
+version = "0.1.0"
 description = "GitHub Issue-driven development workflow toolkit for Claude Code"
 readme = "README.md"
 license = { text = "MIT" }
@@ -8,7 +8,7 @@ requires-python = ">=3.13"
 authors = [{ name = "drillan" }]
 keywords = ["github", "issue", "workflow", "claude", "cli"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
