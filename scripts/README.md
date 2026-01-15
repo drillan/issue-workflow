@@ -168,4 +168,27 @@ issueに対応するworktreeを作成します（setup-issue.sh から呼び出�
 - `gh` CLI がインストールされていること
 - `claude` CLI がインストールされていること
 - `jq` がインストールされていること（verboseモードで使用）
+- `issue-workflow` コマンドがインストールされていること（`full-workflow.sh` で使用）
 - GitHubへの認証が完了していること
+
+## 環境変数
+
+| 変数名 | 説明 | デフォルト |
+|--------|------|-----------|
+| `ISSUE_WORKFLOW_LANGUAGE` | 言語プリセット（`full-workflow.sh` で使用） | `generic` |
+
+利用可能な言語プリセット: `python`, `typescript`, `go`, `rust`, `generic`
+
+```bash
+# 例: Pythonプロジェクトでfull-workflowを実行
+ISSUE_WORKFLOW_LANGUAGE=python ./scripts/full-workflow.sh 199
+```
+
+## 共通オプション
+
+すべてのスクリプトは以下の共通オプションをサポートしています:
+
+| オプション | 説明 |
+|-----------|------|
+| `-h`, `--help` | ヘルプを表示 |
+| `-v`, `--verbose` | 途中経過を表示（ツール呼び出しを含む）|

@@ -1,7 +1,7 @@
 #!/bin/bash
 # setup-issue.sh - worktree作成 → start-issue実行の複合スクリプト
 #
-# Usage: ./scripts/setup-issue.sh <issue番号>
+# Usage: ./scripts/setup-issue.sh [-v|--verbose] [-h|--help] <issue番号>
 # Example: ./scripts/setup-issue.sh 199
 
 set -euo pipefail
@@ -12,20 +12,29 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT=$(lib_get_project_root)
 
-# 引数チェック
+# オプション解析
+lib_parse_options "$@"
+set -- "${_LIB_REMAINING_ARGS[@]}"
+
+# ヘルプ表示
+if lib_should_show_help; then
+    lib_show_usage "setup-issue.sh" "worktree作成 → start-issue実行の複合スクリプト" "<issue番号>"
+    exit 0
+fi
+
 ISSUE_NUM="${1:-}"
 
 if [[ -z "$ISSUE_NUM" ]]; then
-    echo "⚠️ issue番号が必要です"
-    echo ""
-    echo "使用方法: $0 <issue番号>"
-    echo "例: $0 199"
+    echo "⚠️ issue番号が必要です" >&2
+    echo "" >&2
+    echo "使用方法: $0 [-v|--verbose] [-h|--help] <issue番号>" >&2
+    echo "例: $0 199" >&2
     exit 1
 fi
 
 # 数値チェック
 if ! [[ "$ISSUE_NUM" =~ ^[0-9]+$ ]]; then
-    echo "⚠️ issue番号は数値で指定してください: $ISSUE_NUM"
+    echo "⚠️ issue番号は数値で指定してください: $ISSUE_NUM" >&2
     exit 1
 fi
 
@@ -43,7 +52,7 @@ else
     WORKTREE_PATH=$(lib_get_worktree_path "$ISSUE_NUM")
 
     if [[ -z "$WORKTREE_PATH" ]]; then
-        echo "⚠️ ワークツリーディレクトリが見つかりません"
+        echo "⚠️ ワークツリーディレクトリが見つかりません" >&2
         exit 1
     fi
 
@@ -58,7 +67,7 @@ echo ""
 START_ISSUE_FILE="$WORKTREE_PATH/.claude/commands/start-issue.md"
 
 if [[ ! -f "$START_ISSUE_FILE" ]]; then
-    echo "⚠️ start-issue.md が見つかりません: $START_ISSUE_FILE"
+    echo "⚠️ start-issue.md が見つかりません: $START_ISSUE_FILE" >&2
     exit 1
 fi
 
