@@ -42,3 +42,96 @@ class TestTddFileMapping:
 
         assert is_source_file("src/auth.py") is True
         assert is_source_file("tests/test_auth.py") is False
+
+
+class TestValidateTddOrder:
+    """Tests for validate_tdd_order function."""
+
+    def test_valid_tdd_order(self) -> None:
+        """Test valid TDD order: test before implementation."""
+        from issue_workflow.services.tdd import validate_tdd_order
+
+        files = [
+            "tests/test_auth.py",  # Test first
+            "src/auth.py",  # Implementation second
+        ]
+        is_valid, message = validate_tdd_order(files)
+        assert is_valid is True
+        assert message == "TDD order validated"
+
+    def test_invalid_tdd_order(self) -> None:
+        """Test invalid TDD order: implementation before test."""
+        from issue_workflow.services.tdd import validate_tdd_order
+
+        files = [
+            "src/auth.py",  # Implementation first (violation)
+            "tests/test_auth.py",  # Test second
+        ]
+        is_valid, message = validate_tdd_order(files)
+        assert is_valid is False
+        assert "tests/test_auth.py" in message
+
+    def test_multiple_files_valid(self) -> None:
+        """Test valid TDD order with multiple file pairs."""
+        from issue_workflow.services.tdd import validate_tdd_order
+
+        files = [
+            "tests/test_auth.py",
+            "tests/test_user.py",
+            "src/auth.py",
+            "src/user.py",
+        ]
+        is_valid, _message = validate_tdd_order(files)
+        assert is_valid is True
+
+    def test_multiple_files_one_violation(self) -> None:
+        """Test TDD order violation with one file out of order."""
+        from issue_workflow.services.tdd import validate_tdd_order
+
+        files = [
+            "tests/test_auth.py",
+            "src/auth.py",
+            "src/user.py",  # No test before this
+        ]
+        is_valid, message = validate_tdd_order(files)
+        assert is_valid is False
+        assert "tests/test_user.py" in message
+
+    def test_empty_list(self) -> None:
+        """Test empty file list is valid."""
+        from issue_workflow.services.tdd import validate_tdd_order
+
+        is_valid, message = validate_tdd_order([])
+        assert is_valid is True
+        assert message == "TDD order validated"
+
+    def test_test_files_only(self) -> None:
+        """Test only test files is valid."""
+        from issue_workflow.services.tdd import validate_tdd_order
+
+        files = ["tests/test_auth.py", "tests/test_user.py"]
+        is_valid, message = validate_tdd_order(files)
+        assert is_valid is True
+        assert message == "TDD order validated"
+
+    def test_source_file_without_test(self) -> None:
+        """Test source file without any corresponding test."""
+        from issue_workflow.services.tdd import validate_tdd_order
+
+        files = ["src/auth.py"]
+        is_valid, message = validate_tdd_order(files)
+        assert is_valid is False
+        assert "tests/test_auth.py" in message
+
+    def test_non_python_files_treated_as_source(self) -> None:
+        """Test non-Python files are treated as source files in current implementation."""
+        from issue_workflow.services.tdd import validate_tdd_order
+
+        # Current implementation treats all non-test files as source files
+        # This may be improved in future to filter by file extension
+        files = [
+            "README.md",  # Treated as source, no test expected
+        ]
+        is_valid, _message = validate_tdd_order(files)
+        # Non-Python files are treated as source files needing tests
+        assert is_valid is False

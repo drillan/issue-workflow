@@ -1,20 +1,10 @@
 """Language preset models."""
 
-from enum import Enum
-
 from pydantic import BaseModel, Field
 
-from issue_workflow.models.config import QualityCommands
+from issue_workflow.models.config import LanguageName, QualityCommands
 
-
-class LanguageName(str, Enum):
-    """Supported language presets."""
-
-    PYTHON = "python"
-    TYPESCRIPT = "typescript"
-    GO = "go"
-    RUST = "rust"
-    GENERIC = "generic"
+__all__ = ["FileTemplate", "LanguageName", "LanguagePreset"]
 
 
 class FileTemplate(BaseModel):

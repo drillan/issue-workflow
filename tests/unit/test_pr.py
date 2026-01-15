@@ -5,6 +5,46 @@ import pytest
 from issue_workflow.models.pr import MergeState, MergeStrategy, PRState, PullRequest
 
 
+class TestPullRequestValidation:
+    """Tests for PullRequest field validation."""
+
+    def test_number_must_be_positive(self) -> None:
+        """Test number rejects zero."""
+        with pytest.raises(ValueError, match="number must be positive"):
+            PullRequest(
+                number=0,
+                title="Test",
+                state=PRState.OPEN,
+                mergeable=MergeState.MERGEABLE,
+                base_ref_name="main",
+                head_ref_name="feat/1-test",
+            )
+
+    def test_number_rejects_negative(self) -> None:
+        """Test number rejects negative values."""
+        with pytest.raises(ValueError, match="number must be positive"):
+            PullRequest(
+                number=-1,
+                title="Test",
+                state=PRState.OPEN,
+                mergeable=MergeState.MERGEABLE,
+                base_ref_name="main",
+                head_ref_name="feat/1-test",
+            )
+
+    def test_number_accepts_positive(self) -> None:
+        """Test number accepts positive values."""
+        pr = PullRequest(
+            number=1,
+            title="Test",
+            state=PRState.OPEN,
+            mergeable=MergeState.MERGEABLE,
+            base_ref_name="main",
+            head_ref_name="feat/1-test",
+        )
+        assert pr.number == 1
+
+
 class TestPullRequestModel:
     """Tests for PullRequest dataclass."""
 
@@ -119,21 +159,21 @@ class TestPullRequestFromGhJson:
         pr = PullRequest.from_gh_json(data)
         assert pr.state == PRState.MERGED
 
-    def test_from_gh_json_unknown_state(self) -> None:
-        """Test handling unknown state defaults to OPEN."""
+    def test_from_gh_json_invalid_state_raises_valueerror(self) -> None:
+        """Test invalid state raises ValueError."""
         data = {
             "number": 1,
             "title": "Test",
-            "state": "UNKNOWN_STATE",
+            "state": "INVALID_STATE",
             "mergeable": "MERGEABLE",
             "baseRefName": "main",
             "headRefName": "test",
         }
-        pr = PullRequest.from_gh_json(data)
-        assert pr.state == PRState.OPEN
+        with pytest.raises(ValueError, match="'INVALID_STATE' is not a valid PRState"):
+            PullRequest.from_gh_json(data)
 
-    def test_from_gh_json_unknown_mergeable(self) -> None:
-        """Test handling unknown mergeable defaults to UNKNOWN."""
+    def test_from_gh_json_invalid_mergeable_raises_valueerror(self) -> None:
+        """Test invalid mergeable raises ValueError."""
         data = {
             "number": 1,
             "title": "Test",
@@ -142,8 +182,20 @@ class TestPullRequestFromGhJson:
             "baseRefName": "main",
             "headRefName": "test",
         }
-        pr = PullRequest.from_gh_json(data)
-        assert pr.mergeable == MergeState.UNKNOWN
+        with pytest.raises(ValueError, match="'INVALID' is not a valid MergeState"):
+            PullRequest.from_gh_json(data)
+
+    def test_from_gh_json_missing_number_raises_keyerror(self) -> None:
+        """Test missing number raises KeyError."""
+        data: dict[str, object] = {
+            "title": "Test",
+            "state": "OPEN",
+            "mergeable": "MERGEABLE",
+            "baseRefName": "main",
+            "headRefName": "test",
+        }
+        with pytest.raises(KeyError):
+            PullRequest.from_gh_json(data)
 
 
 class TestMergeStrategy:

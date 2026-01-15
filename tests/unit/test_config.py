@@ -3,7 +3,12 @@
 import pytest
 from pydantic import ValidationError
 
-from issue_workflow.models.config import QualityCommands, WorkflowConfig, WorkflowSettings
+from issue_workflow.models.config import (
+    LanguageName,
+    QualityCommands,
+    WorkflowConfig,
+    WorkflowSettings,
+)
 
 
 class TestQualityCommands:
@@ -56,6 +61,27 @@ class TestWorkflowSettings:
         assert settings.auto_report is False
 
 
+class TestLanguageName:
+    """Tests for LanguageName enum."""
+
+    def test_language_name_values(self) -> None:
+        """Test LanguageName has expected values."""
+        assert LanguageName.PYTHON.value == "python"
+        assert LanguageName.TYPESCRIPT.value == "typescript"
+        assert LanguageName.GO.value == "go"
+        assert LanguageName.RUST.value == "rust"
+        assert LanguageName.GENERIC.value == "generic"
+
+    def test_language_name_from_string(self) -> None:
+        """Test LanguageName can be created from string."""
+        assert LanguageName("python") == LanguageName.PYTHON
+
+    def test_language_name_invalid_value(self) -> None:
+        """Test invalid language value raises error."""
+        with pytest.raises(ValueError):
+            LanguageName("invalid")
+
+
 class TestWorkflowConfig:
     """Tests for WorkflowConfig model."""
 
@@ -63,7 +89,7 @@ class TestWorkflowConfig:
         """Test creating valid workflow config."""
         config = WorkflowConfig(**sample_workflow_config)
         assert config.version == "1.0"
-        assert config.language == "python"
+        assert config.language == LanguageName.PYTHON
         assert config.quality.lint == "uv run ruff check --fix ."
         assert config.workflow.tdd_required is True
 
@@ -107,6 +133,48 @@ class TestWorkflowConfig:
         """Test validation error when language is missing."""
         with pytest.raises(ValidationError):
             WorkflowConfig(  # type: ignore[call-arg]
+                quality=QualityCommands(
+                    lint="lint",
+                    format="format",
+                    typecheck="typecheck",
+                    test="test",
+                    all="all",
+                ),
+            )
+
+    def test_language_accepts_enum(self) -> None:
+        """Test language field accepts LanguageName enum."""
+        config = WorkflowConfig(
+            language=LanguageName.PYTHON,
+            quality=QualityCommands(
+                lint="lint",
+                format="format",
+                typecheck="typecheck",
+                test="test",
+                all="all",
+            ),
+        )
+        assert config.language == LanguageName.PYTHON
+
+    def test_language_accepts_valid_string(self) -> None:
+        """Test language field accepts valid string and converts to enum."""
+        config = WorkflowConfig(
+            language="python",
+            quality=QualityCommands(
+                lint="lint",
+                format="format",
+                typecheck="typecheck",
+                test="test",
+                all="all",
+            ),
+        )
+        assert config.language == LanguageName.PYTHON
+
+    def test_language_rejects_invalid(self) -> None:
+        """Test language field rejects invalid values."""
+        with pytest.raises(ValidationError):
+            WorkflowConfig(
+                language="invalid_language",
                 quality=QualityCommands(
                     lint="lint",
                     format="format",

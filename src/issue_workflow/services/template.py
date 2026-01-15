@@ -7,6 +7,12 @@ from pathlib import Path
 from issue_workflow.models.config import WorkflowConfig, WorkflowSettings
 from issue_workflow.models.preset import LanguagePreset
 
+# URL for workflow config JSON schema
+WORKFLOW_CONFIG_SCHEMA_URL = (
+    "https://raw.githubusercontent.com/drillan/issue-workflow/main/"
+    "schemas/workflow-config.schema.json"
+)
+
 
 class SourceDirectoryNotFoundError(Exception):
     """Raised when source directory for commands or skills is not found."""
@@ -60,10 +66,7 @@ class TemplateService:
         config_path = target_dir / "workflow-config.json"
 
         config_dict = config.model_dump()
-        config_dict["$schema"] = (
-            "https://raw.githubusercontent.com/drillan/issue-workflow/main/"
-            "schemas/workflow-config.schema.json"
-        )
+        config_dict["$schema"] = WORKFLOW_CONFIG_SCHEMA_URL
 
         with config_path.open("w") as f:
             json.dump(config_dict, f, indent=2)
@@ -84,11 +87,11 @@ class TemplateService:
         target_dir.mkdir(parents=True, exist_ok=True)
         target_path = target_dir / "git-conventions.md"
 
-        if source_path.exists():
-            target_path.write_text(source_path.read_text())
-        else:
-            # Generate minimal content if template not found
-            target_path.write_text(self._get_default_git_conventions())
+        if not source_path.exists():
+            msg = f"Template file not found: {source_path}"
+            raise FileNotFoundError(msg)
+
+        target_path.write_text(source_path.read_text())
 
         return target_path
 
@@ -169,20 +172,3 @@ class TemplateService:
         generated.append(self.copy_commands(target_dir))
         generated.append(self.copy_skills(target_dir))
         return generated
-
-    def _get_default_git_conventions(self) -> str:
-        """Get default git conventions content."""
-        return """# Git Conventions
-
-## Branch Naming
-
-Format: `<type>/<issue-number>-<description>`
-
-Types: feat/, fix/, refactor/, docs/, test/, chore/
-
-## Commit Message
-
-Format: `<type>(<scope>): <description>`
-
-Follow Conventional Commits specification.
-"""

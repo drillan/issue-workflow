@@ -1,6 +1,18 @@
 """Workflow configuration models."""
 
+from enum import Enum
+
 from pydantic import BaseModel, Field
+
+
+class LanguageName(str, Enum):
+    """Supported language presets."""
+
+    PYTHON = "python"
+    TYPESCRIPT = "typescript"
+    GO = "go"
+    RUST = "rust"
+    GENERIC = "generic"
 
 
 class QualityCommands(BaseModel):
@@ -25,7 +37,7 @@ class WorkflowConfig(BaseModel):
     """Project workflow configuration."""
 
     version: str = Field(default="1.0", description="Configuration file version")
-    language: str = Field(description="Language preset name")
+    language: LanguageName = Field(description="Language preset name")
     quality: QualityCommands = Field(description="Quality check commands")
     workflow: WorkflowSettings = Field(
         default_factory=WorkflowSettings, description="Workflow settings"

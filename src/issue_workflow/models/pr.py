@@ -39,6 +39,11 @@ class PullRequest:
     base_ref_name: str
     head_ref_name: str
 
+    def __post_init__(self) -> None:
+        """Validate fields after initialization."""
+        if self.number <= 0:
+            raise ValueError(f"number must be positive, got {self.number}")
+
     @property
     def can_merge(self) -> bool:
         """Check if PR can be merged."""
@@ -50,17 +55,10 @@ class PullRequest:
         state_str = str(data.get("state", "OPEN")).upper()
         mergeable_str = str(data.get("mergeable", "UNKNOWN")).upper()
 
-        try:
-            state = PRState(state_str)
-        except ValueError:
-            state = PRState.OPEN
+        state = PRState(state_str)
+        mergeable = MergeState(mergeable_str)
 
-        try:
-            mergeable = MergeState(mergeable_str)
-        except ValueError:
-            mergeable = MergeState.UNKNOWN
-
-        number_val = data.get("number", 0)
+        number_val = data["number"]
         return cls(
             number=int(number_val) if isinstance(number_val, (int, str)) else 0,
             title=str(data.get("title", "")),
