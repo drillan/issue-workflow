@@ -228,8 +228,5 @@ ai_working
 /.claude/settings.json
 /.claude/workflow-config.json
 /.claude/git-conventions.md
-/.claude/commands/start-issue.md
-/.claude/commands/add-worktree.md
-/.claude/commands/merge-pr.md
-/.claude/commands/review-pr-comments.md
+/.claude/commands/
 /.claude/skills/

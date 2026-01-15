@@ -8,6 +8,10 @@ from issue_workflow.models.config import WorkflowConfig, WorkflowSettings
 from issue_workflow.models.preset import LanguagePreset
 
 
+class SourceDirectoryNotFoundError(Exception):
+    """Raised when source directory for commands or skills is not found."""
+
+
 def get_commands_source_dir() -> Path:
     """Get the source directory for command files.
 
@@ -99,8 +103,15 @@ class TemplateService:
 
         Returns:
             Path to the commands directory
+
+        Raises:
+            SourceDirectoryNotFoundError: If source commands directory does not exist.
         """
         source_dir = get_commands_source_dir()
+        if not source_dir.exists():
+            msg = f"Commands source directory not found: {source_dir}"
+            raise SourceDirectoryNotFoundError(msg)
+
         commands_target = target_dir / "commands"
         commands_target.mkdir(parents=True, exist_ok=True)
 
@@ -122,8 +133,15 @@ class TemplateService:
 
         Returns:
             Path to the skills directory
+
+        Raises:
+            SourceDirectoryNotFoundError: If source skills directory does not exist.
         """
         source_dir = get_skills_source_dir()
+        if not source_dir.exists():
+            msg = f"Skills source directory not found: {source_dir}"
+            raise SourceDirectoryNotFoundError(msg)
+
         skills_target = target_dir / "skills"
         skills_target.mkdir(parents=True, exist_ok=True)
 
@@ -168,60 +186,3 @@ Format: `<type>(<scope>): <description>`
 
 Follow Conventional Commits specification.
 """
-
-
-def update_settings_json(target_dir: Path, plugin_url: str) -> Path:
-    """Update or create .claude/settings.json with plugin configuration.
-
-    Args:
-        target_dir: Directory to write settings to (.claude/)
-        plugin_url: Plugin URL to add
-
-    Returns:
-        Path to settings file
-    """
-    settings_path = target_dir / "settings.json"
-    target_dir.mkdir(parents=True, exist_ok=True)
-
-    if settings_path.exists():
-        with settings_path.open() as f:
-            settings = json.load(f)
-    else:
-        settings = {}
-
-    # Initialize plugins array if not exists
-    if "plugins" not in settings:
-        settings["plugins"] = []
-
-    # Add plugin if not already present
-    if plugin_url not in settings["plugins"]:
-        settings["plugins"].append(plugin_url)
-
-    with settings_path.open("w") as f:
-        json.dump(settings, f, indent=2)
-        f.write("\n")
-
-    return settings_path
-
-
-def check_user_scope_plugin(plugin_url: str) -> bool:
-    """Check if plugin is already installed in user scope.
-
-    Args:
-        plugin_url: Plugin URL to check
-
-    Returns:
-        True if plugin is installed in user scope
-    """
-    user_settings_path = Path.home() / ".config" / "claude-code" / "settings.json"
-
-    if not user_settings_path.exists():
-        return False
-
-    try:
-        with user_settings_path.open() as f:
-            settings = json.load(f)
-        plugins = settings.get("plugins", [])
-        return plugin_url in plugins
-    except (json.JSONDecodeError, OSError):
-        return False

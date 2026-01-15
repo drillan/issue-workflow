@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from issue_workflow.services.template import TemplateService
+from issue_workflow.services.template import (
+    TemplateService,
+    get_commands_source_dir,
+    get_skills_source_dir,
+)
 
 
 class TestCopyCommands:
@@ -61,6 +65,21 @@ class TestCopyCommands:
 
         assert existing_file.exists()
         assert existing_file.read_text() == "# Existing Command"
+
+    def test_copy_commands_does_not_overwrite_customized_builtin(
+        self, template_service: TemplateService, target_dir: Path
+    ) -> None:
+        """Test that user-customized builtin commands are not overwritten."""
+        commands_dir = target_dir / "commands"
+        commands_dir.mkdir(parents=True)
+        customized_file = commands_dir / "start-issue.md"
+        customized_content = "# User Customized Start Issue\n\nMy custom workflow."
+        customized_file.write_text(customized_content)
+
+        template_service.copy_commands(target_dir)
+
+        assert customized_file.exists()
+        assert customized_file.read_text() == customized_content
 
     def test_copy_commands_returns_commands_directory_path(
         self, template_service: TemplateService, target_dir: Path
@@ -129,6 +148,22 @@ class TestCopySkills:
         assert existing_file.exists()
         assert existing_file.read_text() == "# Existing Skill"
 
+    def test_copy_skills_does_not_overwrite_customized_builtin(
+        self, template_service: TemplateService, target_dir: Path
+    ) -> None:
+        """Test that user-customized builtin skills are not overwritten."""
+        skills_dir = target_dir / "skills"
+        customized_skill = skills_dir / "tdd-workflow"
+        customized_skill.mkdir(parents=True)
+        customized_file = customized_skill / "SKILL.md"
+        customized_content = "# User Customized TDD Workflow\n\nMy custom TDD process."
+        customized_file.write_text(customized_content)
+
+        template_service.copy_skills(target_dir)
+
+        assert customized_file.exists()
+        assert customized_file.read_text() == customized_content
+
     def test_copy_skills_returns_skills_directory_path(
         self, template_service: TemplateService, target_dir: Path
     ) -> None:
@@ -185,3 +220,43 @@ class TestGenerateAllWithCommandsAndSkills:
 
         plugin_dir = target_dir / "plugin"
         assert not plugin_dir.exists()
+
+
+class TestSourceDirectoryHelpers:
+    """Tests for get_commands_source_dir and get_skills_source_dir helper functions."""
+
+    def test_get_commands_source_dir_returns_valid_path(self) -> None:
+        """Test that get_commands_source_dir returns a valid Path."""
+        result = get_commands_source_dir()
+
+        assert isinstance(result, Path)
+        assert result.name == "commands"
+        assert result.exists()
+        assert result.is_dir()
+
+    def test_get_commands_source_dir_contains_command_files(self) -> None:
+        """Test that the commands source dir contains expected command files."""
+        commands_dir = get_commands_source_dir()
+
+        expected_files = ["start-issue.md", "merge-pr.md", "add-worktree.md"]
+        for filename in expected_files:
+            assert (commands_dir / filename).exists(), f"Expected {filename} in commands dir"
+
+    def test_get_skills_source_dir_returns_valid_path(self) -> None:
+        """Test that get_skills_source_dir returns a valid Path."""
+        result = get_skills_source_dir()
+
+        assert isinstance(result, Path)
+        assert result.name == "skills"
+        assert result.exists()
+        assert result.is_dir()
+
+    def test_get_skills_source_dir_contains_skill_directories(self) -> None:
+        """Test that the skills source dir contains expected skill directories."""
+        skills_dir = get_skills_source_dir()
+
+        expected_skills = ["tdd-workflow", "code-quality-gate", "issue-reporter"]
+        for skill_name in expected_skills:
+            skill_path = skills_dir / skill_name
+            assert skill_path.exists(), f"Expected {skill_name} in skills dir"
+            assert skill_path.is_dir(), f"Expected {skill_name} to be a directory"
