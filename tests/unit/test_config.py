@@ -293,3 +293,33 @@ class TestDocumentationSettings:
         assert settings.changelog == "RELEASES.md"
         assert settings.ddd.enabled is True
         assert settings.ddd.retcon_writing is False
+
+    def test_empty_string_path_filtered(self) -> None:
+        """Test empty string paths are filtered out."""
+        settings = DocumentationSettings(paths=["README.md", "", "docs/"])
+        assert settings.paths == ["README.md", "docs/"]
+
+    def test_whitespace_only_path_filtered(self) -> None:
+        """Test whitespace-only paths are filtered out."""
+        settings = DocumentationSettings(paths=["README.md", "  ", "docs/"])
+        assert settings.paths == ["README.md", "docs/"]
+
+    def test_path_whitespace_stripped(self) -> None:
+        """Test leading/trailing whitespace is stripped from paths."""
+        settings = DocumentationSettings(paths=["  README.md  ", "  docs/  "])
+        assert settings.paths == ["README.md", "docs/"]
+
+    def test_changelog_empty_string_becomes_none(self) -> None:
+        """Test empty string changelog becomes None."""
+        settings = DocumentationSettings(changelog="")
+        assert settings.changelog is None
+
+    def test_changelog_whitespace_only_becomes_none(self) -> None:
+        """Test whitespace-only changelog becomes None."""
+        settings = DocumentationSettings(changelog="   ")
+        assert settings.changelog is None
+
+    def test_changelog_whitespace_stripped(self) -> None:
+        """Test leading/trailing whitespace is stripped from changelog."""
+        settings = DocumentationSettings(changelog="  HISTORY.md  ")
+        assert settings.changelog == "HISTORY.md"

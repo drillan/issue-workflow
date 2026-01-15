@@ -65,7 +65,7 @@ def _get_documentation_settings(
 
     return DocumentationSettings(
         paths=paths,
-        changelog=changelog if changelog else None,
+        changelog=changelog,
         ddd=DDDSettings(
             enabled=ddd_enabled,
             retcon_writing=preset.documentation.ddd.retcon_writing,

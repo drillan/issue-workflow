@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class LanguageName(str, Enum):
@@ -55,6 +55,21 @@ class DocumentationSettings(BaseModel):
         default_factory=DDDSettings,
         description="DDD workflow settings",
     )
+
+    @field_validator("paths", mode="before")
+    @classmethod
+    def validate_paths(cls, v: list[str]) -> list[str]:
+        """Strip whitespace and filter out empty paths."""
+        return [path.strip() for path in v if path.strip()]
+
+    @field_validator("changelog", mode="before")
+    @classmethod
+    def validate_changelog(cls, v: str | None) -> str | None:
+        """Strip whitespace and convert empty string to None."""
+        if v is None:
+            return None
+        stripped = v.strip()
+        return stripped if stripped else None
 
 
 class WorkflowConfig(BaseModel):
