@@ -32,14 +32,41 @@ class TestFileChangeInfo:
     """Tests for FileChangeInfo dataclass."""
 
     def test_creation_with_required_fields(self) -> None:
-        """Test creating FileChangeInfo with required fields."""
+        """Test creating FileChangeInfo with required fields for DELETED type."""
+        info = FileChangeInfo(
+            path=Path(".claude/commands/test.md"),
+            change_type=FileChangeType.DELETED,
+        )
+        assert info.path == Path(".claude/commands/test.md")
+        assert info.change_type == FileChangeType.DELETED
+        assert info.source_path is None
+
+    def test_added_requires_source_path(self) -> None:
+        """Test that ADDED change type requires source_path (Important #2)."""
+        with pytest.raises(ValueError, match="source_path"):
+            FileChangeInfo(
+                path=Path(".claude/commands/test.md"),
+                change_type=FileChangeType.ADDED,
+                source_path=None,
+            )
+
+    def test_updated_requires_source_path(self) -> None:
+        """Test that UPDATED change type requires source_path (Important #2)."""
+        with pytest.raises(ValueError, match="source_path"):
+            FileChangeInfo(
+                path=Path(".claude/commands/test.md"),
+                change_type=FileChangeType.UPDATED,
+                source_path=None,
+            )
+
+    def test_added_with_source_path_succeeds(self) -> None:
+        """Test that ADDED with source_path is valid."""
         info = FileChangeInfo(
             path=Path(".claude/commands/test.md"),
             change_type=FileChangeType.ADDED,
+            source_path=Path("/source/commands/test.md"),
         )
-        assert info.path == Path(".claude/commands/test.md")
-        assert info.change_type == FileChangeType.ADDED
-        assert info.source_path is None
+        assert info.source_path == Path("/source/commands/test.md")
 
     def test_creation_with_source_path(self) -> None:
         """Test creating FileChangeInfo with source path."""
@@ -54,7 +81,7 @@ class TestFileChangeInfo:
         """Test FileChangeInfo is immutable."""
         info = FileChangeInfo(
             path=Path(".claude/commands/test.md"),
-            change_type=FileChangeType.ADDED,
+            change_type=FileChangeType.DELETED,
         )
         with pytest.raises(AttributeError):
             info.path = Path("other.md")  # type: ignore[misc]
@@ -539,6 +566,231 @@ class TestDryRunSkills:
             assert result.updated_count == 1
             # But directory is NOT updated
             assert (skills_target / "existing-skill" / "skill.md").read_text() == "# Original Skill"
+        finally:
+            template_module.get_skills_source_dir = original_func
+
+
+class TestFileCmpErrorHandling:
+    """Tests for filecmp.cmp() OSError handling (Critical #2)."""
+
+    def test_filecmp_permission_error_records_error(self, tmp_path: Path) -> None:
+        """Test that permission errors during file comparison are recorded."""
+        from unittest.mock import patch
+
+        # Setup source with file
+        source_dir = tmp_path / "source_package" / "commands"
+        source_dir.mkdir(parents=True)
+        (source_dir / "test.md").write_text("# Test Content")
+
+        # Setup target with file
+        target_dir = tmp_path / ".claude"
+        commands_target = target_dir / "commands"
+        commands_target.mkdir(parents=True)
+        target_file = commands_target / "test.md"
+        target_file.write_text("# Old Content")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_commands_source_dir
+        template_module.get_commands_source_dir = lambda: source_dir
+
+        # Mock filecmp.cmp to raise OSError
+        with patch("issue_workflow.services.template.filecmp.cmp") as mock_cmp:
+            mock_cmp.side_effect = OSError("Permission denied")
+
+            try:
+                result = service.update_commands(target_dir, dry_run=True)
+                # Should have recorded the error, not crashed
+                assert result.has_errors
+                assert any("Permission denied" in str(err) for _, err in result.errors)
+            except OSError:
+                # If we get an OSError here, the handling is missing
+                pytest.fail("OSError should be caught and recorded, not raised")
+            finally:
+                template_module.get_commands_source_dir = original_func
+
+    def test_copy_permission_error_records_error(self, tmp_path: Path) -> None:
+        """Test that permission errors during file copy are recorded in errors."""
+        from unittest.mock import patch
+
+        # Setup source with new file
+        source_dir = tmp_path / "source_package" / "commands"
+        source_dir.mkdir(parents=True)
+        (source_dir / "new.md").write_text("# New Content")
+
+        # Setup target
+        target_dir = tmp_path / ".claude"
+        commands_target = target_dir / "commands"
+        commands_target.mkdir(parents=True)
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_commands_source_dir
+        template_module.get_commands_source_dir = lambda: source_dir
+
+        # Mock shutil.copy2 to raise OSError
+        with patch("issue_workflow.services.template.shutil.copy2") as mock_copy:
+            mock_copy.side_effect = OSError("Permission denied")
+
+            try:
+                result = service.update_commands(target_dir, dry_run=False)
+                # Should have recorded the error, not crashed
+                assert result.has_errors
+                assert any("Permission denied" in str(err) for _, err in result.errors)
+            except OSError:
+                pytest.fail("OSError should be caught and recorded, not raised")
+            finally:
+                template_module.get_commands_source_dir = original_func
+
+    def test_skills_copy_permission_error_records_error(self, tmp_path: Path) -> None:
+        """Test that permission errors during skills directory copy are recorded."""
+        from unittest.mock import patch
+
+        # Setup source with new skill
+        source_dir = tmp_path / "source_package" / "skills"
+        source_dir.mkdir(parents=True)
+        (source_dir / "new-skill").mkdir()
+        (source_dir / "new-skill" / "skill.md").write_text("# New Skill")
+
+        # Setup target
+        target_dir = tmp_path / ".claude"
+        skills_target = target_dir / "skills"
+        skills_target.mkdir(parents=True)
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_skills_source_dir
+        template_module.get_skills_source_dir = lambda: source_dir
+
+        # Mock shutil.copytree to raise OSError
+        with patch("issue_workflow.services.template.shutil.copytree") as mock_copytree:
+            mock_copytree.side_effect = OSError("Permission denied")
+
+            try:
+                result = service.update_skills(target_dir, dry_run=False)
+                # Should have recorded the error, not crashed
+                assert result.has_errors
+                assert any("Permission denied" in str(err) for _, err in result.errors)
+            except OSError:
+                pytest.fail("OSError should be caught and recorded, not raised")
+            finally:
+                template_module.get_skills_source_dir = original_func
+
+    def test_skills_update_rmtree_copytree_failure_shows_data_loss_warning(
+        self, tmp_path: Path
+    ) -> None:
+        """Test that copytree failure after rmtree warns about data loss (Important #1)."""
+        from unittest.mock import patch
+
+        # Setup source with updated skill
+        source_dir = tmp_path / "source_package" / "skills"
+        source_dir.mkdir(parents=True)
+        (source_dir / "existing-skill").mkdir()
+        (source_dir / "existing-skill" / "skill.md").write_text("# Updated Skill")
+
+        # Setup target with existing skill
+        target_dir = tmp_path / ".claude"
+        skills_target = target_dir / "skills"
+        (skills_target / "existing-skill").mkdir(parents=True)
+        (skills_target / "existing-skill" / "skill.md").write_text("# Old Skill")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_skills_source_dir
+        template_module.get_skills_source_dir = lambda: source_dir
+
+        def mock_copytree_fail(_src: Path, _dst: Path) -> None:
+            raise OSError("Permission denied during copytree")
+
+        with patch(
+            "issue_workflow.services.template.shutil.copytree",
+            side_effect=mock_copytree_fail,
+        ):
+            try:
+                result = service.update_skills(target_dir, dry_run=False)
+                # Should have recorded the error with data loss warning
+                assert result.has_errors
+                error_messages = [str(err) for _, err in result.errors]
+                # Should mention that original directory was removed (data loss warning)
+                assert any("removed" in msg.lower() for msg in error_messages)
+            finally:
+                template_module.get_skills_source_dir = original_func
+
+
+class TestDircmpRecursive:
+    """Tests for recursive directory change detection (Important #3)."""
+
+    def test_detects_nested_subdirectory_changes(self, tmp_path: Path) -> None:
+        """Test that changes in nested subdirectories are detected."""
+        # Setup source with nested structure
+        source_dir = tmp_path / "source_package" / "skills"
+        source_dir.mkdir(parents=True)
+        skill_dir = source_dir / "my-skill"
+        skill_dir.mkdir()
+        (skill_dir / "skill.md").write_text("# Skill")
+        nested_dir = skill_dir / "templates"
+        nested_dir.mkdir()
+        (nested_dir / "template.md").write_text("# Updated Template")
+
+        # Setup target with same structure but different nested file
+        target_dir = tmp_path / ".claude"
+        skills_target = target_dir / "skills"
+        target_skill = skills_target / "my-skill"
+        target_skill.mkdir(parents=True)
+        (target_skill / "skill.md").write_text("# Skill")
+        target_nested = target_skill / "templates"
+        target_nested.mkdir()
+        (target_nested / "template.md").write_text("# Original Template")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_skills_source_dir
+        template_module.get_skills_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_skills(target_dir, dry_run=True)
+            # Should detect that the skill directory has changes
+            assert result.updated_count == 1
+        finally:
+            template_module.get_skills_source_dir = original_func
+
+    def test_detects_deeply_nested_changes(self, tmp_path: Path) -> None:
+        """Test that changes in deeply nested subdirectories are detected."""
+        # Setup source with deeply nested structure
+        source_dir = tmp_path / "source_package" / "skills"
+        source_dir.mkdir(parents=True)
+        skill_dir = source_dir / "my-skill"
+        level1 = skill_dir / "level1"
+        level2 = level1 / "level2"
+        level2.mkdir(parents=True)
+        (skill_dir / "skill.md").write_text("# Skill")
+        (level2 / "deep.md").write_text("# Updated Deep File")
+
+        # Setup target with same structure but different deeply nested file
+        target_dir = tmp_path / ".claude"
+        skills_target = target_dir / "skills"
+        target_skill = skills_target / "my-skill"
+        target_level1 = target_skill / "level1"
+        target_level2 = target_level1 / "level2"
+        target_level2.mkdir(parents=True)
+        (target_skill / "skill.md").write_text("# Skill")
+        (target_level2 / "deep.md").write_text("# Original Deep File")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_skills_source_dir
+        template_module.get_skills_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_skills(target_dir, dry_run=True)
+            # Should detect that the skill directory has changes
+            assert result.updated_count == 1
         finally:
             template_module.get_skills_source_dir = original_func
 

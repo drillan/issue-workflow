@@ -134,6 +134,87 @@ class TestDryRunOption:
             os.chdir(original_cwd)
 
 
+class TestSourceDirectoryNotFoundHandling:
+    """Tests for SourceDirectoryNotFoundError handling in CLI (Critical #1)."""
+
+    def test_source_directory_not_found_shows_reinstall_message(self, tmp_path: Path) -> None:
+        """Test that SourceDirectoryNotFoundError shows helpful reinstall message."""
+        # Create .claude directory
+        claude_dir = tmp_path / ".claude"
+        (claude_dir / "commands").mkdir(parents=True)
+        (claude_dir / "skills").mkdir(parents=True)
+
+        original_cwd = Path.cwd()
+        os.chdir(tmp_path)
+
+        # Mock get_commands_source_dir to return non-existent path
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_commands_source_dir
+        template_module.get_commands_source_dir = lambda: tmp_path / "nonexistent"
+
+        try:
+            result = runner.invoke(app, ["update"])
+            assert result.exit_code == 1
+            assert "installation" in result.output.lower() or "reinstall" in result.output.lower()
+        finally:
+            template_module.get_commands_source_dir = original_func
+            os.chdir(original_cwd)
+
+
+class TestExitCodeOne:
+    """Tests for exit code 1 on file operation errors (Important #4)."""
+
+    def test_file_operation_error_returns_exit_code_1(self, tmp_path: Path) -> None:
+        """Test that file operation errors result in exit code 1."""
+        from unittest.mock import patch
+
+        # Create .claude directory
+        claude_dir = tmp_path / ".claude"
+        (claude_dir / "commands").mkdir(parents=True)
+        (claude_dir / "skills").mkdir(parents=True)
+
+        original_cwd = Path.cwd()
+        os.chdir(tmp_path)
+
+        # Mock shutil.copy2 to raise OSError
+        with patch("issue_workflow.services.template.shutil.copy2") as mock_copy:
+            mock_copy.side_effect = OSError("Permission denied")
+
+            try:
+                result = runner.invoke(app, ["update"])
+                assert result.exit_code == 1
+            finally:
+                os.chdir(original_cwd)
+
+    def test_error_message_shown_with_exit_code_1(self, tmp_path: Path) -> None:
+        """Test that error message is shown when exit code is 1."""
+        from unittest.mock import patch
+
+        # Create .claude directory
+        claude_dir = tmp_path / ".claude"
+        (claude_dir / "commands").mkdir(parents=True)
+        (claude_dir / "skills").mkdir(parents=True)
+
+        original_cwd = Path.cwd()
+        os.chdir(tmp_path)
+
+        # Mock shutil.copy2 to raise OSError
+        with patch("issue_workflow.services.template.shutil.copy2") as mock_copy:
+            mock_copy.side_effect = OSError("Permission denied")
+
+            try:
+                result = runner.invoke(app, ["update"])
+                assert result.exit_code == 1
+                # Should show error message
+                assert (
+                    "could not be updated" in result.output.lower()
+                    or "error" in result.output.lower()
+                )
+            finally:
+                os.chdir(original_cwd)
+
+
 class TestEdgeCasesIntegration:
     """Integration tests for edge cases (T026)."""
 

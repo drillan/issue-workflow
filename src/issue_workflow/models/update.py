@@ -28,6 +28,15 @@ class FileChangeInfo:
     change_type: FileChangeType
     source_path: Path | None = None
 
+    def __post_init__(self) -> None:
+        """Validate invariants after initialization."""
+        if (
+            self.change_type in (FileChangeType.ADDED, FileChangeType.UPDATED)
+            and self.source_path is None
+        ):
+            msg = f"{self.change_type.value} requires source_path"
+            raise ValueError(msg)
+
 
 @dataclass
 class UpdateResult:

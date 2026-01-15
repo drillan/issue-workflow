@@ -38,7 +38,9 @@ def get_skills_source_dir() -> Path:
     return Path(__file__).parent.parent / "skills"
 
 
-def _get_file_changes(source_dir: Path, target_dir: Path, pattern: str) -> list[FileChangeInfo]:
+def _get_file_changes(
+    source_dir: Path, target_dir: Path, pattern: str
+) -> tuple[list[FileChangeInfo], list[tuple[Path, str]]]:
     """Detect file changes between source and target directories.
 
     Args:
@@ -47,9 +49,10 @@ def _get_file_changes(source_dir: Path, target_dir: Path, pattern: str) -> list[
         pattern: Glob pattern to match files (e.g., "*.md")
 
     Returns:
-        List of FileChangeInfo describing changes
+        Tuple of (list of FileChangeInfo describing changes, list of error tuples)
     """
     changes: list[FileChangeInfo] = []
+    errors: list[tuple[Path, str]] = []
 
     # Added and updated files
     for source_file in source_dir.glob(pattern):
@@ -62,14 +65,18 @@ def _get_file_changes(source_dir: Path, target_dir: Path, pattern: str) -> list[
                     source_path=source_file,
                 )
             )
-        elif not filecmp.cmp(source_file, target_file, shallow=False):
-            changes.append(
-                FileChangeInfo(
-                    path=target_file,
-                    change_type=FileChangeType.UPDATED,
-                    source_path=source_file,
-                )
-            )
+        else:
+            try:
+                if not filecmp.cmp(source_file, target_file, shallow=False):
+                    changes.append(
+                        FileChangeInfo(
+                            path=target_file,
+                            change_type=FileChangeType.UPDATED,
+                            source_path=source_file,
+                        )
+                    )
+            except OSError as e:
+                errors.append((target_file, str(e)))
 
     # Deleted files (in target but not in source)
     for target_file in target_dir.glob(pattern):
@@ -82,7 +89,22 @@ def _get_file_changes(source_dir: Path, target_dir: Path, pattern: str) -> list[
                 )
             )
 
-    return changes
+    return changes, errors
+
+
+def _has_recursive_diff(dcmp: filecmp.dircmp[str]) -> bool:
+    """Check if there are differences recursively in a dircmp result.
+
+    Args:
+        dcmp: A dircmp comparison result
+
+    Returns:
+        True if there are differences in this directory or any subdirectory
+    """
+    if dcmp.diff_files or dcmp.left_only or dcmp.right_only:
+        return True
+
+    return any(_has_recursive_diff(subdir_dcmp) for subdir_dcmp in dcmp.subdirs.values())
 
 
 def _get_dir_changes(source_dir: Path, target_dir: Path) -> list[FileChangeInfo]:
@@ -111,9 +133,9 @@ def _get_dir_changes(source_dir: Path, target_dir: Path) -> list[FileChangeInfo]
                 )
             )
         else:
-            # Check if any file in the directory changed
+            # Check if any file in the directory changed (recursively)
             dcmp = filecmp.dircmp(source_subdir, target_subdir)
-            if dcmp.diff_files or dcmp.left_only or dcmp.right_only:
+            if _has_recursive_diff(dcmp):
                 changes.append(
                     FileChangeInfo(
                         path=target_subdir,
@@ -279,8 +301,7 @@ class TemplateService:
         commands_target = target_dir / "commands"
         commands_target.mkdir(parents=True, exist_ok=True)
 
-        changes = _get_file_changes(source_dir, commands_target, "*.md")
-        errors: list[tuple[Path, str]] = []
+        changes, errors = _get_file_changes(source_dir, commands_target, "*.md")
 
         if not dry_run:
             for change in changes:
@@ -334,11 +355,20 @@ class TemplateService:
                 elif (
                     change.change_type == FileChangeType.UPDATED and change.source_path is not None
                 ):
+                    target_removed = False
                     try:
                         shutil.rmtree(change.path)
+                        target_removed = True
                         shutil.copytree(change.source_path, change.path)
                     except OSError as e:
-                        errors.append((change.path, str(e)))
+                        if target_removed:
+                            error_msg = (
+                                f"{e} (WARNING: Original directory was removed "
+                                "but new version could not be copied)"
+                            )
+                        else:
+                            error_msg = str(e)
+                        errors.append((change.path, error_msg))
 
         return UpdateResult(
             commands_changes=[],

@@ -7,7 +7,7 @@ import typer
 
 from issue_workflow.cli import ui
 from issue_workflow.models.update import FileChangeType, UpdateResult
-from issue_workflow.services.template import TemplateService
+from issue_workflow.services.template import SourceDirectoryNotFoundError, TemplateService
 
 app = typer.Typer(
     help="Update commands and skills to latest version",
@@ -157,4 +157,10 @@ def update(
         _run_update(dry_run)
     except KeyboardInterrupt:
         ui.print_info("Update cancelled")
+        raise typer.Exit(EXIT_GENERAL_ERROR) from None
+    except SourceDirectoryNotFoundError as e:
+        ui.print_error(
+            f"Installation corrupted: {e}\n\n"
+            "Try reinstalling with: uv pip install --force-reinstall issue-workflow"
+        )
         raise typer.Exit(EXIT_GENERAL_ERROR) from None
