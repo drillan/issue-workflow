@@ -1,45 +1,45 @@
 # issue-reporter
 
-作業進捗をIssueにコメントとして自動報告する。
+Automatically report work progress as comments on Issues.
 
 ## Overview
 
-このスキルは、Claude Codeが作業完了時に該当のGitHub Issueに進捗レポートを自動投稿するための仕組みを提供します。
+This skill enables Claude Code to automatically post progress reports to the relevant GitHub Issue upon work completion.
 
 ## Trigger
 
-- ユーザーから明示的に指示された場合
-- 重要なマイルストーン完了時（PR作成、マージ完了など）
-- エラーや問題発生時にユーザーが記録を望む場合
+- When explicitly requested by user
+- Upon completion of major milestones (PR creation, merge completion, etc.)
+- When user wants to record errors or issues
 
 ## Instructions
 
 ### Step 1: Identify Current Issue
 
-現在のブランチ名からIssue番号を抽出:
+Extract Issue number from current branch name:
 
 ```bash
 # Get current branch name
 git branch --show-current
 ```
 
-ブランチ名パターン: `<type>/<issue-number>-<description>`
+Branch name pattern: `<type>/<issue-number>-<description>`
 
-例: `feat/123-add-auth` → Issue #123
+Example: `feat/123-add-auth` → Issue #123
 
 ### Step 2: Gather Progress Information
 
-以下の情報を収集:
+Collect the following information:
 
-1. **完了したタスク** - 実装した機能・修正
-2. **変更ファイル** - `git diff --stat`の概要
-3. **テスト結果** - テストの実行状況
-4. **次のステップ** - 残りのタスク
+1. **Completed tasks** - Features implemented/fixed
+2. **Changed files** - Summary of `git diff --stat`
+3. **Test results** - Test execution status
+4. **Next steps** - Remaining tasks
 
 ### Step 3: Format Report
 
 ```markdown
-## 📊 Progress Update
+## Progress Update
 
 ### Completed
 - [x] Implemented user authentication
@@ -91,44 +91,44 @@ gh issue comment <issue-number> --body "<formatted-report>"
 ### Success
 
 ```
-✅ Issue #123 に進捗レポートを投稿しました
+✅ Progress report posted to Issue #123
 
-投稿内容:
-  - 完了タスク: 3件
-  - 変更ファイル: 5件
-  - テスト結果: 24/24 通過
+Posted content:
+  - Completed tasks: 3
+  - Changed files: 5
+  - Test results: 24/24 passing
 ```
 
 ### Failure
 
 ```
-⚠️ Issue #123 へのコメント投稿に失敗しました
+⚠️ Failed to post comment to Issue #123
 
-原因: <error-message>
-解決方法: <suggestion>
+Cause: <error-message>
+Resolution: <suggestion>
 ```
 
 ## Error Handling
 
 | Error | Action |
 |-------|--------|
-| Issue number not found | `⚠️ 現在のブランチからIssue番号を検出できません` |
-| Issue not found | `⚠️ Issue #N が見つかりません` |
-| No permission | `⚠️ このリポジトリへのコメント権限がありません` |
-| API error | エラー詳細を表示 |
+| Issue number not found | `⚠️ Cannot detect Issue number from current branch` |
+| Issue not found | `⚠️ Issue #N not found` |
+| No permission | `⚠️ No permission to comment on this repository` |
+| API error | Display error details |
 
 ## Integration with Workflow
 
-このスキルは以下のワークフローステップと連携します:
+This skill integrates with the following workflow steps:
 
-1. **start-issue後** - 作業開始の通知
-2. **PR作成後** - PR番号とリンクの報告
-3. **レビュー対応後** - 対応内容のサマリー
-4. **マージ完了後** - クローズ報告
+1. **After start-issue** - Notify work start
+2. **After PR creation** - Report PR number and link
+3. **After review response** - Summary of responses
+4. **After merge completion** - Close report
 
 ## Best Practices
 
-1. **簡潔に** - 長すぎるレポートは避ける
-2. **具体的に** - 実装した機能を明確に記載
-3. **次のステップ** - 残りのタスクを明確化
-4. **適度な頻度** - 頻繁すぎる投稿は避ける
+1. **Be concise** - Avoid overly long reports
+2. **Be specific** - Clearly describe implemented features
+3. **Next steps** - Clarify remaining tasks
+4. **Moderate frequency** - Avoid posting too frequently

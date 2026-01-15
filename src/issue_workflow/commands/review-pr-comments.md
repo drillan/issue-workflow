@@ -1,18 +1,18 @@
 # /review-pr-comments
 
-PRのレビューコメントを確認・対応する。
+Review and respond to PR review comments.
 
 ## Usage
 
 ```
-/review-pr-comments [PR番号]
+/review-pr-comments [pr-number]
 ```
 
 ## Arguments
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
-| `PR番号` | integer | No | GitHub PR番号（省略時は現在のブランチから検出） |
+| `pr-number` | integer | No | GitHub PR number (auto-detect from current branch if omitted) |
 
 ## Instructions
 
@@ -73,7 +73,7 @@ For rejected comments:
 Post a summary comment on the PR:
 
 ```markdown
-## 📋 Review Response Summary
+## Review Response Summary
 
 ### Accepted (2)
 - [src/auth.py:10] Fixed null check
@@ -120,10 +120,10 @@ For each comment, choose:
 
 | Error | Action |
 |-------|--------|
-| PR not detected | `⚠️ 現在のブランチに紐づくPRが見つかりません` |
-| PR not found | エラーメッセージを表示 |
-| No comments | `ℹ️ レビューコメントはありません` |
-| API error | エラー詳細を表示 |
+| PR not detected | `⚠️ No PR found for current branch` |
+| PR not found | Display error message |
+| No comments | `ℹ️ No review comments found` |
+| API error | Display error details |
 
 ## Tips
 

@@ -90,10 +90,38 @@ class TestBranchTypeDetection:
 
         assert detect_branch_type(issue) == BranchType.FEAT
 
+    def test_refactor_keyword_in_title(self, create_issue: type[IssueFactory]) -> None:
+        """Test refactor keyword in title maps to refactor prefix."""
+        issue = create_issue.with_title("Refactor authentication module")
+        from issue_workflow.services.branch import detect_branch_type
+
+        assert detect_branch_type(issue) == BranchType.REFACTOR
+
+    def test_doc_keyword_in_title(self, create_issue: type[IssueFactory]) -> None:
+        """Test doc keyword in title maps to docs prefix."""
+        issue = create_issue.with_title("Update doc for API endpoints")
+        from issue_workflow.services.branch import detect_branch_type
+
+        assert detect_branch_type(issue) == BranchType.DOCS
+
+    def test_test_keyword_in_title(self, create_issue: type[IssueFactory]) -> None:
+        """Test test keyword in title maps to test prefix."""
+        issue = create_issue.with_title("Add test for user service")
+        from issue_workflow.services.branch import detect_branch_type
+
+        assert detect_branch_type(issue) == BranchType.TEST
+
+    def test_chore_keyword_in_title(self, create_issue: type[IssueFactory]) -> None:
+        """Test chore keyword in title maps to chore prefix."""
+        issue = create_issue.with_title("Chore: update dependencies")
+        from issue_workflow.services.branch import detect_branch_type
+
+        assert detect_branch_type(issue) == BranchType.CHORE
+
     def test_default_to_feat(self, create_issue: type[IssueFactory]) -> None:
         """Test default branch type is feat."""
         # Use a title without keywords to ensure default
-        issue = create_issue.with_labels((), title="Improve performance")
+        issue = create_issue.with_labels((), title="Something unrelated")
         from issue_workflow.services.branch import detect_branch_type
 
         assert detect_branch_type(issue) == BranchType.FEAT

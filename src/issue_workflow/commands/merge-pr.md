@@ -1,22 +1,22 @@
 # /merge-pr
 
-PRのCIチェックが完了するまで待機し、マージを実行する。
+Wait for PR CI checks to complete, then execute merge.
 
 ## Usage
 
 ```
-/merge-pr <PR番号> [--merge|--rebase]
+/merge-pr <pr-number> [--merge|--rebase]
 ```
 
 ## Arguments
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
-| `PR番号` | integer | Yes | GitHub PR番号 |
-| `--merge` | flag | No | マージコミットを作成 |
-| `--rebase` | flag | No | リベースマージ |
+| `pr-number` | integer | Yes | GitHub PR number |
+| `--merge` | flag | No | Create a merge commit |
+| `--rebase` | flag | No | Rebase merge |
 
-デフォルト: `--squash`（コミットを1つにまとめる）
+Default: `--squash` (squash commits into one)
 
 ## Instructions
 
@@ -91,34 +91,34 @@ gh pr merge <number> --rebase --delete-branch
 ### Success
 
 ```
-✅ PR #100 をマージしました
+✅ PR #100 merged successfully
 
-マージ方法: squash
-ベースブランチ: main
-リモートブランチ: 削除済み
-ローカルブランチ: 削除済み
-ワークツリー: 削除済み (該当する場合)
+Merge method: squash
+Base branch: main
+Remote branch: deleted
+Local branch: deleted
+Worktree: deleted (if applicable)
 ```
 
 ### Failure
 
 ```
-❌ PR #100 のマージに失敗しました
+❌ Failed to merge PR #100
 
-原因: [具体的な原因]
-解決方法: [提案]
+Cause: [specific cause]
+Resolution: [suggestion]
 ```
 
 ## Error Handling
 
 | Error | Action |
 |-------|--------|
-| PR not found | `⚠️ PR #N が見つかりません` |
-| PR already merged | `ℹ️ PR #N は既にマージ済みです` |
-| PR closed | `⚠️ PR #N はクローズされています` |
-| Has conflicts | コンフリクト解消方法を案内 |
-| CI failed | 失敗したチェックを表示し確認を求める |
-| Merge blocked | ブロック理由（branch protection等）を表示 |
+| PR not found | `⚠️ PR #N not found` |
+| PR already merged | `ℹ️ PR #N is already merged` |
+| PR closed | `⚠️ PR #N is closed` |
+| Has conflicts | Provide conflict resolution guidance |
+| CI failed | Show failed checks and ask for confirmation |
+| Merge blocked | Show block reason (branch protection, etc.) |
 
 ## Safety Checks
 
