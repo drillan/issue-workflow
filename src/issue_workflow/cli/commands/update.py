@@ -42,8 +42,7 @@ def _display_changes(result: UpdateResult, category: str, dry_run: bool) -> None
             ui.print_added(f"{name}{suffix} added")
         elif change.change_type == FileChangeType.UPDATED:
             ui.print_updated(f"{name}{suffix} updated")
-        elif change.change_type == FileChangeType.DELETED:
-            ui.print_deleted(f"{name} (not in toolkit, manual deletion required)")
+        # Note: DELETED type is no longer generated - unmanaged files are ignored (#15)
 
 
 def _display_summary(result: UpdateResult) -> None:
@@ -58,8 +57,7 @@ def _display_summary(result: UpdateResult) -> None:
         parts.append(f"{result.added_count} added")
     if result.updated_count > 0:
         parts.append(f"{result.updated_count} updated")
-    if result.deleted_count > 0:
-        parts.append(f"{result.deleted_count} to delete manually")
+    # Note: deleted_count is no longer used - unmanaged files are ignored (#15)
 
     if parts:
         action = "Would update" if result.dry_run else "Updated"

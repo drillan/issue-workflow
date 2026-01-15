@@ -78,16 +78,9 @@ def _get_file_changes(
             except OSError as e:
                 errors.append((target_file, str(e)))
 
-    # Deleted files (in target but not in source)
-    for target_file in target_dir.glob(pattern):
-        if not (source_dir / target_file.name).exists():
-            changes.append(
-                FileChangeInfo(
-                    path=target_file,
-                    change_type=FileChangeType.DELETED,
-                    source_path=None,
-                )
-            )
+    # Note: Files in target but not in source are intentionally ignored.
+    # These are user files or files from other tools and should not be
+    # reported as needing deletion (#15).
 
     return changes, errors
 
@@ -144,18 +137,9 @@ def _get_dir_changes(source_dir: Path, target_dir: Path) -> list[FileChangeInfo]
                     )
                 )
 
-    # Deleted directories (in target but not in source)
-    for target_subdir in target_dir.iterdir():
-        if not target_subdir.is_dir():
-            continue
-        if not (source_dir / target_subdir.name).exists():
-            changes.append(
-                FileChangeInfo(
-                    path=target_subdir,
-                    change_type=FileChangeType.DELETED,
-                    source_path=None,
-                )
-            )
+    # Note: Directories in target but not in source are intentionally ignored.
+    # These are user directories or directories from other tools and should not be
+    # reported as needing deletion (#15).
 
     return changes
 
