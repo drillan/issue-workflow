@@ -5,6 +5,46 @@ import pytest
 from issue_workflow.models.pr import MergeState, MergeStrategy, PRState, PullRequest
 
 
+class TestPullRequestValidation:
+    """Tests for PullRequest field validation."""
+
+    def test_number_must_be_positive(self) -> None:
+        """Test number rejects zero."""
+        with pytest.raises(ValueError, match="number must be positive"):
+            PullRequest(
+                number=0,
+                title="Test",
+                state=PRState.OPEN,
+                mergeable=MergeState.MERGEABLE,
+                base_ref_name="main",
+                head_ref_name="feat/1-test",
+            )
+
+    def test_number_rejects_negative(self) -> None:
+        """Test number rejects negative values."""
+        with pytest.raises(ValueError, match="number must be positive"):
+            PullRequest(
+                number=-1,
+                title="Test",
+                state=PRState.OPEN,
+                mergeable=MergeState.MERGEABLE,
+                base_ref_name="main",
+                head_ref_name="feat/1-test",
+            )
+
+    def test_number_accepts_positive(self) -> None:
+        """Test number accepts positive values."""
+        pr = PullRequest(
+            number=1,
+            title="Test",
+            state=PRState.OPEN,
+            mergeable=MergeState.MERGEABLE,
+            base_ref_name="main",
+            head_ref_name="feat/1-test",
+        )
+        assert pr.number == 1
+
+
 class TestPullRequestModel:
     """Tests for PullRequest dataclass."""
 

@@ -2,7 +2,68 @@
 
 import pytest
 
-from issue_workflow.models.issue import Issue
+from issue_workflow.models.issue import Issue, IssueState
+
+
+class TestIssueState:
+    """Tests for IssueState enum."""
+
+    def test_issue_state_values(self) -> None:
+        """Test IssueState has expected values."""
+        assert IssueState.OPEN.value == "OPEN"
+        assert IssueState.CLOSED.value == "CLOSED"
+
+    def test_issue_state_is_str_enum(self) -> None:
+        """Test IssueState can be used as string."""
+        assert IssueState.OPEN == "OPEN"
+        assert IssueState.CLOSED == "CLOSED"
+
+    def test_issue_state_from_string(self) -> None:
+        """Test IssueState can be created from string."""
+        assert IssueState("OPEN") == IssueState.OPEN
+        assert IssueState("CLOSED") == IssueState.CLOSED
+
+    def test_issue_state_invalid_value(self) -> None:
+        """Test invalid state value raises error."""
+        with pytest.raises(ValueError):
+            IssueState("INVALID")
+
+
+class TestIssueValidation:
+    """Tests for Issue field validation."""
+
+    def test_number_must_be_positive(self) -> None:
+        """Test number rejects zero."""
+        with pytest.raises(ValueError, match="number must be positive"):
+            Issue(
+                number=0,
+                title="Test",
+                body="",
+                labels=[],
+                state=IssueState.OPEN,
+            )
+
+    def test_number_rejects_negative(self) -> None:
+        """Test number rejects negative values."""
+        with pytest.raises(ValueError, match="number must be positive"):
+            Issue(
+                number=-1,
+                title="Test",
+                body="",
+                labels=[],
+                state=IssueState.OPEN,
+            )
+
+    def test_number_accepts_positive(self) -> None:
+        """Test number accepts positive values."""
+        issue = Issue(
+            number=1,
+            title="Test",
+            body="",
+            labels=[],
+            state=IssueState.OPEN,
+        )
+        assert issue.number == 1
 
 
 class TestIssueModel:
@@ -15,13 +76,13 @@ class TestIssueModel:
             title="Test Issue",
             body="Test body content",
             labels=["bug", "enhancement"],
-            state="OPEN",
+            state=IssueState.OPEN,
         )
         assert issue.number == 123
         assert issue.title == "Test Issue"
         assert issue.body == "Test body content"
         assert issue.labels == ["bug", "enhancement"]
-        assert issue.state == "OPEN"
+        assert issue.state == IssueState.OPEN
 
     def test_is_open_true(self) -> None:
         """Test is_open property returns True for open issues."""
@@ -30,7 +91,7 @@ class TestIssueModel:
             title="Test",
             body="",
             labels=[],
-            state="OPEN",
+            state=IssueState.OPEN,
         )
         assert issue.is_open is True
 
@@ -41,7 +102,7 @@ class TestIssueModel:
             title="Test",
             body="",
             labels=[],
-            state="CLOSED",
+            state=IssueState.CLOSED,
         )
         assert issue.is_open is False
 
@@ -52,7 +113,7 @@ class TestIssueModel:
             title="Test",
             body="",
             labels=[],
-            state="OPEN",
+            state=IssueState.OPEN,
         )
         with pytest.raises(AttributeError):
             issue.number = 2  # type: ignore[misc]
@@ -75,7 +136,7 @@ class TestIssueFromGhJson:
         assert issue.title == "Test Issue"
         assert issue.body == "Test body"
         assert issue.labels == ["bug"]
-        assert issue.state == "OPEN"
+        assert issue.state == IssueState.OPEN
 
     def test_from_gh_json_multiple_labels(self) -> None:
         """Test creating issue with multiple labels."""
@@ -109,7 +170,7 @@ class TestIssueFromGhJson:
         assert issue.title == ""
         assert issue.body == ""
         assert issue.labels == []
-        assert issue.state == "OPEN"
+        assert issue.state == IssueState.OPEN
 
     def test_from_gh_json_string_labels(self) -> None:
         """Test creating issue with string labels (edge case)."""
@@ -122,3 +183,9 @@ class TestIssueFromGhJson:
         }
         issue = Issue.from_gh_json(data)
         assert issue.labels == ["bug", "feature"]
+
+    def test_from_gh_json_missing_number_raises_error(self) -> None:
+        """Test creating issue without number raises ValueError."""
+        data: dict[str, object] = {"title": "Test"}
+        with pytest.raises(ValueError, match="number must be positive"):
+            Issue.from_gh_json(data)

@@ -31,14 +31,15 @@ class WorkflowSettings(BaseModel):
 class WorkflowConfig(BaseModel):
     """プロジェクトのワークフロー設定"""
     version: str = Field(default="1.0", description="設定ファイルバージョン")
-    language: str = Field(description="言語プリセット名")
+    language: LanguageName = Field(description="言語プリセット名")
     quality: QualityCommands = Field(description="品質チェックコマンド")
     workflow: WorkflowSettings = Field(default_factory=WorkflowSettings, description="ワークフロー設定")
 
-    class Config:
-        json_schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "$schema": "https://raw.githubusercontent.com/drillan/issue-workflow/main/schemas/workflow-config.schema.json"
         }
+    }
 ```
 
 **Storage**: `.claude/workflow-config.json`
@@ -87,6 +88,13 @@ GitHub Issueの情報を保持する。
 
 ```python
 from dataclasses import dataclass
+from enum import Enum
+
+class IssueState(str, Enum):
+    """Issue状態"""
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
+
 
 @dataclass(frozen=True)
 class Issue:
@@ -95,11 +103,11 @@ class Issue:
     title: str
     body: str
     labels: list[str]
-    state: str  # OPEN, CLOSED
+    state: IssueState
 
     @property
     def is_open(self) -> bool:
-        return self.state == "OPEN"
+        return self.state == IssueState.OPEN
 ```
 
 **Source**: GitHub API（`gh issue view`）

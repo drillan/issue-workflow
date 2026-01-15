@@ -5,7 +5,7 @@ from typing import Protocol
 import pytest
 
 from issue_workflow.models.branch import Branch, BranchType
-from issue_workflow.models.issue import Issue
+from issue_workflow.models.issue import Issue, IssueState
 
 
 class IssueFactory(Protocol):
@@ -33,7 +33,7 @@ class TestBranchTypeDetection:
                     title=title,
                     body="Sample body",
                     labels=labels,
-                    state="OPEN",
+                    state=IssueState.OPEN,
                 )
 
             @staticmethod
@@ -43,7 +43,7 @@ class TestBranchTypeDetection:
                     title=title,
                     body="",
                     labels=labels or [],
-                    state="OPEN",
+                    state=IssueState.OPEN,
                 )
 
         return Factory
@@ -106,6 +106,25 @@ class TestBranchTypeDetection:
         assert detect_branch_type(issue) == BranchType.FEAT
 
 
+class TestBranchValidation:
+    """Tests for Branch field validation."""
+
+    def test_issue_number_must_be_positive(self) -> None:
+        """Test issue_number rejects zero."""
+        with pytest.raises(ValueError, match="issue_number must be positive"):
+            Branch(type=BranchType.FEAT, issue_number=0, description="test")
+
+    def test_issue_number_rejects_negative(self) -> None:
+        """Test issue_number rejects negative values."""
+        with pytest.raises(ValueError, match="issue_number must be positive"):
+            Branch(type=BranchType.FEAT, issue_number=-1, description="test")
+
+    def test_issue_number_accepts_positive(self) -> None:
+        """Test issue_number accepts positive values."""
+        branch = Branch(type=BranchType.FEAT, issue_number=1, description="test")
+        assert branch.issue_number == 1
+
+
 class TestBranchNaming:
     """Tests for branch name generation."""
 
@@ -146,7 +165,7 @@ class TestBranchNaming:
             title="Add user login",
             body="",
             labels=["enhancement"],
-            state="OPEN",
+            state=IssueState.OPEN,
         )
         branch = Branch.from_issue(issue, BranchType.FEAT)
         assert branch.issue_number == 456

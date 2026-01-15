@@ -1,6 +1,14 @@
 """GitHub Issue model."""
 
 from dataclasses import dataclass
+from enum import Enum
+
+
+class IssueState(str, Enum):
+    """Issue states."""
+
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
 
 
 @dataclass(frozen=True)
@@ -11,12 +19,17 @@ class Issue:
     title: str
     body: str
     labels: list[str]
-    state: str  # OPEN, CLOSED
+    state: IssueState
+
+    def __post_init__(self) -> None:
+        """Validate fields after initialization."""
+        if self.number <= 0:
+            raise ValueError(f"number must be positive, got {self.number}")
 
     @property
     def is_open(self) -> bool:
         """Check if issue is open."""
-        return self.state == "OPEN"
+        return self.state == IssueState.OPEN
 
     @classmethod
     def from_gh_json(cls, data: dict[str, object]) -> "Issue":
@@ -31,10 +44,15 @@ class Issue:
             labels = []
 
         number_val = data.get("number", 0)
+        state_str = str(data.get("state", "OPEN"))
+        try:
+            state = IssueState(state_str)
+        except ValueError:
+            state = IssueState.OPEN
         return cls(
             number=int(number_val) if isinstance(number_val, (int, str)) else 0,
             title=str(data.get("title", "")),
             body=str(data.get("body", "")),
             labels=labels,
-            state=str(data.get("state", "OPEN")),
+            state=state,
         )

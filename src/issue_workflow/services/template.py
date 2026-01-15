@@ -7,6 +7,12 @@ from pathlib import Path
 from issue_workflow.models.config import WorkflowConfig, WorkflowSettings
 from issue_workflow.models.preset import LanguagePreset
 
+# URL for workflow config JSON schema
+WORKFLOW_CONFIG_SCHEMA_URL = (
+    "https://raw.githubusercontent.com/drillan/issue-workflow/main/"
+    "schemas/workflow-config.schema.json"
+)
+
 
 class SourceDirectoryNotFoundError(Exception):
     """Raised when source directory for commands or skills is not found."""
@@ -60,10 +66,7 @@ class TemplateService:
         config_path = target_dir / "workflow-config.json"
 
         config_dict = config.model_dump()
-        config_dict["$schema"] = (
-            "https://raw.githubusercontent.com/drillan/issue-workflow/main/"
-            "schemas/workflow-config.schema.json"
-        )
+        config_dict["$schema"] = WORKFLOW_CONFIG_SCHEMA_URL
 
         with config_path.open("w") as f:
             json.dump(config_dict, f, indent=2)

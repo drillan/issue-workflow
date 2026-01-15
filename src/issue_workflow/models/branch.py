@@ -30,6 +30,11 @@ class Branch:
     issue_number: int
     description: str
 
+    def __post_init__(self) -> None:
+        """Validate fields after initialization."""
+        if self.issue_number <= 0:
+            raise ValueError(f"issue_number must be positive, got {self.issue_number}")
+
     @property
     def name(self) -> str:
         """Generate branch name."""
@@ -76,6 +81,11 @@ class Branch:
         Supports patterns like:
         - feat/123-xxx
         - fix/456-xxx
+        - chore/123-xxx
+        - docs/123-xxx
+        - refactor/123-xxx
+        - test/123-xxx
+        - bugfix/123-xxx
         - feature/789-xxx (legacy)
         """
         pattern = r"^(?:feat|fix|chore|docs|refactor|test|feature|bugfix)/(\d+)-"

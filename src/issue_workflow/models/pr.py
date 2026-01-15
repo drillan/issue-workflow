@@ -39,6 +39,11 @@ class PullRequest:
     base_ref_name: str
     head_ref_name: str
 
+    def __post_init__(self) -> None:
+        """Validate fields after initialization."""
+        if self.number <= 0:
+            raise ValueError(f"number must be positive, got {self.number}")
+
     @property
     def can_merge(self) -> bool:
         """Check if PR can be merged."""
