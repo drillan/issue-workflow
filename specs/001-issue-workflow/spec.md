@@ -165,7 +165,7 @@
 - **FR-004**: `--non-interactive`オプションでプロンプトをスキップできなければならない
 - **FR-005**: 初期化により`.claude/workflow-config.json`と`.claude/git-conventions.md`が生成されなければならない
 - **FR-006**: 初期化により`.claude/settings.json`（Project scope）にPlugin設定が追加されなければならない。ただしUser scope（`~/.config/claude-code/settings.json`）に同一Pluginがインストール済みの場合は重複追加をスキップする
-- **FR-007**: システムは`issue-workflow update`コマンドで設定を更新できなければならない（v1.1予定）
+- **FR-007**: システムは`issue-workflow update`コマンドでcommands/skillsファイルを更新できなければならない
 
 #### Plugin コマンド要件
 
