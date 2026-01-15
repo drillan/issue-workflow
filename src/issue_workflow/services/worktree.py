@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from issue_workflow.lib.git import GitOperations
+from issue_workflow.lib.git import GitError, GitOperations
 
 
 def find_worktree_for_branch(repo_path: Path, branch_name: str) -> Path | None:
@@ -75,7 +75,7 @@ def cleanup_branch_and_worktree(
     try:
         git.delete_branch(branch_name, force=force)
         result["branch_deleted"] = True
-    except Exception:
+    except GitError:
         result["branch_deleted"] = False
 
     return result

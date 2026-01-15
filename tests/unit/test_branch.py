@@ -48,9 +48,7 @@ class TestBranchTypeDetection:
 
         return Factory
 
-    def test_enhancement_label_maps_to_feat(
-        self, create_issue: type[IssueFactory]
-    ) -> None:
+    def test_enhancement_label_maps_to_feat(self, create_issue: type[IssueFactory]) -> None:
         """Test enhancement label maps to feat prefix."""
         issue = create_issue.with_labels(["enhancement"])
         from issue_workflow.services.branch import detect_branch_type
@@ -64,18 +62,14 @@ class TestBranchTypeDetection:
 
         assert detect_branch_type(issue) == BranchType.FIX
 
-    def test_refactoring_label_maps_to_refactor(
-        self, create_issue: type[IssueFactory]
-    ) -> None:
+    def test_refactoring_label_maps_to_refactor(self, create_issue: type[IssueFactory]) -> None:
         """Test refactoring label maps to refactor prefix."""
         issue = create_issue.with_labels(["refactoring"])
         from issue_workflow.services.branch import detect_branch_type
 
         assert detect_branch_type(issue) == BranchType.REFACTOR
 
-    def test_documentation_label_maps_to_docs(
-        self, create_issue: type[IssueFactory]
-    ) -> None:
+    def test_documentation_label_maps_to_docs(self, create_issue: type[IssueFactory]) -> None:
         """Test documentation label maps to docs prefix."""
         issue = create_issue.with_labels(["documentation"])
         from issue_workflow.services.branch import detect_branch_type
@@ -104,9 +98,7 @@ class TestBranchTypeDetection:
 
         assert detect_branch_type(issue) == BranchType.FEAT
 
-    def test_label_takes_precedence_over_keyword(
-        self, create_issue: type[IssueFactory]
-    ) -> None:
+    def test_label_takes_precedence_over_keyword(self, create_issue: type[IssueFactory]) -> None:
         """Test that label takes precedence over keyword in title."""
         issue = create_issue.with_labels(["enhancement"], title="Fix something")
         from issue_workflow.services.branch import detect_branch_type

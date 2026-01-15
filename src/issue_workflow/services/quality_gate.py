@@ -1,6 +1,7 @@
 """Quality gate service for loading and executing quality commands."""
 
 import json
+import warnings
 from pathlib import Path
 
 from issue_workflow.models.config import QualityCommands, WorkflowConfig
@@ -25,7 +26,19 @@ def load_quality_commands(project_dir: Path) -> QualityCommands | None:
             data = json.load(f)
         config = WorkflowConfig(**data)
         return config.quality
-    except (json.JSONDecodeError, ValueError):
+    except json.JSONDecodeError as e:
+        warnings.warn(
+            f"Invalid JSON in {config_path}: {e}",
+            UserWarning,
+            stacklevel=2,
+        )
+        return None
+    except ValueError as e:
+        warnings.warn(
+            f"Invalid config in {config_path}: {e}",
+            UserWarning,
+            stacklevel=2,
+        )
         return None
 
 
@@ -48,7 +61,19 @@ def is_quality_gate_required(project_dir: Path) -> bool:
             data = json.load(f)
         config = WorkflowConfig(**data)
         return config.workflow.quality_gate_required
-    except (json.JSONDecodeError, ValueError):
+    except json.JSONDecodeError as e:
+        warnings.warn(
+            f"Invalid JSON in {config_path}: {e}",
+            UserWarning,
+            stacklevel=2,
+        )
+        return False
+    except ValueError as e:
+        warnings.warn(
+            f"Invalid config in {config_path}: {e}",
+            UserWarning,
+            stacklevel=2,
+        )
         return False
 
 

@@ -15,10 +15,6 @@ def get_test_file_path(source_path: str) -> str:
     path = Path(source_path)
     filename = path.name
 
-    # Remove src/ prefix if present
-    if "src" in path.parts:
-        filename = path.name
-
     # Add test_ prefix
     test_filename = f"test_{filename}"
     return f"tests/{test_filename}"
