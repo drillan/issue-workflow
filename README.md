@@ -16,7 +16,7 @@ GitHub Issue-driven development workflow toolkit for Claude Code. Automates and 
 - Python 3.13+
 - [uv](https://docs.astral.sh/uv/) (package manager)
 - [gh CLI](https://cli.github.com/) (GitHub CLI)
-- [Claude Code](https://claude.ai/claude-code) CLI
+- [Claude Code](https://www.anthropic.com/claude-code) CLI
 
 ## Installation
 
@@ -48,6 +48,7 @@ After initialization, use Claude Code slash commands to manage your workflow:
 |---------|-------------|
 | `issue-workflow init` | Initialize Issue Workflow in project |
 | `issue-workflow init --language <lang>` | Initialize with language preset |
+| `issue-workflow init --non-interactive` | Initialize without interactive prompts (CI/CD) |
 | `issue-workflow --version` | Show version |
 | `issue-workflow --help` | Show help |
 
@@ -80,7 +81,7 @@ Available presets with pre-configured quality commands:
 | Preset | Quality Tools |
 |--------|---------------|
 | `python` | ruff, mypy, pytest |
-| `typescript` | eslint, prettier, tsc |
+| `typescript` | npm run lint/format/typecheck (typically eslint, prettier, tsc) |
 | `go` | golangci-lint, go fmt, go vet |
 | `rust` | clippy, rustfmt, cargo check |
 | `generic` | Customizable |
@@ -104,7 +105,8 @@ Available presets with pre-configured quality commands:
     "tdd_required": true,
     "quality_gate_required": true,
     "auto_report": true
-  }
+  },
+  "$schema": "https://raw.githubusercontent.com/drillan/issue-workflow/main/schemas/workflow-config.schema.json"
 }
 ```
 

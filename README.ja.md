@@ -16,7 +16,7 @@ GitHub Issue駆動開発ワークフローツールキット for Claude Code。I
 - Python 3.13+
 - [uv](https://docs.astral.sh/uv/) (パッケージマネージャー)
 - [gh CLI](https://cli.github.com/) (GitHub CLI)
-- [Claude Code](https://claude.ai/claude-code) CLI
+- [Claude Code](https://www.anthropic.com/claude-code) CLI
 
 ## インストール
 
@@ -48,6 +48,7 @@ issue-workflow init --language python
 |---------|------|
 | `issue-workflow init` | プロジェクトにIssue Workflowを初期化 |
 | `issue-workflow init --language <lang>` | 言語プリセットを指定して初期化 |
+| `issue-workflow init --non-interactive` | 対話プロンプトなしで初期化（CI/CD用） |
 | `issue-workflow --version` | バージョンを表示 |
 | `issue-workflow --help` | ヘルプを表示 |
 
@@ -80,7 +81,7 @@ Claude Code内で使用するコマンド：
 | プリセット | 品質ツール |
 |-----------|-----------|
 | `python` | ruff, mypy, pytest |
-| `typescript` | eslint, prettier, tsc |
+| `typescript` | npm run lint/format/typecheck（通常eslint, prettier, tsc） |
 | `go` | golangci-lint, go fmt, go vet |
 | `rust` | clippy, rustfmt, cargo check |
 | `generic` | カスタマイズ可能 |
@@ -104,7 +105,8 @@ Claude Code内で使用するコマンド：
     "tdd_required": true,
     "quality_gate_required": true,
     "auto_report": true
-  }
+  },
+  "$schema": "https://raw.githubusercontent.com/drillan/issue-workflow/main/schemas/workflow-config.schema.json"
 }
 ```
 
