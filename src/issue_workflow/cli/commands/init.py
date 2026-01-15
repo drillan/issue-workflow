@@ -10,7 +10,6 @@ from issue_workflow.services.github import check_gh_availability
 from issue_workflow.services.preset_loader import PresetLoader, PresetNotFoundError
 from issue_workflow.services.template import (
     TemplateService,
-    check_user_scope_plugin,
     update_settings_json,
 )
 
@@ -19,7 +18,8 @@ app = typer.Typer(
     invoke_without_command=True,
 )
 
-PLUGIN_URL = "github:drillan/issue-workflow#plugin"
+# Local plugin path (relative to project root)
+PLUGIN_PATH = "./.claude/plugin"
 
 # Exit codes
 EXIT_SUCCESS = 0
@@ -127,12 +127,9 @@ def _run_init(language: str | None, non_interactive: bool, force: bool) -> None:
     for path in generated_files:
         ui.print_success(f"Created {path.relative_to(project_dir)}")
 
-    # Update settings.json with plugin
-    if not check_user_scope_plugin(PLUGIN_URL):
-        settings_path = update_settings_json(claude_dir, PLUGIN_URL)
-        ui.print_success(f"Updated {settings_path.relative_to(project_dir)}")
-    else:
-        ui.print_info("Plugin already installed in user scope, skipping project settings")
+    # Update settings.json with local plugin path
+    settings_path = update_settings_json(claude_dir, PLUGIN_PATH)
+    ui.print_success(f"Updated {settings_path.relative_to(project_dir)}")
 
     ui.print_success("Issue Workflow initialized successfully!")
     ui.print_info("Run 'claude' to start Claude Code with the workflow plugin")
