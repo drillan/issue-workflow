@@ -224,8 +224,9 @@ ai_working
 # debug log files
 /debug
 
-# Issue Workflow generated settings (project-specific, not tracked)
+# Issue Workflow generated files (project-specific, not tracked)
 /.claude/settings.json
 /.claude/workflow-config.json
 /.claude/git-conventions.md
-/.claude/plugin/
+/.claude/commands/
+/.claude/skills/

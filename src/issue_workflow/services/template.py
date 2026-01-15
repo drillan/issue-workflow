@@ -8,30 +8,26 @@ from issue_workflow.models.config import WorkflowConfig, WorkflowSettings
 from issue_workflow.models.preset import LanguagePreset
 
 
-def get_plugin_source_dir() -> Path:
-    """Get the source directory for plugin files.
+class SourceDirectoryNotFoundError(Exception):
+    """Raised when source directory for commands or skills is not found."""
+
+
+def get_commands_source_dir() -> Path:
+    """Get the source directory for command files.
 
     Returns:
-        Path to the plugin directory bundled with the package.
-        Falls back to project root plugin/ directory during development.
+        Path to the commands directory bundled with the package.
     """
-    # First, check for bundled plugin (installed package)
-    package_plugin = Path(__file__).parent.parent / "plugin"
-    if package_plugin.exists():
-        return package_plugin
+    return Path(__file__).parent.parent / "commands"
 
-    # Fallback: development mode - look for plugin/ in project root
-    # Walk up from current file to find project root with plugin/
-    current = Path(__file__).parent
-    for _ in range(5):  # Max 5 levels up
-        candidate = current / "plugin"
-        if candidate.exists() and (candidate / "commands").exists():
-            return candidate
-        current = current.parent
 
-    # Last resort: assume project root structure
-    project_root = Path(__file__).parent.parent.parent.parent
-    return project_root / "plugin"
+def get_skills_source_dir() -> Path:
+    """Get the source directory for skill files.
+
+    Returns:
+        Path to the skills directory bundled with the package.
+    """
+    return Path(__file__).parent.parent / "skills"
 
 
 class TemplateService:
@@ -96,28 +92,66 @@ class TemplateService:
 
         return target_path
 
-    def copy_plugin(self, target_dir: Path) -> Path:
-        """Copy plugin files to target directory.
+    def copy_commands(self, target_dir: Path) -> Path:
+        """Copy command files to target directory.
 
-        Copies the bundled plugin files (commands, skills, manifest) to .claude/plugin/.
+        Copies the bundled command files to .claude/commands/.
+        Preserves existing command files.
 
         Args:
-            target_dir: Directory to write plugin to (.claude/)
+            target_dir: Directory to write commands to (.claude/)
 
         Returns:
-            Path to the plugin directory
+            Path to the commands directory
+
+        Raises:
+            SourceDirectoryNotFoundError: If source commands directory does not exist.
         """
-        source_dir = get_plugin_source_dir()
-        plugin_target = target_dir / "plugin"
+        source_dir = get_commands_source_dir()
+        if not source_dir.exists():
+            msg = f"Commands source directory not found: {source_dir}"
+            raise SourceDirectoryNotFoundError(msg)
 
-        # Remove existing plugin directory if exists
-        if plugin_target.exists():
-            shutil.rmtree(plugin_target)
+        commands_target = target_dir / "commands"
+        commands_target.mkdir(parents=True, exist_ok=True)
 
-        # Copy entire plugin directory
-        shutil.copytree(source_dir, plugin_target)
+        for source_file in source_dir.glob("*.md"):
+            target_file = commands_target / source_file.name
+            if not target_file.exists():
+                shutil.copy2(source_file, target_file)
 
-        return plugin_target
+        return commands_target
+
+    def copy_skills(self, target_dir: Path) -> Path:
+        """Copy skill directories to target directory.
+
+        Copies the bundled skill directories to .claude/skills/.
+        Preserves existing skill directories.
+
+        Args:
+            target_dir: Directory to write skills to (.claude/)
+
+        Returns:
+            Path to the skills directory
+
+        Raises:
+            SourceDirectoryNotFoundError: If source skills directory does not exist.
+        """
+        source_dir = get_skills_source_dir()
+        if not source_dir.exists():
+            msg = f"Skills source directory not found: {source_dir}"
+            raise SourceDirectoryNotFoundError(msg)
+
+        skills_target = target_dir / "skills"
+        skills_target.mkdir(parents=True, exist_ok=True)
+
+        for skill_dir in source_dir.iterdir():
+            if skill_dir.is_dir():
+                target_skill = skills_target / skill_dir.name
+                if not target_skill.exists():
+                    shutil.copytree(skill_dir, target_skill)
+
+        return skills_target
 
     def generate_all(self, preset: LanguagePreset, target_dir: Path) -> list[Path]:
         """Generate all config files from preset.
@@ -127,12 +161,13 @@ class TemplateService:
             target_dir: Directory to write config files to (.claude/)
 
         Returns:
-            List of paths to generated files
+            List of paths to generated files/directories
         """
         generated: list[Path] = []
         generated.append(self.generate_workflow_config(preset, target_dir))
         generated.append(self.generate_git_conventions(target_dir))
-        generated.append(self.copy_plugin(target_dir))
+        generated.append(self.copy_commands(target_dir))
+        generated.append(self.copy_skills(target_dir))
         return generated
 
     def _get_default_git_conventions(self) -> str:
@@ -151,60 +186,3 @@ Format: `<type>(<scope>): <description>`
 
 Follow Conventional Commits specification.
 """
-
-
-def update_settings_json(target_dir: Path, plugin_url: str) -> Path:
-    """Update or create .claude/settings.json with plugin configuration.
-
-    Args:
-        target_dir: Directory to write settings to (.claude/)
-        plugin_url: Plugin URL to add
-
-    Returns:
-        Path to settings file
-    """
-    settings_path = target_dir / "settings.json"
-    target_dir.mkdir(parents=True, exist_ok=True)
-
-    if settings_path.exists():
-        with settings_path.open() as f:
-            settings = json.load(f)
-    else:
-        settings = {}
-
-    # Initialize plugins array if not exists
-    if "plugins" not in settings:
-        settings["plugins"] = []
-
-    # Add plugin if not already present
-    if plugin_url not in settings["plugins"]:
-        settings["plugins"].append(plugin_url)
-
-    with settings_path.open("w") as f:
-        json.dump(settings, f, indent=2)
-        f.write("\n")
-
-    return settings_path
-
-
-def check_user_scope_plugin(plugin_url: str) -> bool:
-    """Check if plugin is already installed in user scope.
-
-    Args:
-        plugin_url: Plugin URL to check
-
-    Returns:
-        True if plugin is installed in user scope
-    """
-    user_settings_path = Path.home() / ".config" / "claude-code" / "settings.json"
-
-    if not user_settings_path.exists():
-        return False
-
-    try:
-        with user_settings_path.open() as f:
-            settings = json.load(f)
-        plugins = settings.get("plugins", [])
-        return plugin_url in plugins
-    except (json.JSONDecodeError, OSError):
-        return False
