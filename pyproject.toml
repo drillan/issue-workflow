@@ -48,6 +48,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/issue_workflow"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"plugin" = "issue_workflow/plugin"
+
 [tool.ruff]
 target-version = "py313"
 line-length = 100

@@ -1,10 +1,37 @@
 """Template service for generating config files."""
 
 import json
+import shutil
 from pathlib import Path
 
 from issue_workflow.models.config import WorkflowConfig, WorkflowSettings
 from issue_workflow.models.preset import LanguagePreset
+
+
+def get_plugin_source_dir() -> Path:
+    """Get the source directory for plugin files.
+
+    Returns:
+        Path to the plugin directory bundled with the package.
+        Falls back to project root plugin/ directory during development.
+    """
+    # First, check for bundled plugin (installed package)
+    package_plugin = Path(__file__).parent.parent / "plugin"
+    if package_plugin.exists():
+        return package_plugin
+
+    # Fallback: development mode - look for plugin/ in project root
+    # Walk up from current file to find project root with plugin/
+    current = Path(__file__).parent
+    for _ in range(5):  # Max 5 levels up
+        candidate = current / "plugin"
+        if candidate.exists() and (candidate / "commands").exists():
+            return candidate
+        current = current.parent
+
+    # Last resort: assume project root structure
+    project_root = Path(__file__).parent.parent.parent.parent
+    return project_root / "plugin"
 
 
 class TemplateService:
@@ -69,6 +96,29 @@ class TemplateService:
 
         return target_path
 
+    def copy_plugin(self, target_dir: Path) -> Path:
+        """Copy plugin files to target directory.
+
+        Copies the bundled plugin files (commands, skills, manifest) to .claude/plugin/.
+
+        Args:
+            target_dir: Directory to write plugin to (.claude/)
+
+        Returns:
+            Path to the plugin directory
+        """
+        source_dir = get_plugin_source_dir()
+        plugin_target = target_dir / "plugin"
+
+        # Remove existing plugin directory if exists
+        if plugin_target.exists():
+            shutil.rmtree(plugin_target)
+
+        # Copy entire plugin directory
+        shutil.copytree(source_dir, plugin_target)
+
+        return plugin_target
+
     def generate_all(self, preset: LanguagePreset, target_dir: Path) -> list[Path]:
         """Generate all config files from preset.
 
@@ -82,6 +132,7 @@ class TemplateService:
         generated: list[Path] = []
         generated.append(self.generate_workflow_config(preset, target_dir))
         generated.append(self.generate_git_conventions(target_dir))
+        generated.append(self.copy_plugin(target_dir))
         return generated
 
     def _get_default_git_conventions(self) -> str:
