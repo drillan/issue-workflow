@@ -57,7 +57,6 @@ def _display_summary(result: UpdateResult) -> None:
         parts.append(f"{result.added_count} added")
     if result.updated_count > 0:
         parts.append(f"{result.updated_count} updated")
-    # Note: deleted_count is no longer used - unmanaged files are ignored (#15)
 
     if parts:
         action = "Would update" if result.dry_run else "Updated"
@@ -149,7 +148,7 @@ def update(
 
     Existing files will be overwritten with newer versions.
     Files that exist in your project but not in the toolkit
-    will not be deleted (a warning will be shown).
+    will be silently ignored.
     """
     try:
         _run_update(dry_run)
