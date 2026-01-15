@@ -1,3 +1,8 @@
+---
+name: code-quality-gate
+description: Ensure complete compliance with code quality standards. Use before commit, before PR creation, or when quality issues are detected.
+---
+
 # Code Quality Gate Skill
 
 Ensure complete compliance with code quality standards.
