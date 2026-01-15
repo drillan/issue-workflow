@@ -8,30 +8,22 @@ from issue_workflow.models.config import WorkflowConfig, WorkflowSettings
 from issue_workflow.models.preset import LanguagePreset
 
 
-def get_plugin_source_dir() -> Path:
-    """Get the source directory for plugin files.
+def get_commands_source_dir() -> Path:
+    """Get the source directory for command files.
 
     Returns:
-        Path to the plugin directory bundled with the package.
-        Falls back to project root plugin/ directory during development.
+        Path to the commands directory bundled with the package.
     """
-    # First, check for bundled plugin (installed package)
-    package_plugin = Path(__file__).parent.parent / "plugin"
-    if package_plugin.exists():
-        return package_plugin
+    return Path(__file__).parent.parent / "commands"
 
-    # Fallback: development mode - look for plugin/ in project root
-    # Walk up from current file to find project root with plugin/
-    current = Path(__file__).parent
-    for _ in range(5):  # Max 5 levels up
-        candidate = current / "plugin"
-        if candidate.exists() and (candidate / "commands").exists():
-            return candidate
-        current = current.parent
 
-    # Last resort: assume project root structure
-    project_root = Path(__file__).parent.parent.parent.parent
-    return project_root / "plugin"
+def get_skills_source_dir() -> Path:
+    """Get the source directory for skill files.
+
+    Returns:
+        Path to the skills directory bundled with the package.
+    """
+    return Path(__file__).parent.parent / "skills"
 
 
 class TemplateService:
@@ -96,28 +88,52 @@ class TemplateService:
 
         return target_path
 
-    def copy_plugin(self, target_dir: Path) -> Path:
-        """Copy plugin files to target directory.
+    def copy_commands(self, target_dir: Path) -> Path:
+        """Copy command files to target directory.
 
-        Copies the bundled plugin files (commands, skills, manifest) to .claude/plugin/.
+        Copies the bundled command files to .claude/commands/.
+        Preserves existing command files.
 
         Args:
-            target_dir: Directory to write plugin to (.claude/)
+            target_dir: Directory to write commands to (.claude/)
 
         Returns:
-            Path to the plugin directory
+            Path to the commands directory
         """
-        source_dir = get_plugin_source_dir()
-        plugin_target = target_dir / "plugin"
+        source_dir = get_commands_source_dir()
+        commands_target = target_dir / "commands"
+        commands_target.mkdir(parents=True, exist_ok=True)
 
-        # Remove existing plugin directory if exists
-        if plugin_target.exists():
-            shutil.rmtree(plugin_target)
+        for source_file in source_dir.glob("*.md"):
+            target_file = commands_target / source_file.name
+            if not target_file.exists():
+                shutil.copy2(source_file, target_file)
 
-        # Copy entire plugin directory
-        shutil.copytree(source_dir, plugin_target)
+        return commands_target
 
-        return plugin_target
+    def copy_skills(self, target_dir: Path) -> Path:
+        """Copy skill directories to target directory.
+
+        Copies the bundled skill directories to .claude/skills/.
+        Preserves existing skill directories.
+
+        Args:
+            target_dir: Directory to write skills to (.claude/)
+
+        Returns:
+            Path to the skills directory
+        """
+        source_dir = get_skills_source_dir()
+        skills_target = target_dir / "skills"
+        skills_target.mkdir(parents=True, exist_ok=True)
+
+        for skill_dir in source_dir.iterdir():
+            if skill_dir.is_dir():
+                target_skill = skills_target / skill_dir.name
+                if not target_skill.exists():
+                    shutil.copytree(skill_dir, target_skill)
+
+        return skills_target
 
     def generate_all(self, preset: LanguagePreset, target_dir: Path) -> list[Path]:
         """Generate all config files from preset.
@@ -127,12 +143,13 @@ class TemplateService:
             target_dir: Directory to write config files to (.claude/)
 
         Returns:
-            List of paths to generated files
+            List of paths to generated files/directories
         """
         generated: list[Path] = []
         generated.append(self.generate_workflow_config(preset, target_dir))
         generated.append(self.generate_git_conventions(target_dir))
-        generated.append(self.copy_plugin(target_dir))
+        generated.append(self.copy_commands(target_dir))
+        generated.append(self.copy_skills(target_dir))
         return generated
 
     def _get_default_git_conventions(self) -> str:

@@ -8,18 +8,12 @@ import typer
 from issue_workflow.cli import ui
 from issue_workflow.services.github import check_gh_availability
 from issue_workflow.services.preset_loader import PresetLoader, PresetNotFoundError
-from issue_workflow.services.template import (
-    TemplateService,
-    update_settings_json,
-)
+from issue_workflow.services.template import TemplateService
 
 app = typer.Typer(
     help="Initialize Issue Workflow in current project",
     invoke_without_command=True,
 )
-
-# Local plugin path (relative to project root)
-PLUGIN_PATH = "./.claude/plugin"
 
 # Exit codes
 EXIT_SUCCESS = 0
@@ -127,9 +121,5 @@ def _run_init(language: str | None, non_interactive: bool, force: bool) -> None:
     for path in generated_files:
         ui.print_success(f"Created {path.relative_to(project_dir)}")
 
-    # Update settings.json with local plugin path
-    settings_path = update_settings_json(claude_dir, PLUGIN_PATH)
-    ui.print_success(f"Updated {settings_path.relative_to(project_dir)}")
-
     ui.print_success("Issue Workflow initialized successfully!")
-    ui.print_info("Run 'claude' to start Claude Code with the workflow plugin")
+    ui.print_info("Run 'claude' to start using the workflow commands")
