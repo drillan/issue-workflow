@@ -28,7 +28,7 @@
 **Acceptance Scenarios**:
 
 1. **Given** Issue Workflowで初期化済みのプロジェクト, **When** `issue-workflow update`を実行する, **Then** `.claude/commands`と`.claude/skills`ディレクトリの内容が最新のツールキット内容で上書きされる
-2. **Given** `.claude/commands`や`.claude/skills`が存在しないプロジェクト, **When** `issue-workflow update`を実行する, **Then** 必要なディレクトリが作成され、最新のファイルがコピーされる
+2. **Given** 初期化済み（`.claude/`存在）だが`.claude/commands`や`.claude/skills`が存在しないプロジェクト, **When** `issue-workflow update`を実行する, **Then** 必要なディレクトリが作成され、最新のファイルがコピーされる
 3. **Given** 更新対象のファイルが存在する状態, **When** 更新が完了する, **Then** 更新されたファイルの一覧と変更内容の要約が表示される
 
 ---
@@ -51,9 +51,9 @@
 ### Edge Cases
 
 - `.claude/`ディレクトリが存在しない（initコマンド未実行）場合、明確なエラーメッセージと`init`コマンドの案内を表示する
-- ツールキットのバージョンがプロジェクトより古い場合のダウングレード防止
+- ツールキットのバージョンがプロジェクトより古い場合 → 警告なしで上書き（v1.2でバージョン比較機能を検討）
 - ファイル権限エラー時の適切なエラーメッセージ表示
-- 部分的に更新が失敗した場合のロールバック処理
+- 部分的に更新が失敗した場合 → エラーメッセージを表示して終了（ロールバックしない、既にコピーされたファイルは残る）
 
 ## Requirements *(mandatory)*
 
@@ -63,7 +63,7 @@
 
 - **FR-001**: システムは`issue-workflow update`コマンドでcommands/skillsを更新できなければならない
 - **FR-002**: 更新コマンドはツールキットの`src/issue_workflow/commands/`から`.claude/commands/`へファイルをコピーしなければならない
-- **FR-003**: 更新コマンドはツールキットの`src/issue_workflow/skills/`から`.claude/skills/`へディレクトリをコピーしなければならない
+- **FR-003**: 更新コマンドはツールキットの`src/issue_workflow/skills/`から`.claude/skills/`へディレクトリ構造を再帰的にコピーしなければならない
 - **FR-004**: `--dry-run`オプションで実際の更新なしに差分を表示できなければならない
 
 #### 前提条件要件
@@ -92,7 +92,7 @@
 
 ### Measurable Outcomes
 
-- **SC-001**: 開発者は30秒以内にcommands/skillsの更新を完了できる
+- **SC-001**: 通常のファイル数（commands 10ファイル + skills 5ディレクトリ程度）で30秒以内に更新を完了できる
 - **SC-002**: `--dry-run`による差分確認は実際のファイル変更を0件にする
 - **SC-003**: 更新操作の成功率は99%以上となる（ファイルアクセス可能な場合）
 - **SC-004**: 更新完了後、すべてのcommands/skillsがツールキットと同一内容となる
@@ -114,3 +114,4 @@
 - リモートからの直接ダウンロード更新（現バージョンはローカルインストール前提）
 - ユーザーカスタムcommands/skillsのバックアップ機能（v1.2で検討）
 - 選択的更新（--commands-only/--skills-only）- 常に両方を更新する
+- `--non-interactive`オプション - updateコマンドは常に確認プロンプトなしで実行されるため不要
