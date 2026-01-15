@@ -46,7 +46,7 @@ def select_option(
         panel = Panel(
             menu_text,
             title=title,
-            subtitle="↑↓: 移動  Enter: 選択",
+            subtitle="↑↓: Navigate  Enter: Select",
             border_style="cyan",
         )
         console.print(panel)

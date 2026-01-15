@@ -92,8 +92,8 @@ class TestBranchTypeDetection:
 
     def test_default_to_feat(self, create_issue: type[IssueFactory]) -> None:
         """Test default branch type is feat."""
-        # Use a title without keywords to ensure default
-        issue = create_issue.with_labels([], title="Improve performance")
+        # Use a title without any keywords to ensure default
+        issue = create_issue.with_labels([], title="Something unrelated")
         from issue_workflow.services.branch import detect_branch_type
 
         assert detect_branch_type(issue) == BranchType.FEAT

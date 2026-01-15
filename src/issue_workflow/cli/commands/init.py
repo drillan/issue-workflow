@@ -79,13 +79,13 @@ def _run_init(language: str | None, non_interactive: bool, force: bool) -> None:
     if config_file.exists() and not force:
         if non_interactive:
             ui.print_error(
-                "設定ファイルが既に存在します\n\n"
-                f"{config_file} が既に存在します。\n"
-                "上書きするには --force オプションを使用してください。"
+                "Configuration file already exists\n\n"
+                f"{config_file} already exists.\n"
+                "Use --force option to overwrite."
             )
             raise typer.Exit(EXIT_CONFIG_EXISTS)
         else:
-            if not ui.confirm("設定ファイルが既に存在します。上書きしますか?", default=False):
+            if not ui.confirm("Configuration file already exists. Overwrite?", default=False):
                 ui.print_info("Initialization cancelled")
                 raise typer.Exit(EXIT_SUCCESS)
 
@@ -93,15 +93,15 @@ def _run_init(language: str | None, non_interactive: bool, force: bool) -> None:
     if language is None:
         if non_interactive:
             ui.print_error(
-                "言語プリセットが必要です\n\n"
-                "--language オプションで言語を指定してください。\n\n"
-                "例: issue-workflow init --language python --non-interactive"
+                "Language preset is required\n\n"
+                "Please specify a language with --language option.\n\n"
+                "Example: issue-workflow init --language python --non-interactive"
             )
             raise typer.Exit(EXIT_INVALID_ARGUMENT)
         else:
             # Interactive selection
             choices = get_language_choices()
-            language = ui.select_option("言語プリセットを選択", choices)
+            language = ui.select_option("Select language preset", choices)
 
     # Validate and load preset
     loader = PresetLoader()
@@ -109,7 +109,7 @@ def _run_init(language: str | None, non_interactive: bool, force: bool) -> None:
         preset = loader.load(language)
     except PresetNotFoundError as e:
         ui.print_error(
-            f"無効な言語プリセットです: {language}\n\n有効な値: {', '.join(loader.list_available())}"
+            f"Invalid language preset: {language}\n\nValid options: {', '.join(loader.list_available())}"
         )
         raise typer.Exit(EXIT_INVALID_ARGUMENT) from e
 

@@ -30,15 +30,15 @@ def check_gh_availability() -> tuple[bool, str]:
         )
         if result.returncode != 0:
             return False, (
-                "GitHub CLI (gh) が見つかりません\n\n"
-                "Issue Workflowを使用するにはGitHub CLIが必要です。\n\n"
-                "インストール: https://cli.github.com/"
+                "GitHub CLI (gh) not found\n\n"
+                "GitHub CLI is required to use Issue Workflow.\n\n"
+                "Install: https://cli.github.com/"
             )
     except FileNotFoundError:
         return False, (
-            "GitHub CLI (gh) が見つかりません\n\n"
-            "Issue Workflowを使用するにはGitHub CLIが必要です。\n\n"
-            "インストール: https://cli.github.com/"
+            "GitHub CLI (gh) not found\n\n"
+            "GitHub CLI is required to use Issue Workflow.\n\n"
+            "Install: https://cli.github.com/"
         )
 
     # Check if gh is authenticated
@@ -51,10 +51,10 @@ def check_gh_availability() -> tuple[bool, str]:
         )
         if result.returncode != 0:
             return False, (
-                "GitHub CLIの認証が必要です\n\n以下のコマンドで認証してください:\n  gh auth login"
+                "GitHub CLI authentication required\n\nPlease authenticate with:\n  gh auth login"
             )
     except subprocess.SubprocessError:
-        return False, "GitHub CLI認証チェックでエラーが発生しました"
+        return False, "Error occurred while checking GitHub CLI authentication"
 
     return True, "GitHub CLI is available and authenticated"
 

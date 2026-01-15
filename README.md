@@ -1,5 +1,7 @@
 # Issue Workflow Toolkit
 
+English | [日本語](README.ja.md)
+
 GitHub Issue-driven development workflow toolkit for Claude Code.
 
 ## Installation

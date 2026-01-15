@@ -1,17 +1,17 @@
 # Code Quality Gate Skill
 
-コード品質基準の完全遵守を保証する。
+Ensure complete compliance with code quality standards.
 
 ## Trigger Conditions
 
-- コミット前
-- PR作成前
-- 品質問題検出時
-- 明示的な依頼時
+- Before commit
+- Before PR creation
+- When quality issues are detected
+- When explicitly requested
 
 ## Quality Checks
 
-品質コマンドは`.claude/workflow-config.json`から読み込む:
+Quality commands are loaded from `.claude/workflow-config.json`:
 
 ```json
 {
@@ -30,13 +30,13 @@
 1. **Ruff Linter**
    ```bash
    uv run ruff check .
-   uv run ruff check --fix .  # 自動修正
+   uv run ruff check --fix .  # Auto-fix
    ```
 
 2. **Ruff Formatter**
    ```bash
    uv run ruff format --check .
-   uv run ruff format .  # 自動フォーマット
+   uv run ruff format .  # Auto-format
    ```
 
 3. **Mypy Type Checker**
@@ -52,7 +52,7 @@ uv run ruff check --fix . && uv run ruff format . && uv run mypy .
 
 ## Gate Criteria
 
-**PASS条件**: すべてのチェックがエラーなしで完了
+**PASS condition**: All checks complete without errors
 
 ```
 ✓ ruff check: 0 errors
@@ -60,21 +60,21 @@ uv run ruff check --fix . && uv run ruff format . && uv run mypy .
 ✓ mypy: Success: no issues found
 ```
 
-**FAIL条件**: いずれかのチェックでエラー発生 → コミット/PR作成をブロック
+**FAIL condition**: Any check has errors → Block commit/PR creation
 
 ## Report Format
 
 ```markdown
 ## Code Quality Gate Report
 
-### チェック結果
+### Check Results
 | Tool | Status | Details |
 |------|--------|---------|
 | ruff check | ✓ PASS | 0 errors |
 | ruff format | ✓ PASS | No changes |
 | mypy | ✓ PASS | No issues |
 
-### 総合判定: PASS
+### Overall Result: PASS
 ```
 
 ## Failure Report Format
@@ -82,14 +82,14 @@ uv run ruff check --fix . && uv run ruff format . && uv run mypy .
 ```markdown
 ## Code Quality Gate Report
 
-### チェック結果
+### Check Results
 | Tool | Status | Details |
 |------|--------|---------|
 | ruff check | ✗ FAIL | 3 errors |
 | ruff format | ✓ PASS | No changes |
 | mypy | ✗ FAIL | 2 issues |
 
-### 詳細
+### Details
 
 #### ruff check errors:
 - src/auth.py:10: E501 line too long
@@ -98,9 +98,9 @@ uv run ruff check --fix . && uv run ruff format . && uv run mypy .
 #### mypy issues:
 - src/auth.py:15: error: Incompatible types
 
-### 総合判定: FAIL
+### Overall Result: FAIL
 
-コミットをブロックしました。上記の問題を修正してください。
+Commit blocked. Please fix the issues above.
 ```
 
 ## Instructions for Claude

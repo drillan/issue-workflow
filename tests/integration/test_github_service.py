@@ -36,7 +36,7 @@ class TestGhAvailability:
 
             available, message = check_gh_availability()
             assert available is False
-            assert "見つかりません" in message or "not found" in message.lower()
+            assert "not found" in message.lower()
 
     def test_gh_not_authenticated(self) -> None:
         """Test when gh is installed but not authenticated."""
@@ -53,7 +53,7 @@ class TestGhAvailability:
 
             available, message = check_gh_availability()
             assert available is False
-            assert "認証" in message or "auth" in message.lower()
+            assert "auth" in message.lower()
 
 
 class TestGetIssue:

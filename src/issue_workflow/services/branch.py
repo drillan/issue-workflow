@@ -18,12 +18,12 @@ LABEL_MAPPING: dict[str, BranchType] = {
 
 # Keyword to branch type mapping (fallback)
 KEYWORD_MAPPING: dict[BranchType, list[str]] = {
-    BranchType.FIX: ["bug", "fix", "バグ", "修正", "不具合", "エラー"],
-    BranchType.REFACTOR: ["refactor", "リファクタ", "整理", "改善"],
-    BranchType.DOCS: ["doc", "ドキュメント", "readme", "説明"],
-    BranchType.TEST: ["test", "テスト"],
-    BranchType.CHORE: ["chore", "設定", "config"],
-    BranchType.FEAT: ["add", "追加", "新機能", "implement", "実装"],
+    BranchType.FIX: ["bug", "fix", "error", "issue"],
+    BranchType.REFACTOR: ["refactor", "cleanup", "improve", "reorganize"],
+    BranchType.DOCS: ["doc", "readme", "documentation"],
+    BranchType.TEST: ["test", "testing"],
+    BranchType.CHORE: ["chore", "config", "setup", "dependency"],
+    BranchType.FEAT: ["add", "feature", "implement", "create", "new"],
 }
 
 
