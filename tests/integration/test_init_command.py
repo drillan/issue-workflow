@@ -46,19 +46,22 @@ class TestInitCommand:
         """Test init command with Python preset."""
         from issue_workflow.cli.main import app
 
-        runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
+        result = runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
 
-        # Check command succeeded or failed with expected exit code
-        # Note: Without mocking gh, this may fail but we check file creation
+        # If gh CLI is not available, test may fail - skip in that case
+        if result.exit_code != 0 and "gh" in result.output.lower():
+            pytest.skip("gh CLI not available or not authenticated")
+
         claude_dir = temp_project / ".claude"
-        if claude_dir.exists():
-            # Verify config file
-            config_file = claude_dir / "workflow-config.json"
-            if config_file.exists():
-                config = json.loads(config_file.read_text())
-                assert config["language"] == "python"
-                assert "quality" in config
-                assert config["quality"]["lint"] == "uv run ruff check --fix ."
+        assert claude_dir.exists(), "Claude directory should be created"
+
+        config_file = claude_dir / "workflow-config.json"
+        assert config_file.exists(), "Config file should be created"
+
+        config = json.loads(config_file.read_text())
+        assert config["language"] == "python"
+        assert "quality" in config
+        assert config["quality"]["lint"] == "uv run ruff check --fix ."
 
     def test_init_creates_claude_directory(self, temp_project: Path) -> None:
         """Test that init creates .claude directory."""
@@ -96,13 +99,18 @@ class TestInitCommand:
         config_file = claude_dir / "workflow-config.json"
         config_file.write_text('{"language": "old"}')
 
-        runner.invoke(app, ["init", "--language", "python", "--non-interactive", "--force"])
+        result = runner.invoke(
+            app, ["init", "--language", "python", "--non-interactive", "--force"]
+        )
 
-        # After implementation, config should be overwritten
-        if config_file.exists():
-            _ = json.loads(config_file.read_text())
-            # Config should be updated to python
-            assert True  # Placeholder for TDD
+        # If gh CLI is not available, test may fail - skip in that case
+        if result.exit_code != 0 and "gh" in result.output.lower():
+            pytest.skip("gh CLI not available or not authenticated")
+
+        assert config_file.exists(), "Config file should exist after --force"
+        config = json.loads(config_file.read_text())
+        # Config should be updated to python
+        assert config["language"] == "python"
 
     def test_init_without_force_errors_on_existing(self, temp_project: Path) -> None:
         """Test init without --force fails when config exists."""
@@ -117,3 +125,51 @@ class TestInitCommand:
         result = runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
         # Should fail because config already exists and --force not specified
         assert result.exit_code != 0 or "exists" in result.output.lower()
+
+    def test_init_creates_documentation_settings(self, temp_project: Path) -> None:
+        """Test that init creates documentation settings in config."""
+        from issue_workflow.cli.main import app
+
+        result = runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
+
+        # If gh CLI is not available, test may fail - skip in that case
+        if result.exit_code != 0 and "gh" in result.output.lower():
+            pytest.skip("gh CLI not available or not authenticated")
+
+        claude_dir = temp_project / ".claude"
+        config_file = claude_dir / "workflow-config.json"
+
+        assert config_file.exists(), "Config file should be created"
+
+        config = json.loads(config_file.read_text())
+        # Verify documentation section exists
+        assert "documentation" in config
+        assert "paths" in config["documentation"]
+        assert "changelog" in config["documentation"]
+        assert "ddd" in config["documentation"]
+        # Verify default values from python preset
+        assert config["documentation"]["paths"] == ["README.md", "docs/"]
+        assert config["documentation"]["changelog"] == "CHANGELOG.md"
+        assert config["documentation"]["ddd"]["enabled"] is True
+        assert config["documentation"]["ddd"]["retcon_writing"] is True
+
+    def test_init_non_interactive_uses_preset_documentation_defaults(
+        self, temp_project: Path
+    ) -> None:
+        """Test that non-interactive mode uses preset documentation defaults."""
+        from issue_workflow.cli.main import app
+
+        result = runner.invoke(app, ["init", "--language", "generic", "--non-interactive"])
+
+        # If gh CLI is not available, test may fail - skip in that case
+        if result.exit_code != 0 and "gh" in result.output.lower():
+            pytest.skip("gh CLI not available or not authenticated")
+
+        claude_dir = temp_project / ".claude"
+        config_file = claude_dir / "workflow-config.json"
+
+        assert config_file.exists(), "Config file should be created"
+
+        config = json.loads(config_file.read_text())
+        # Generic preset has different defaults
+        assert config["documentation"]["paths"] == ["README.md"]

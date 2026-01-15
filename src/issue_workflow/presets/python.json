@@ -8,6 +8,14 @@
     "test": "uv run pytest",
     "all": "uv run ruff check --fix . && uv run ruff format . && uv run mypy ."
   },
+  "documentation": {
+    "paths": ["README.md", "docs/"],
+    "changelog": "CHANGELOG.md",
+    "ddd": {
+      "enabled": true,
+      "retcon_writing": true
+    }
+  },
   "files": [
     {
       "path": "workflow-config.json",

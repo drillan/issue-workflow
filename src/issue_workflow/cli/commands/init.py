@@ -6,6 +6,8 @@ from typing import Annotated
 import typer
 
 from issue_workflow.cli import ui
+from issue_workflow.models.config import DDDSettings, DocumentationSettings
+from issue_workflow.models.preset import LanguagePreset
 from issue_workflow.services.github import check_gh_availability
 from issue_workflow.services.preset_loader import PresetLoader, PresetNotFoundError
 from issue_workflow.services.template import TemplateService
@@ -27,6 +29,48 @@ def get_language_choices() -> list[tuple[str, str]]:
     loader = PresetLoader()
     display_names = loader.get_display_names()
     return [(lang, display_names[lang]) for lang in loader.list_available()]
+
+
+def _get_documentation_settings(
+    preset: LanguagePreset,
+    non_interactive: bool,
+) -> DocumentationSettings:
+    """Get documentation settings from user or preset defaults.
+
+    Args:
+        preset: Language preset with default documentation settings
+        non_interactive: Skip interactive prompts
+
+    Returns:
+        Documentation settings (from user input or preset defaults)
+    """
+    if non_interactive:
+        return preset.documentation
+
+    # Documentation paths
+    paths = ui.input_list(
+        "Documentation paths",
+        preset.documentation.paths,
+    )
+
+    # Changelog file
+    changelog_default = preset.documentation.changelog or "CHANGELOG.md"
+    changelog = ui.input_text("CHANGELOG file", changelog_default)
+
+    # DDD enabled
+    ddd_enabled = ui.confirm(
+        "Enable DDD workflow?",
+        default=preset.documentation.ddd.enabled,
+    )
+
+    return DocumentationSettings(
+        paths=paths,
+        changelog=changelog,
+        ddd=DDDSettings(
+            enabled=ddd_enabled,
+            retcon_writing=preset.documentation.ddd.retcon_writing,
+        ),
+    )
 
 
 @app.callback(invoke_without_command=True)
@@ -113,11 +157,14 @@ def _run_init(language: str | None, non_interactive: bool, force: bool) -> None:
         )
         raise typer.Exit(EXIT_INVALID_ARGUMENT) from e
 
+    # Get documentation settings
+    documentation = _get_documentation_settings(preset, non_interactive)
+
     # Generate config files
     template_service = TemplateService()
     ui.print_info(f"Initializing with {preset.display_name} preset...")
 
-    generated_files = template_service.generate_all(preset, claude_dir)
+    generated_files = template_service.generate_all(preset, claude_dir, documentation)
     for path in generated_files:
         ui.print_success(f"Created {path.relative_to(project_dir)}")
 

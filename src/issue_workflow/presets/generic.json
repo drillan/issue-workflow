@@ -8,6 +8,14 @@
     "test": "echo 'No test command configured'",
     "all": "echo 'No quality commands configured'"
   },
+  "documentation": {
+    "paths": ["README.md"],
+    "changelog": "CHANGELOG.md",
+    "ddd": {
+      "enabled": true,
+      "retcon_writing": true
+    }
+  },
   "files": [
     {
       "path": "workflow-config.json",

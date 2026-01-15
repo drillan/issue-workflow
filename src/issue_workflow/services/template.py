@@ -5,7 +5,11 @@ import json
 import shutil
 from pathlib import Path
 
-from issue_workflow.models.config import WorkflowConfig, WorkflowSettings
+from issue_workflow.models.config import (
+    DocumentationSettings,
+    WorkflowConfig,
+    WorkflowSettings,
+)
 from issue_workflow.models.preset import LanguagePreset
 from issue_workflow.models.update import FileChangeInfo, FileChangeType, UpdateResult
 
@@ -153,12 +157,18 @@ class TemplateService:
             templates_dir = Path(__file__).parent.parent / "templates"
         self.templates_dir = templates_dir
 
-    def generate_workflow_config(self, preset: LanguagePreset, target_dir: Path) -> Path:
+    def generate_workflow_config(
+        self,
+        preset: LanguagePreset,
+        target_dir: Path,
+        documentation: DocumentationSettings | None = None,
+    ) -> Path:
         """Generate workflow-config.json from preset.
 
         Args:
             preset: Language preset to use
             target_dir: Directory to write config to (.claude/)
+            documentation: Documentation settings (uses preset defaults if None)
 
         Returns:
             Path to generated config file
@@ -168,6 +178,7 @@ class TemplateService:
             language=preset.name.value,
             quality=preset.quality,
             workflow=WorkflowSettings(),
+            documentation=documentation or preset.documentation,
         )
 
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -361,18 +372,24 @@ class TemplateService:
             dry_run=dry_run,
         )
 
-    def generate_all(self, preset: LanguagePreset, target_dir: Path) -> list[Path]:
+    def generate_all(
+        self,
+        preset: LanguagePreset,
+        target_dir: Path,
+        documentation: DocumentationSettings | None = None,
+    ) -> list[Path]:
         """Generate all config files from preset.
 
         Args:
             preset: Language preset to use
             target_dir: Directory to write config files to (.claude/)
+            documentation: Documentation settings (uses preset defaults if None)
 
         Returns:
             List of paths to generated files/directories
         """
         generated: list[Path] = []
-        generated.append(self.generate_workflow_config(preset, target_dir))
+        generated.append(self.generate_workflow_config(preset, target_dir, documentation))
         generated.append(self.generate_git_conventions(target_dir))
         generated.append(self.copy_commands(target_dir))
         generated.append(self.copy_skills(target_dir))

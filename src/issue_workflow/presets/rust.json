@@ -8,6 +8,14 @@
     "test": "cargo test",
     "all": "cargo clippy --fix --allow-dirty --allow-staged && cargo fmt && cargo check"
   },
+  "documentation": {
+    "paths": ["README.md", "docs/"],
+    "changelog": "CHANGELOG.md",
+    "ddd": {
+      "enabled": true,
+      "retcon_writing": true
+    }
+  },
   "files": [
     {
       "path": "workflow-config.json",

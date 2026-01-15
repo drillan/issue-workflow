@@ -4,6 +4,8 @@ import pytest
 from pydantic import ValidationError
 
 from issue_workflow.models.config import (
+    DDDSettings,
+    DocumentationSettings,
     LanguageName,
     QualityCommands,
     WorkflowConfig,
@@ -183,3 +185,141 @@ class TestWorkflowConfig:
                     all="all",
                 ),
             )
+
+    def test_default_documentation_settings(self) -> None:
+        """Test default documentation settings are applied."""
+        config = WorkflowConfig(
+            language="python",
+            quality=QualityCommands(
+                lint="lint",
+                format="format",
+                typecheck="typecheck",
+                test="test",
+                all="all",
+            ),
+        )
+        assert config.documentation.paths == ["README.md", "docs/"]
+        assert config.documentation.changelog == "CHANGELOG.md"
+        assert config.documentation.ddd.enabled is True
+
+    def test_custom_documentation_settings(self) -> None:
+        """Test custom documentation settings are applied."""
+        config = WorkflowConfig(
+            language="python",
+            quality=QualityCommands(
+                lint="lint",
+                format="format",
+                typecheck="typecheck",
+                test="test",
+                all="all",
+            ),
+            documentation=DocumentationSettings(
+                paths=["README.md", "specs/"],
+                changelog="CHANGELOG.md",
+                ddd=DDDSettings(enabled=False),
+            ),
+        )
+        assert config.documentation.paths == ["README.md", "specs/"]
+        assert config.documentation.ddd.enabled is False
+
+
+class TestDDDSettings:
+    """Tests for DDDSettings model."""
+
+    def test_default_values(self) -> None:
+        """Test default values are applied."""
+        settings = DDDSettings()
+        assert settings.enabled is True
+        assert settings.retcon_writing is True
+
+    def test_custom_values(self) -> None:
+        """Test custom values override defaults."""
+        settings = DDDSettings(enabled=False, retcon_writing=False)
+        assert settings.enabled is False
+        assert settings.retcon_writing is False
+
+    def test_partial_custom_values(self) -> None:
+        """Test partial custom values with defaults."""
+        settings = DDDSettings(enabled=False)
+        assert settings.enabled is False
+        assert settings.retcon_writing is True
+
+
+class TestDocumentationSettings:
+    """Tests for DocumentationSettings model."""
+
+    def test_default_values(self) -> None:
+        """Test default values are applied."""
+        settings = DocumentationSettings()
+        assert settings.paths == ["README.md", "docs/"]
+        assert settings.changelog == "CHANGELOG.md"
+        assert settings.ddd.enabled is True
+        assert settings.ddd.retcon_writing is True
+
+    def test_custom_paths(self) -> None:
+        """Test custom paths override defaults."""
+        settings = DocumentationSettings(paths=["README.md", "specs/"])
+        assert settings.paths == ["README.md", "specs/"]
+
+    def test_empty_paths_allowed(self) -> None:
+        """Test empty paths list is allowed."""
+        settings = DocumentationSettings(paths=[])
+        assert settings.paths == []
+
+    def test_custom_changelog(self) -> None:
+        """Test custom changelog path."""
+        settings = DocumentationSettings(changelog="HISTORY.md")
+        assert settings.changelog == "HISTORY.md"
+
+    def test_changelog_none(self) -> None:
+        """Test changelog can be None."""
+        settings = DocumentationSettings(changelog=None)
+        assert settings.changelog is None
+
+    def test_ddd_disabled(self) -> None:
+        """Test DDD can be disabled."""
+        settings = DocumentationSettings(ddd=DDDSettings(enabled=False))
+        assert settings.ddd.enabled is False
+        assert settings.ddd.retcon_writing is True
+
+    def test_full_custom_config(self) -> None:
+        """Test fully customized documentation settings."""
+        settings = DocumentationSettings(
+            paths=["README.md", "api-docs/"],
+            changelog="RELEASES.md",
+            ddd=DDDSettings(enabled=True, retcon_writing=False),
+        )
+        assert settings.paths == ["README.md", "api-docs/"]
+        assert settings.changelog == "RELEASES.md"
+        assert settings.ddd.enabled is True
+        assert settings.ddd.retcon_writing is False
+
+    def test_empty_string_path_filtered(self) -> None:
+        """Test empty string paths are filtered out."""
+        settings = DocumentationSettings(paths=["README.md", "", "docs/"])
+        assert settings.paths == ["README.md", "docs/"]
+
+    def test_whitespace_only_path_filtered(self) -> None:
+        """Test whitespace-only paths are filtered out."""
+        settings = DocumentationSettings(paths=["README.md", "  ", "docs/"])
+        assert settings.paths == ["README.md", "docs/"]
+
+    def test_path_whitespace_stripped(self) -> None:
+        """Test leading/trailing whitespace is stripped from paths."""
+        settings = DocumentationSettings(paths=["  README.md  ", "  docs/  "])
+        assert settings.paths == ["README.md", "docs/"]
+
+    def test_changelog_empty_string_becomes_none(self) -> None:
+        """Test empty string changelog becomes None."""
+        settings = DocumentationSettings(changelog="")
+        assert settings.changelog is None
+
+    def test_changelog_whitespace_only_becomes_none(self) -> None:
+        """Test whitespace-only changelog becomes None."""
+        settings = DocumentationSettings(changelog="   ")
+        assert settings.changelog is None
+
+    def test_changelog_whitespace_stripped(self) -> None:
+        """Test leading/trailing whitespace is stripped from changelog."""
+        settings = DocumentationSettings(changelog="  HISTORY.md  ")
+        assert settings.changelog == "HISTORY.md"

@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class LanguageName(str, Enum):
@@ -33,6 +33,45 @@ class WorkflowSettings(BaseModel):
     auto_report: bool = Field(default=True, description="Enable automatic progress reporting")
 
 
+class DDDSettings(BaseModel):
+    """DDD (Documentation-Driven Development) settings."""
+
+    enabled: bool = Field(default=True, description="Enable DDD workflow")
+    retcon_writing: bool = Field(default=True, description="Enforce retcon writing style")
+
+
+class DocumentationSettings(BaseModel):
+    """Documentation configuration settings."""
+
+    paths: list[str] = Field(
+        default=["README.md", "docs/"],
+        description="Documentation file/directory paths",
+    )
+    changelog: str | None = Field(
+        default="CHANGELOG.md",
+        description="Changelog file path",
+    )
+    ddd: DDDSettings = Field(
+        default_factory=DDDSettings,
+        description="DDD workflow settings",
+    )
+
+    @field_validator("paths", mode="before")
+    @classmethod
+    def validate_paths(cls, v: list[str]) -> list[str]:
+        """Strip whitespace and filter out empty paths."""
+        return [path.strip() for path in v if path.strip()]
+
+    @field_validator("changelog", mode="before")
+    @classmethod
+    def validate_changelog(cls, v: str | None) -> str | None:
+        """Strip whitespace and convert empty string to None."""
+        if v is None:
+            return None
+        stripped = v.strip()
+        return stripped if stripped else None
+
+
 class WorkflowConfig(BaseModel):
     """Project workflow configuration."""
 
@@ -41,6 +80,9 @@ class WorkflowConfig(BaseModel):
     quality: QualityCommands = Field(description="Quality check commands")
     workflow: WorkflowSettings = Field(
         default_factory=WorkflowSettings, description="Workflow settings"
+    )
+    documentation: DocumentationSettings = Field(
+        default_factory=DocumentationSettings, description="Documentation settings"
     )
 
     model_config = {

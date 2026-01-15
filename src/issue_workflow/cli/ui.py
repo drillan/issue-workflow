@@ -122,3 +122,44 @@ def print_added(message: str) -> None:
 def print_updated(message: str) -> None:
     """Print message for updated item."""
     console.print(f"  [yellow]~[/yellow] {message}")
+
+
+def input_list(prompt: str, default: list[str]) -> list[str]:
+    """Prompt for comma-separated list input.
+
+    Args:
+        prompt: Prompt message to display
+        default: Default list value
+
+    Returns:
+        List of strings from user input
+    """
+    default_str = ", ".join(default)
+    console.print(f"[bold]{prompt}[/bold] [{default_str}]: ", end="")
+
+    try:
+        user_input = input().strip()
+        if not user_input:
+            return default
+        return [item.strip() for item in user_input.split(",") if item.strip()]
+    except (KeyboardInterrupt, EOFError):
+        raise KeyboardInterrupt from None
+
+
+def input_text(prompt: str, default: str) -> str:
+    """Prompt for single text input.
+
+    Args:
+        prompt: Prompt message to display
+        default: Default value
+
+    Returns:
+        User input or default value
+    """
+    console.print(f"[bold]{prompt}[/bold] [{default}]: ", end="")
+
+    try:
+        user_input = input().strip()
+        return user_input if user_input else default
+    except (KeyboardInterrupt, EOFError):
+        raise KeyboardInterrupt from None

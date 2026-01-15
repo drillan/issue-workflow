@@ -115,9 +115,30 @@ Available presets with pre-configured quality commands:
     "quality_gate_required": true,
     "auto_report": true
   },
+  "documentation": {
+    "paths": ["README.md", "docs/"],
+    "changelog": "CHANGELOG.md",
+    "ddd": {
+      "enabled": true,
+      "retcon_writing": true
+    }
+  },
   "$schema": "https://raw.githubusercontent.com/drillan/issue-workflow/main/schemas/workflow-config.schema.json"
 }
 ```
+
+### Documentation Settings
+
+The `documentation` section configures documentation paths and DDD (Documentation-Driven Development) workflow:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `paths` | `string[]` | `["README.md", "docs/"]` | Documentation file/directory paths to maintain |
+| `changelog` | `string` | `"CHANGELOG.md"` | Changelog file path |
+| `ddd.enabled` | `boolean` | `true` | Enable DDD workflow |
+| `ddd.retcon_writing` | `boolean` | `true` | Enforce retcon writing style (write docs as if feature exists) |
+
+During `issue-workflow init`, you can customize these settings interactively or use preset defaults with `--non-interactive`.
 
 ### Git Conventions (`.claude/git-conventions.md`)
 
