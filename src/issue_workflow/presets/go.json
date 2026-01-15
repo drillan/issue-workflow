@@ -1,0 +1,21 @@
+{
+  "name": "go",
+  "display_name": "Go",
+  "quality": {
+    "lint": "golangci-lint run --fix",
+    "format": "go fmt ./...",
+    "typecheck": "go vet ./...",
+    "test": "go test ./...",
+    "all": "golangci-lint run --fix && go fmt ./... && go vet ./..."
+  },
+  "files": [
+    {
+      "path": "workflow-config.json",
+      "template": "workflow-config.json.j2"
+    },
+    {
+      "path": "git-conventions.md",
+      "template": "git-conventions.md"
+    }
+  ]
+}

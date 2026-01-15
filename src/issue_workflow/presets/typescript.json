@@ -1,0 +1,21 @@
+{
+  "name": "typescript",
+  "display_name": "TypeScript",
+  "quality": {
+    "lint": "npm run lint -- --fix",
+    "format": "npm run format",
+    "typecheck": "npm run typecheck",
+    "test": "npm test",
+    "all": "npm run lint -- --fix && npm run format && npm run typecheck"
+  },
+  "files": [
+    {
+      "path": "workflow-config.json",
+      "template": "workflow-config.json.j2"
+    },
+    {
+      "path": "git-conventions.md",
+      "template": "git-conventions.md"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "generic",
+  "display_name": "Generic",
+  "quality": {
+    "lint": "echo 'No lint command configured'",
+    "format": "echo 'No format command configured'",
+    "typecheck": "echo 'No typecheck command configured'",
+    "test": "echo 'No test command configured'",
+    "all": "echo 'No quality commands configured'"
+  },
+  "files": [
+    {
+      "path": "workflow-config.json",
+      "template": "workflow-config.json.j2"
+    },
+    {
+      "path": "git-conventions.md",
+      "template": "git-conventions.md"
+    }
+  ]
+}

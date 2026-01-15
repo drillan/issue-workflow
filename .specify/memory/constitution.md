@@ -1,50 +1,316 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Issue Workflow Toolkit Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### Article 1: Test-First Imperative
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+**これは非交渉的である**: すべての実装は厳密なTDD（テスト駆動開発）に従わなければならない（MUST）。
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**実装コードを書く前に**:
+1. ユニットテストを作成しなければならない（MUST）
+2. テストをユーザーに承認してもらわなければならない（MUST）
+3. テストが失敗する（Redフェーズ）ことを確認しなければならない（MUST）
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**テスト構成の原則**:
+1. テストコードは機能毎に作成しなければならない（MUST）
+2. 1つの機能に対して1つのテストファイルを対応させなければならない（MUST）
+3. テストファイル名は対象機能を明確に反映させなければならない（MUST）
+   - 例: `test_auth.py` ← `auth.py`
+4. 機能が複雑な場合は、サブ機能毎にテストクラスで分離すべきである（SHOULD）
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+**理由**: AIによる「動くけど正しくない」コード生成を防ぐ
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### Article 2: Documentation Integrity
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+**これは非交渉的である**: すべての実装は、ドキュメント仕様との完全な整合性を保たなければならない（MUST）。
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**必須要件**:
+1. 実装前の仕様確認を必ず実施しなければならない（MUST）
+2. ドキュメント変更時はユーザー承認を取得しなければならない（MUST）
+3. ドキュメント更新完了後に実装着手しなければならない（MUST）
+4. 仕様が曖昧な場合は実装を停止し、明確化を要求しなければならない（MUST）
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**実施プロトコル**:
+- **仕様曖昧性検出**: 複数解釈可能な記述を特定し報告する
+- **仕様確認チェックリスト**: 実装前に仕様書の該当セクションを必ず確認する
+
+**理由**: AIによる仕様誤認識・独自解釈を防ぎ、意図した通りの実装を保証
+
+### Article 3: CLI & Plugin Design Compliance
+
+すべてのCLI・Plugin実装は、設計原則に準拠しなければならない（MUST）。
+
+**CLI要件**:
+1. すべてのコマンドは`--help`で明確な使用方法を表示しなければならない（MUST）
+2. 対話モードと非対話モード（`--non-interactive`）をサポートしなければならない（MUST）
+3. エラーメッセージは具体的な解決方法を含めなければならない（MUST）
+4. 終了コードは成功（0）と失敗（非0）を適切に返さなければならない（MUST）
+
+**Plugin要件**:
+- スキルは独立してテスト可能でなければならない（MUST）
+- 設定は`workflow-config.json`で一元管理しなければならない（MUST）
+- コマンドはClaude Code Skillsの形式に準拠しなければならない（MUST）
+
+**理由**: CLI/Pluginの一貫した使用体験と保守性を保証
+
+### Article 4: Simplicity
+
+**最小プロジェクト構造**:
+- 初期実装では最大3プロジェクトまでとしなければならない（MUST）
+- 追加プロジェクトには文書化された正当な理由が必要である（MUST）
+
+**フレームワーク信頼の原則**:
+- フレームワークの機能を直接使用しなければならない（MUST）
+- 不必要なラッパーを作成してはならない（MUST NOT）
+
+**理由**: 過剰設計と不必要な複雑さを防ぐ。「車輪の再発明」を回避し、標準的なパターンを活用
+
+## Quality Assurance & Constraints
+
+### Article 5: Code Quality Standards
+
+**これは非交渉的である**: すべてのコードは、品質基準に完全に準拠しなければならない（MUST）。
+いかなる理由があっても品質基準の例外化を認めない。
+
+**必須要件**:
+- 品質基準の完全遵守が必要である（MUST）
+- コミット前の品質チェックが必須である（MUST）
+- 時間制約、進捗圧力、緊急性を理由とした品質妥協は禁止である（MUST NOT）
+- リンター、フォーマッター、型チェッカーの全エラーを解消しなければならない（MUST）
+
+**実施プロトコル**:
+- **コミット前**: `ruff check --fix . && ruff format . && mypy .` を実行する
+- **CI/CD**: すべての品質チェック（ruff、mypy）をパイプラインで自動実行する
+- **品質基準違反時**: 作業を完全停止し、修正完了まで次工程に進まない
+
+**理由**: 技術的負債の蓄積を防ぎ、長期的な保守性とコード品質を保証
+
+### Article 6: Data Accuracy Mandate
+
+**これは非交渉的である**: すべてのデータは、明示的なソースから取得しなければならない（MUST）。
+推測、フォールバック、ハードコードは一切認めない。
+
+**必須要件**:
+
+1. **一次データの推測禁止**
+   - マジックナンバーや固定文字列の直接埋め込みを禁止する（MUST NOT）
+   - 環境依存値の埋め込みを禁止する（MUST NOT）
+   - 認証情報・APIキーのコード内保存を禁止する（MUST NOT）
+
+2. **暗黙的フォールバック禁止**
+   - データ取得失敗時の自動デフォルト値割り当てを禁止する（MUST NOT）
+   - エラーを隠蔽する自動補完を禁止する（MUST NOT）
+   - 推測に基づく値の生成を禁止する（MUST NOT）
+
+3. **設定値ハードコード禁止**
+   - すべての固定値は名前付き定数として定義しなければならない（MUST）
+   - 設定値は専用の設定モジュールで一元管理しなければならない（MUST）
+   - 環境固有値は環境変数または設定ファイルで管理しなければならない（MUST）
+
+**実装例**:
+
+```python
+# 悪い例（禁止）
+timeout = 30  # ハードコードされた値
+if not data:
+    data = "default"  # 暗黙的フォールバック
+
+# 良い例（推奨）
+TIMEOUT_SECONDS = int(os.environ["API_TIMEOUT"])  # 環境変数から取得
+if not data:
+    raise ValueError("Required data is missing")  # 明示的エラー処理
+```
+
+**理由**: データの正確性とトレーサビリティを保証し、潜在的なバグを防ぐ
+
+### Article 7: DRY Principle
+
+**これは非交渉的である**: すべての実装において、コードの重複を避けなければならない（MUST）。
+Don't Repeat Yourself - 同じ知識を複数の場所で表現してはならない（MUST NOT）。
+
+**必須要件**:
+
+1. **実装前の事前調査必須**
+   - 既存の実装を必ず検索・確認しなければならない（MUST）（Glob, Grepツールの活用）
+   - 類似機能の存在を確認しなければならない（MUST）
+   - 再利用可能なコンポーネントを特定しなければならない（MUST）
+
+2. **共通パターンの認識必須**
+   - 3回以上の繰り返しパターンを抽出しなければならない（MUST）
+   - 同一ロジックの関数化・モジュール化を行わなければならない（MUST）
+   - 設定駆動アプローチを検討すべきである（SHOULD）
+
+3. **重複検出時の強制停止**
+   - 重複実装を検出した場合は作業を停止しなければならない（MUST）
+   - 既存実装の拡張可能性を評価しなければならない（MUST）
+   - リファクタリング計画を立案し、ユーザー承認を取得しなければならない（MUST）
+
+**理由**: コードの保守性を向上させ、バグの混入リスクを低減
+
+### Article 8: Refactoring Policy
+
+既存のコードに問題がある場合、新しいバージョンを作成するのではなく、
+既存のコードを直接修正しなければならない（MUST）。
+
+**必須要件**:
+
+1. **既存クラス修正優先**
+   - V2、V3などのバージョン付きクラス作成を禁止する（MUST NOT）
+   - 既存クラスの直接修正を優先しなければならない（MUST）
+   - 後方互換性よりも設計の正しさを優先しなければならない（MUST）
+
+2. **破壊的変更の推奨条件**
+   - アーキテクチャが改善される場合（SHOULD）
+   - 技術的負債を解消できる場合（SHOULD）
+   - 長期的な保守性が向上する場合（SHOULD）
+   - コードの一貫性が保たれる場合（SHOULD）
+
+3. **リファクタリング前チェックリスト**
+   - 影響範囲を特定しなければならない（MUST）（依存関係の分析）
+   - テストカバレッジを確認しなければならない（MUST）（既存テストの実行）
+   - 段階的移行計画を立案すべきである（SHOULD）（必要な場合）
+   - ドキュメントの更新計画を立案しなければならない（MUST）
+
+**理由**: 技術的負債の蓄積を防ぎ、コードベースの一貫性と品質を維持
+
+## Project Standards
+
+### Article 9: Python Type Safety Mandate
+
+**これは非交渉的である**: すべてのPythonコードは、包括的な型注釈と静的型チェックを必須とする（MUST）。
+型安全性を犠牲にしたコードは一切許可しない。
+
+**必須要件**:
+
+1. **型注釈の強制**
+   - すべての関数・メソッドの引数に型注釈を付与しなければならない（MUST）
+   - すべての関数・メソッドの戻り値に型注釈を付与しなければならない（MUST）
+   - クラス属性・インスタンス変数に型注釈を付与しなければならない（MUST）
+   - グローバル変数・モジュール変数に型注釈を付与しなければならない（MUST）
+
+2. **mypy静的型チェック必須**
+   - すべてのPythonファイルでmypy型チェックを実行しなければならない（MUST）
+   - 型チェックエラーが存在する状態でのコミットを禁止する（MUST NOT）
+   - `# type: ignore`コメントの使用を最小限に抑えなければならない（MUST）
+
+3. **型注釈品質基準**
+   - `Any`型の使用を避け、具体的な型を指定しなければならない（MUST）
+   - `Union`より`|`構文（Python 3.10+）を優先すべきである（SHOULD）
+   - `Optional`より`| None`構文を優先すべきである（SHOULD）
+   - 型エイリアスを適切に使用して複雑な型を簡潔に表現すべきである（SHOULD）
+
+**実装例**:
+
+```python
+# 良い例（推奨）
+from pydantic import BaseModel
+
+class ArticleContent(BaseModel):
+    title: str
+    body: str
+    tags: list[str] | None = None
+
+async def create_draft(content: ArticleContent) -> str:
+    """下書きを作成し、記事IDを返す"""
+    ...
+
+# 悪い例（禁止）
+def create_draft(content):  # 型注釈なし
+    return content
+```
+
+**理由**: 静的型チェックによりバグの早期発見、コード可読性向上、リファクタリング安全性を保証
+
+### Article 10: Python Docstring Standards
+
+すべてのPythonコードには、Google-styleのdocstring形式による包括的なドキュメントを強く推奨する（SHOULD）。
+高品質なドキュメントはコード品質と保守性を大幅に向上させる。
+
+**推奨要件**:
+
+1. **Docstring推奨対象**
+   - すべてのpublicモジュールにmodule-level docstringを記述すべきである（SHOULD）
+   - すべてのpublic関数・メソッドにdocstringを記述すべきである（SHOULD）
+   - すべてのpublicクラスにclass-level docstringを記述すべきである（SHOULD）
+   - 複雑なprivate関数（10行以上）にもdocstringを記述すべきである（SHOULD）
+
+2. **Google-style形式推奨**
+   - docstringはGoogle-style形式に従うべきである（SHOULD）
+   - セクション見出し（Args、Returns、Raises等）は正確なスペルと書式を使用すべきである（SHOULD）
+   - インデントは一貫して4スペースを使用すべきである（SHOULD）
+
+**理由**: 統一されたドキュメント形式により、コードの理解性、保守性を向上
+
+### Article 11: Naming Convention Compliance
+
+**これは非交渉的である**: すべてのブランチ名、コミットメッセージ、ディレクトリ名は、標準化された命名規則に従わなければならない（MUST）。
+
+**参照**: 命名規則の詳細は `.claude/git-conventions.md` で定義される。
+
+**原則**:
+- 一貫性: プロジェクト全体で統一された命名を使用する
+- 識別性: 名前から目的が明確にわかる
+- トレーサビリティ: issueとの関連付けが可能
+
+**補足: SpecKitディレクトリ命名**
+
+SpecKitで生成されるディレクトリ（`specs/`配下）は、以下の形式に従う:
+- 形式: `<issue-number>-<name>`
+- issue番号: 3桁ゼロパディング（001、002、003...）
+- 例: `001-issue-workflow`, `002-auth`, `003-article-management`
+
+注: Gitブランチはゼロパディングなし（`.claude/git-conventions.md` 参照）
+
+**理由**: プロジェクトの一貫性と識別性を保証
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+### Amendment Procedure
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+この憲法の改正は、以下のプロセスに従わなければならない（MUST）:
+
+1. **改正提案**: 文書化された改正案を作成し、変更理由を明記する
+2. **影響分析**: 依存テンプレート（plan.md、spec.md、tasks.md）への影響を評価する
+3. **承認**: プロジェクトオーナーまたは指定された承認者の承認を取得する
+4. **移行計画**: 既存コードへの影響がある場合、段階的移行計画を立案する
+5. **バージョン更新**: セマンティックバージョニングに従ってバージョンを更新する
+
+### Versioning Policy
+
+憲法のバージョンは、セマンティックバージョニング（MAJOR.MINOR.PATCH）に従う:
+
+- **MAJOR**: 後方互換性のないガバナンス/原則の削除または再定義
+- **MINOR**: 新しい原則/セクションの追加または重要な拡張ガイダンス
+- **PATCH**: 明確化、文言修正、誤字修正、非セマンティックな改善
+
+### Compliance Review
+
+すべてのプルリクエストとコードレビューは、この憲法への準拠を検証しなければならない（MUST）。
+
+**必須チェック項目**:
+- テストファーストが遵守されているか（Article 1）
+- ドキュメントとの整合性が保たれているか（Article 2）
+- CLI/Plugin設計原則に準拠しているか（Article 3）
+- コード品質基準に準拠しているか（Article 5）
+- DRY原則に違反していないか（Article 7）
+- Python型安全性基準を満たしているか（Article 9）
+
+**推奨チェック項目**:
+- Python docstring標準が適用されているか（Article 10）
+
+**複雑性の正当化**: 憲法の原則に違反する複雑性は、明確に正当化されなければならない（MUST）。
+
+**ランタイムガイダンス**: AI開発支援のランタイムガイダンスは、`CLAUDE.md`（プロジェクトルート）で管理される。
+
+### Application Principles
+
+この憲法のすべてのArticleは、以下の原則に基づいて適用される:
+
+1. **非交渉的遵守**: 「これは非交渉的である」と明記されたArticleは、いかなる理由があっても例外を認めない
+2. **優先順位**: Articleの番号順ではなく、プロジェクトの目的に応じて適切に適用する
+3. **相互補完**: Core PrinciplesとQuality Assuranceは、相互に補完し合う関係にある
+4. **継続的改善**: この憲法自体も、プロジェクトの成長に合わせて進化させる
+
+---
+
+**Version**: 2.0.0 | **Ratified**: 2025-12-20 | **Last Amended**: 2026-01-15
