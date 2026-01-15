@@ -151,19 +151,6 @@ issueに対応するworktreeを作成します（setup-issue.sh から呼び出�
 ./scripts/add-worktree.sh 199
 ```
 
-### python-init.sh
-
-新しいPythonプロジェクトを初期化します（既存プロジェクトでは使用しません）。
-
-```bash
-./scripts/python-init.sh
-```
-
-**実行内容:**
-- `uv init` でプロジェクト初期化
-- 開発ツール（ruff, mypy, pytest）をインストール
-- Sphinxドキュメント環境をセットアップ
-
 ## 実行場所
 
 | スクリプト | 実行場所 |
