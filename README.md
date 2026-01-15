@@ -54,25 +54,34 @@ After initialization, use Claude Code slash commands to manage your workflow:
 
 ## Plugin Commands (Slash Commands)
 
-Use these commands within Claude Code:
+Use these commands within Claude Code. Listed in recommended workflow order:
 
-| Command | Description |
-|---------|-------------|
-| `/start-issue <number>` | Load Issue, create branch, and develop implementation plan |
-| `/merge-pr <number>` | Wait for CI checks, then merge PR |
-| `/add-worktree <number>` | Create a new worktree for an Issue |
-| `/review-pr-comments [number]` | Review and respond to PR review comments |
+| # | Command | Description | Arguments |
+|---|---------|-------------|-----------|
+| 1 | `/add-worktree` | Create a new worktree for an Issue (optional) | `<issue-number>` |
+| 2 | `/start-issue` | Load Issue, create branch, and develop implementation plan | `<issue-number>` |
+| - | `/commit-push-pr` | Commit, push, and create PR (Official Plugin) | - |
+| - | `/pr-review-toolkit:review-pr` | Review PR (Official Plugin) | `<pr-number>` |
+| 3 | `/review-pr-comments` | Review and respond to PR review comments | `[pr-number]` (optional) |
+| 4 | `/merge-pr` | Wait for CI checks, then merge PR | `<pr-number>` |
+
+### Official Plugin Integration
+
+This toolkit integrates with official Claude Code plugins:
+
+- **commit-commands** - Provides `/commit-push-pr` for streamlined commit, push, and PR creation
+- **pr-review-toolkit** - Provides `/pr-review-toolkit:review-pr` for comprehensive PR reviews
 
 ## Auto-Activated Skills
 
 These skills are automatically triggered during appropriate contexts:
 
-| Skill | Description |
-|-------|-------------|
-| `tdd-workflow` | Enforces TDD workflow (Red-Green-Refactor cycle) |
-| `code-quality-gate` | Runs quality checks before commits |
-| `issue-reporter` | Posts progress updates to Issues |
-| `doc-updater` | Detects changes requiring documentation updates |
+| # | Skill | Description | Activation Timing |
+|---|-------|-------------|-------------------|
+| 1 | `tdd-workflow` | Enforces TDD workflow (Red-Green-Refactor cycle) | Implementation start |
+| 2 | `code-quality-gate` | Runs quality checks before commits | Pre-commit (required to pass) |
+| 3 | `issue-reporter` | Posts progress updates to Issues | Planning phase, problem detection |
+| 4 | `doc-updater` | Detects changes requiring documentation updates | API changes (optional) |
 
 ## Language Presets
 

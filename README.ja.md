@@ -54,25 +54,34 @@ issue-workflow init --language python
 
 ## プラグインコマンド（スラッシュコマンド）
 
-Claude Code内で使用するコマンド：
+Claude Code内で使用するコマンド。推奨ワークフロー順に記載：
 
-| コマンド | 説明 |
-|---------|------|
-| `/start-issue <number>` | Issueを読み込み、ブランチを作成し、実装計画を策定 |
-| `/merge-pr <number>` | CIチェック完了を待機後、PRをマージ |
-| `/add-worktree <number>` | Issue用の新規ワークツリーを作成 |
-| `/review-pr-comments [number]` | PRレビューコメントを確認・対応 |
+| # | コマンド | 説明 | 引数 |
+|---|---------|------|------|
+| 1 | `/add-worktree` | Issue用の新規ワークツリーを作成（オプション） | `<issue番号>` |
+| 2 | `/start-issue` | Issueを読み込み、ブランチを作成し、実装計画を策定 | `<issue番号>` |
+| - | `/commit-push-pr` | コミット、プッシュ、PR作成（公式Plugin） | - |
+| - | `/pr-review-toolkit:review-pr` | PRレビュー（公式Plugin） | `<PR番号>` |
+| 3 | `/review-pr-comments` | PRレビューコメントを確認・対応 | `[PR番号]`（省略可） |
+| 4 | `/merge-pr` | CIチェック完了を待機後、PRをマージ | `<PR番号>` |
+
+### 公式Pluginとの連携
+
+本ツールキットは公式Claude Codeプラグインと連携します：
+
+- **commit-commands** - `/commit-push-pr`を提供し、コミット・プッシュ・PR作成を効率化
+- **pr-review-toolkit** - `/pr-review-toolkit:review-pr`を提供し、包括的なPRレビューを実現
 
 ## 自動起動スキル
 
 適切なコンテキストで自動的にトリガーされるスキル：
 
-| スキル | 説明 |
-|-------|------|
-| `tdd-workflow` | TDDワークフロー（Red-Green-Refactorサイクル）を強制 |
-| `code-quality-gate` | コミット前に品質チェックを実行 |
-| `issue-reporter` | Issueに進捗を投稿 |
-| `doc-updater` | ドキュメント更新が必要な変更を検知 |
+| # | スキル | 説明 | 起動タイミング |
+|---|-------|------|---------------|
+| 1 | `tdd-workflow` | TDDワークフロー（Red-Green-Refactorサイクル）を強制 | 実装開始時 |
+| 2 | `code-quality-gate` | コミット前に品質チェックを実行 | コミット前（必須通過） |
+| 3 | `issue-reporter` | Issueに進捗を投稿 | 計画立案時、問題発覚時 |
+| 4 | `doc-updater` | ドキュメント更新が必要な変更を検知 | API変更時（任意） |
 
 ## 言語プリセット
 
