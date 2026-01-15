@@ -39,7 +39,7 @@ class TestIssueValidation:
                 number=0,
                 title="Test",
                 body="",
-                labels=[],
+                labels=(),
                 state=IssueState.OPEN,
             )
 
@@ -50,7 +50,7 @@ class TestIssueValidation:
                 number=-1,
                 title="Test",
                 body="",
-                labels=[],
+                labels=(),
                 state=IssueState.OPEN,
             )
 
@@ -60,7 +60,7 @@ class TestIssueValidation:
             number=1,
             title="Test",
             body="",
-            labels=[],
+            labels=(),
             state=IssueState.OPEN,
         )
         assert issue.number == 1
@@ -75,13 +75,13 @@ class TestIssueModel:
             number=123,
             title="Test Issue",
             body="Test body content",
-            labels=["bug", "enhancement"],
+            labels=("bug", "enhancement"),
             state=IssueState.OPEN,
         )
         assert issue.number == 123
         assert issue.title == "Test Issue"
         assert issue.body == "Test body content"
-        assert issue.labels == ["bug", "enhancement"]
+        assert issue.labels == ("bug", "enhancement")
         assert issue.state == IssueState.OPEN
 
     def test_is_open_true(self) -> None:
@@ -90,7 +90,7 @@ class TestIssueModel:
             number=1,
             title="Test",
             body="",
-            labels=[],
+            labels=(),
             state=IssueState.OPEN,
         )
         assert issue.is_open is True
@@ -101,7 +101,7 @@ class TestIssueModel:
             number=1,
             title="Test",
             body="",
-            labels=[],
+            labels=(),
             state=IssueState.CLOSED,
         )
         assert issue.is_open is False
@@ -112,7 +112,7 @@ class TestIssueModel:
             number=1,
             title="Test",
             body="",
-            labels=[],
+            labels=(),
             state=IssueState.OPEN,
         )
         with pytest.raises(AttributeError):
@@ -135,7 +135,7 @@ class TestIssueFromGhJson:
         assert issue.number == 123
         assert issue.title == "Test Issue"
         assert issue.body == "Test body"
-        assert issue.labels == ["bug"]
+        assert issue.labels == ("bug",)
         assert issue.state == IssueState.OPEN
 
     def test_from_gh_json_multiple_labels(self) -> None:
@@ -148,7 +148,7 @@ class TestIssueFromGhJson:
             "state": "OPEN",
         }
         issue = Issue.from_gh_json(data)
-        assert issue.labels == ["bug", "urgent", "frontend"]
+        assert issue.labels == ("bug", "urgent", "frontend")
 
     def test_from_gh_json_empty_labels(self) -> None:
         """Test creating issue with empty labels."""
@@ -160,16 +160,16 @@ class TestIssueFromGhJson:
             "state": "OPEN",
         }
         issue = Issue.from_gh_json(data)
-        assert issue.labels == []
+        assert issue.labels == ()
 
-    def test_from_gh_json_missing_fields(self) -> None:
-        """Test creating issue with missing fields uses defaults."""
+    def test_from_gh_json_minimal_fields(self) -> None:
+        """Test creating issue with only required number field."""
         data: dict[str, object] = {"number": 1}
         issue = Issue.from_gh_json(data)
         assert issue.number == 1
         assert issue.title == ""
         assert issue.body == ""
-        assert issue.labels == []
+        assert issue.labels == ()
         assert issue.state == IssueState.OPEN
 
     def test_from_gh_json_string_labels(self) -> None:
@@ -182,10 +182,20 @@ class TestIssueFromGhJson:
             "state": "OPEN",
         }
         issue = Issue.from_gh_json(data)
-        assert issue.labels == ["bug", "feature"]
+        assert issue.labels == ("bug", "feature")
 
-    def test_from_gh_json_missing_number_raises_error(self) -> None:
-        """Test creating issue without number raises ValueError."""
+    def test_from_gh_json_missing_number_raises_keyerror(self) -> None:
+        """Test creating issue without number raises KeyError."""
         data: dict[str, object] = {"title": "Test"}
-        with pytest.raises(ValueError, match="number must be positive"):
+        with pytest.raises(KeyError):
+            Issue.from_gh_json(data)
+
+    def test_from_gh_json_invalid_state_raises_valueerror(self) -> None:
+        """Test creating issue with invalid state raises ValueError."""
+        data = {
+            "number": 1,
+            "title": "Test",
+            "state": "INVALID_STATE",
+        }
+        with pytest.raises(ValueError, match="'INVALID_STATE' is not a valid IssueState"):
             Issue.from_gh_json(data)

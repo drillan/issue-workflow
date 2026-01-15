@@ -18,7 +18,7 @@ class Issue:
     number: int
     title: str
     body: str
-    labels: list[str]
+    labels: tuple[str, ...]
     state: IssueState
 
     def __post_init__(self) -> None:
@@ -43,16 +43,13 @@ class Issue:
         else:
             labels = []
 
-        number_val = data.get("number", 0)
+        number_val = data["number"]
         state_str = str(data.get("state", "OPEN"))
-        try:
-            state = IssueState(state_str)
-        except ValueError:
-            state = IssueState.OPEN
+        state = IssueState(state_str)
         return cls(
             number=int(number_val) if isinstance(number_val, (int, str)) else 0,
             title=str(data.get("title", "")),
             body=str(data.get("body", "")),
-            labels=labels,
+            labels=tuple(labels),
             state=state,
         )

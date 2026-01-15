@@ -12,10 +12,10 @@ class IssueFactory(Protocol):
     """Protocol for issue factory fixture."""
 
     @staticmethod
-    def with_labels(labels: list[str], title: str = "Test Issue") -> Issue: ...
+    def with_labels(labels: tuple[str, ...], title: str = "Test Issue") -> Issue: ...
 
     @staticmethod
-    def with_title(title: str, labels: list[str] | None = None) -> Issue: ...
+    def with_title(title: str, labels: tuple[str, ...] | None = None) -> Issue: ...
 
 
 class TestBranchTypeDetection:
@@ -27,7 +27,7 @@ class TestBranchTypeDetection:
 
         class Factory:
             @staticmethod
-            def with_labels(labels: list[str], title: str = "Sample Issue") -> Issue:
+            def with_labels(labels: tuple[str, ...], title: str = "Sample Issue") -> Issue:
                 return Issue(
                     number=123,
                     title=title,
@@ -37,12 +37,12 @@ class TestBranchTypeDetection:
                 )
 
             @staticmethod
-            def with_title(title: str, labels: list[str] | None = None) -> Issue:
+            def with_title(title: str, labels: tuple[str, ...] | None = None) -> Issue:
                 return Issue(
                     number=123,
                     title=title,
                     body="",
-                    labels=labels or [],
+                    labels=labels or (),
                     state=IssueState.OPEN,
                 )
 
@@ -50,28 +50,28 @@ class TestBranchTypeDetection:
 
     def test_enhancement_label_maps_to_feat(self, create_issue: type[IssueFactory]) -> None:
         """Test enhancement label maps to feat prefix."""
-        issue = create_issue.with_labels(["enhancement"])
+        issue = create_issue.with_labels(("enhancement",))
         from issue_workflow.services.branch import detect_branch_type
 
         assert detect_branch_type(issue) == BranchType.FEAT
 
     def test_bug_label_maps_to_fix(self, create_issue: type[IssueFactory]) -> None:
         """Test bug label maps to fix prefix."""
-        issue = create_issue.with_labels(["bug"])
+        issue = create_issue.with_labels(("bug",))
         from issue_workflow.services.branch import detect_branch_type
 
         assert detect_branch_type(issue) == BranchType.FIX
 
     def test_refactoring_label_maps_to_refactor(self, create_issue: type[IssueFactory]) -> None:
         """Test refactoring label maps to refactor prefix."""
-        issue = create_issue.with_labels(["refactoring"])
+        issue = create_issue.with_labels(("refactoring",))
         from issue_workflow.services.branch import detect_branch_type
 
         assert detect_branch_type(issue) == BranchType.REFACTOR
 
     def test_documentation_label_maps_to_docs(self, create_issue: type[IssueFactory]) -> None:
         """Test documentation label maps to docs prefix."""
-        issue = create_issue.with_labels(["documentation"])
+        issue = create_issue.with_labels(("documentation",))
         from issue_workflow.services.branch import detect_branch_type
 
         assert detect_branch_type(issue) == BranchType.DOCS
@@ -120,15 +120,15 @@ class TestBranchTypeDetection:
 
     def test_default_to_feat(self, create_issue: type[IssueFactory]) -> None:
         """Test default branch type is feat."""
-        # Use a title without any keywords to ensure default
-        issue = create_issue.with_labels([], title="Something unrelated")
+        # Use a title without keywords to ensure default
+        issue = create_issue.with_labels((), title="Something unrelated")
         from issue_workflow.services.branch import detect_branch_type
 
         assert detect_branch_type(issue) == BranchType.FEAT
 
     def test_label_takes_precedence_over_keyword(self, create_issue: type[IssueFactory]) -> None:
         """Test that label takes precedence over keyword in title."""
-        issue = create_issue.with_labels(["enhancement"], title="Fix something")
+        issue = create_issue.with_labels(("enhancement",), title="Fix something")
         from issue_workflow.services.branch import detect_branch_type
 
         assert detect_branch_type(issue) == BranchType.FEAT
@@ -192,7 +192,7 @@ class TestBranchNaming:
             number=456,
             title="Add user login",
             body="",
-            labels=["enhancement"],
+            labels=("enhancement",),
             state=IssueState.OPEN,
         )
         branch = Branch.from_issue(issue, BranchType.FEAT)

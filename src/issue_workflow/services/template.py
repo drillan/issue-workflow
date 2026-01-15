@@ -87,11 +87,11 @@ class TemplateService:
         target_dir.mkdir(parents=True, exist_ok=True)
         target_path = target_dir / "git-conventions.md"
 
-        if source_path.exists():
-            target_path.write_text(source_path.read_text())
-        else:
-            # Generate minimal content if template not found
-            target_path.write_text(self._get_default_git_conventions())
+        if not source_path.exists():
+            msg = f"Template file not found: {source_path}"
+            raise FileNotFoundError(msg)
+
+        target_path.write_text(source_path.read_text())
 
         return target_path
 
@@ -172,20 +172,3 @@ class TemplateService:
         generated.append(self.copy_commands(target_dir))
         generated.append(self.copy_skills(target_dir))
         return generated
-
-    def _get_default_git_conventions(self) -> str:
-        """Get default git conventions content."""
-        return """# Git Conventions
-
-## Branch Naming
-
-Format: `<type>/<issue-number>-<description>`
-
-Types: feat/, fix/, refactor/, docs/, test/, chore/
-
-## Commit Message
-
-Format: `<type>(<scope>): <description>`
-
-Follow Conventional Commits specification.
-"""

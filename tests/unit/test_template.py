@@ -185,62 +185,13 @@ class TestGenerateGitConventions:
 
         assert result.read_text() == template_content
 
-    def test_generates_default_when_template_missing(self, tmp_path: Path) -> None:
-        """Test generates default content when template file is missing."""
+    def test_raises_error_when_template_missing(self, tmp_path: Path) -> None:
+        """Test raises FileNotFoundError when template file is missing."""
         templates_dir = tmp_path / "empty_templates"
         templates_dir.mkdir()
 
         service = TemplateService(templates_dir=templates_dir)
         target_dir = tmp_path / ".claude"
 
-        result = service.generate_git_conventions(target_dir)
-
-        content = result.read_text()
-        assert "# Git Conventions" in content
-        assert "Branch Naming" in content
-        assert "Commit Message" in content
-
-    def test_default_content_includes_branch_types(self, tmp_path: Path) -> None:
-        """Test default content includes branch type examples."""
-        templates_dir = tmp_path / "empty_templates"
-        templates_dir.mkdir()
-
-        service = TemplateService(templates_dir=templates_dir)
-        target_dir = tmp_path / ".claude"
-
-        result = service.generate_git_conventions(target_dir)
-
-        content = result.read_text()
-        assert "feat/" in content
-        assert "fix/" in content
-
-
-class TestGetDefaultGitConventions:
-    """Tests for _get_default_git_conventions method."""
-
-    def test_returns_string(self) -> None:
-        """Test returns string content."""
-        service = TemplateService()
-
-        content = service._get_default_git_conventions()
-
-        assert isinstance(content, str)
-        assert len(content) > 0
-
-    def test_contains_branch_naming_section(self) -> None:
-        """Test contains branch naming section."""
-        service = TemplateService()
-
-        content = service._get_default_git_conventions()
-
-        assert "Branch Naming" in content
-        assert "<type>/<issue-number>" in content
-
-    def test_contains_commit_message_section(self) -> None:
-        """Test contains commit message section."""
-        service = TemplateService()
-
-        content = service._get_default_git_conventions()
-
-        assert "Commit Message" in content
-        assert "Conventional Commits" in content
+        with pytest.raises(FileNotFoundError, match="Template file not found"):
+            service.generate_git_conventions(target_dir)
