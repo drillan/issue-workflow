@@ -1,3 +1,8 @@
+---
+name: issue-reporter
+description: Automatically report work progress as comments on GitHub Issues. Use upon completion of major milestones, PR creation, merge completion, or when explicitly requested.
+---
+
 # issue-reporter
 
 Automatically report work progress as comments on Issues.

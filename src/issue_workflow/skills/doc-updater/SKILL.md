@@ -1,3 +1,8 @@
+---
+name: doc-updater
+description: Detect changes that require documentation updates and suggest/execute updates. Use when code changes may impact documentation, during pre-PR creation checklist, or when explicitly requested.
+---
+
 # doc-updater
 
 Detect changes that require documentation updates and suggest/execute updates.

@@ -1,3 +1,8 @@
+---
+name: tdd-workflow
+description: Enforce TDD workflow and ensure proper execution of the Red-Green-Refactor cycle. Use when starting a new feature implementation, bug fix, or refactoring.
+---
+
 # TDD Workflow Skill
 
 Enforce TDD workflow and ensure proper execution of the Red-Green-Refactor cycle.
