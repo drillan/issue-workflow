@@ -396,3 +396,34 @@ lib_get_worktree_path() {
         echo "$(dirname "$(lib_get_project_root)")/$dir_name"
     fi
 }
+
+# ========================================
+# 設定ファイル読み取り
+# ========================================
+
+# CI レビューモードが有効かどうかを確認
+# 戻り値: 0=有効, 1=無効またはエラー
+lib_is_ci_review_enabled() {
+    local config_file
+    config_file="$(lib_get_project_root)/.claude/workflow-config.json"
+
+    if [[ ! -f "$config_file" ]]; then
+        return 1  # 設定ファイルなし → デフォルト（ローカルレビュー）
+    fi
+
+    # jqの存在確認
+    if ! command -v jq &>/dev/null; then
+        echo "⚠️ jqコマンドが見つかりません。ci_review設定の読み取りにはjqが必要です。" >&2
+        return 1
+    fi
+
+    local ci_review
+    local jq_error
+    if ! ci_review=$(jq -r '.workflow.ci_review // false' "$config_file" 2>&1); then
+        jq_error="$ci_review"
+        echo "⚠️ 設定ファイルの読み取りに失敗しました: $jq_error" >&2
+        return 1
+    fi
+
+    [[ "$ci_review" == "true" ]]
+}
