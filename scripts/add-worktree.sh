@@ -92,9 +92,11 @@ if lib_is_verbose; then
     claude_exit=${pipestatus[0]}
     jq_exit=${pipestatus[1]}
     if [[ $claude_exit -ne 0 ]]; then
+        echo "⚠️ claudeの実行に失敗しました（終了コード: $claude_exit）" >&2
         exit $claude_exit
     fi
     if [[ $jq_exit -ne 0 ]]; then
+        echo "⚠️ 出力のフォーマットに失敗しました（終了コード: $jq_exit）" >&2
         exit $jq_exit
     fi
     exit 0
