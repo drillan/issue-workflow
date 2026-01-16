@@ -23,7 +23,7 @@ for arg in "$@"; do
         _REMAINING_FOR_DEBUG+=("$arg")
     fi
 done
-lib_parse_options "${_REMAINING_FOR_DEBUG[@]}"
+lib_parse_options ${_REMAINING_FOR_DEBUG[@]+"${_REMAINING_FOR_DEBUG[@]}"}
 set -- "${_LIB_REMAINING_ARGS[@]}"
 
 # ヘルプ表示
@@ -95,6 +95,7 @@ if lib_is_verbose; then
     if [[ $jq_exit -ne 0 ]]; then
         exit $jq_exit
     fi
+    exit 0
 else
     claude -p "$PROMPT" --allowedTools "Bash(git:*),Bash(gh:*),Read,Glob"
     exit $?

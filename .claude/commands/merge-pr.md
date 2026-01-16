@@ -81,7 +81,7 @@ gh pr merge <number> --rebase --delete-branch
      git worktree prune
      ```
 
-4. Delete local branch (already done by --delete-branch, but verify):
+4. Delete local branch (--delete-branch only deletes remote branch):
    ```bash
    git branch -d <branch-name>
    ```

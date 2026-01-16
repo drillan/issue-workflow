@@ -354,12 +354,14 @@ lib_find_worktree_dir() {
     local ls_exit_code=0
     ls_output=$(ls "$parent_dir" 2>&1) || ls_exit_code=$?
     if [[ $ls_exit_code -ne 0 ]]; then
-        # 権限エラー等の場合は警告を出力（ディレクトリが存在しない場合は無視）
-        if [[ ! "$ls_output" == *"No such file or directory"* ]]; then
-            echo "⚠️ ディレクトリの読み取りに失敗: $parent_dir ($ls_output)" >&2
+        # ディレクトリが存在しない場合は正常（空を返す）
+        if [[ "$ls_output" == *"No such file or directory"* ]]; then
+            echo ""
+            return 0
         fi
-        echo ""
-        return 0
+        # 権限エラー等の場合は警告を出力して失敗を返す
+        echo "⚠️ ディレクトリの読み取りに失敗: $parent_dir ($ls_output)" >&2
+        return 1
     fi
 
     # 複数のworktree命名パターンをサポート:
@@ -367,7 +369,13 @@ lib_find_worktree_dir() {
     # 2. project-name-N (ゼロパディングなし形式: issue-workflow-15)
     # 3. project-name-type-N[-title] (ブランチタイプ形式: issue-workflow-feat-15-add-feature)
     local result
-    result=$(echo "$ls_output" | grep -E "^${escaped_name}-(${padded_num}$|${issue_num}$|[a-z]+-${issue_num}(-|$))" | head -1) || true
+    local grep_exit=0
+    result=$(echo "$ls_output" | grep -E "^${escaped_name}-(${padded_num}$|${issue_num}$|[a-z]+-${issue_num}(-|$))" | head -1) || grep_exit=$?
+    # grep終了コード: 0=マッチあり, 1=マッチなし, 2=エラー
+    if [[ $grep_exit -eq 2 ]]; then
+        echo "⚠️ grepでエラーが発生しました" >&2
+        return 1
+    fi
     echo "$result"
 }
 

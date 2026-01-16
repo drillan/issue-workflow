@@ -65,7 +65,10 @@ if [[ -n "$WORKTREE_PATH" ]]; then
     echo "📁 既存のワークツリーを検出: $WORKTREE_PATH"
 else
     echo "🔧 ワークツリーを作成中..."
-    "$SCRIPT_DIR/add-worktree.sh" "$ISSUE_NUM"
+    if ! "$SCRIPT_DIR/add-worktree.sh" "$ISSUE_NUM"; then
+        echo "⚠️ ワークツリーの作成に失敗しました" >&2
+        exit 1
+    fi
 
     WORKTREE_PATH=$(lib_get_worktree_path "$ISSUE_NUM")
 
