@@ -418,7 +418,12 @@ lib_is_ci_review_enabled() {
     fi
 
     local ci_review
-    ci_review=$(jq -r '.workflow.ci_review // false' "$config_file" 2>/dev/null)
+    local jq_error
+    if ! ci_review=$(jq -r '.workflow.ci_review // false' "$config_file" 2>&1); then
+        jq_error="$ci_review"
+        echo "⚠️ 設定ファイルの読み取りに失敗しました: $jq_error" >&2
+        return 1
+    fi
 
     [[ "$ci_review" == "true" ]]
 }

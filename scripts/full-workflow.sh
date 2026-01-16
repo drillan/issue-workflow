@@ -147,14 +147,19 @@ else
     if lib_is_ci_review_enabled; then
         # CIレビューモード: CI待機のみ
         echo "⏳ CIチェック完了を待機中...（ci_review モード）"
+        CI_CHECK_FAILED=false
         CHECK_OUTPUT=$(gh pr checks "$PR_NUM" --watch 2>&1) || {
             if [[ "$CHECK_OUTPUT" == *"no checks reported"* ]]; then
                 echo "ℹ️ CIチェックは設定されていません"
             else
                 echo "⚠️ CIチェックが失敗しました" >&2
                 echo "   詳細: gh pr checks $PR_NUM" >&2
+                CI_CHECK_FAILED=true
             fi
         }
+        if [[ "$CI_CHECK_FAILED" == "true" ]]; then
+            exit 1
+        fi
         echo "✅ CIチェック完了"
     else
         # ローカルレビューモード（デフォルト）: review-pr を実行
