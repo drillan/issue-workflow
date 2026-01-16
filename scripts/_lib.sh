@@ -278,10 +278,12 @@ lib_run_claude() {
         fi
 
         # パイプラインの終了コードを取得するためPIPESTATUSを使用
+        # 注意: PIPESTATUS配列は次のコマンドで上書きされるため、一度に保存する必要がある
         claude -p "$prompt" --dangerously-skip-permissions --output-format stream-json --verbose 2>&1 | \
             _lib_format_stream_json
-        local claude_exit=${PIPESTATUS[0]}
-        local jq_exit=${PIPESTATUS[1]}
+        local pipestatus=("${PIPESTATUS[@]}")
+        local claude_exit=${pipestatus[0]}
+        local jq_exit=${pipestatus[1]}
         if [[ $claude_exit -ne 0 ]]; then
             echo "⚠️ claudeの実行に失敗しました（終了コード: $claude_exit）" >&2
             return $claude_exit

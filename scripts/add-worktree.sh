@@ -87,12 +87,16 @@ if lib_is_verbose; then
 
     claude -p "$PROMPT" --allowedTools "Bash(git:*),Bash(gh:*),Read,Glob" \
         --output-format stream-json --verbose 2>&1 | _lib_format_stream_json
-    claude_exit=${PIPESTATUS[0]}
-    jq_exit=${PIPESTATUS[1]}
+    # PIPESTATUS配列は次のコマンドで上書きされるため、一度に保存
+    pipestatus=("${PIPESTATUS[@]}")
+    claude_exit=${pipestatus[0]}
+    jq_exit=${pipestatus[1]}
     if [[ $claude_exit -ne 0 ]]; then
+        echo "⚠️ claudeの実行に失敗しました（終了コード: $claude_exit）" >&2
         exit $claude_exit
     fi
     if [[ $jq_exit -ne 0 ]]; then
+        echo "⚠️ 出力のフォーマットに失敗しました（終了コード: $jq_exit）" >&2
         exit $jq_exit
     fi
     exit 0
