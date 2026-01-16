@@ -81,4 +81,6 @@ ${CONTENT_REPLACED}"
 
 # worktreeディレクトリで claude -p を実行（自動化スクリプトのため常に --dangerously-skip-permissions）
 cd "$WORKTREE_PATH"
-exec claude -p "$PROMPT" --dangerously-skip-permissions
+if ! lib_run_claude "$PROMPT"; then
+    exit 1
+fi

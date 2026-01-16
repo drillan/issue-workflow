@@ -33,4 +33,6 @@ PROMPT="以下のスキルを実行してください:
 
 実装された変更をコミットし、リモートにプッシュして、プルリクエストを作成してください。"
 
-lib_run_claude "$PROMPT"
+if ! lib_run_claude "$PROMPT"; then
+    exit 1
+fi

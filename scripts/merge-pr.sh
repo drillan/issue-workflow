@@ -41,4 +41,6 @@ echo ""
 
 PROMPT="/merge-pr $PR_NUM"
 
-lib_run_claude "$PROMPT"
+if ! lib_run_claude "$PROMPT"; then
+    exit 1
+fi

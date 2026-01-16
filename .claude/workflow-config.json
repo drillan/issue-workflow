@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "language": "python",
+  "quality": {
+    "lint": "uv run ruff check --fix .",
+    "format": "uv run ruff format .",
+    "typecheck": "uv run mypy .",
+    "test": "uv run pytest",
+    "all": "uv run ruff check --fix . && uv run ruff format . && uv run mypy ."
+  },
+  "workflow": {
+    "tdd_required": true,
+    "quality_gate_required": true,
+    "auto_report": true
+  },
+  "$schema": "https://raw.githubusercontent.com/drillan/issue-workflow/main/schemas/workflow-config.schema.json"
+}
