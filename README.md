@@ -70,7 +70,7 @@ Use these commands within Claude Code. Listed in recommended workflow order:
 This toolkit integrates with official Claude Code plugins:
 
 - **commit-commands** - Provides `/commit-push-pr` for streamlined commit, push, and PR creation
-- **pr-review-toolkit** - Provides `/pr-review-toolkit:review-pr` for comprehensive PR reviews
+- **pr-review-toolkit** - Provides `/pr-review-toolkit:review-pr` for comprehensive PR reviews. Can also be used as a [GitHub Action](https://github.com/marketplace/actions/claude-pr-reviewer) for CI integration.
 
 ## Auto-Activated Skills
 

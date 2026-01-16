@@ -70,7 +70,7 @@ Claude Code内で使用するコマンド。推奨ワークフロー順に記載
 本ツールキットは公式Claude Codeプラグインと連携します：
 
 - **commit-commands** - `/commit-push-pr`を提供し、コミット・プッシュ・PR作成を効率化
-- **pr-review-toolkit** - `/pr-review-toolkit:review-pr`を提供し、包括的なPRレビューを実現
+- **pr-review-toolkit** - `/pr-review-toolkit:review-pr`を提供し、包括的なPRレビューを実現。[GitHub Action](https://github.com/marketplace/actions/claude-pr-reviewer)としてCI化も可能。
 
 ## 自動起動スキル
 
