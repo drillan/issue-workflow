@@ -87,8 +87,10 @@ if lib_is_verbose; then
 
     claude -p "$PROMPT" --allowedTools "Bash(git:*),Bash(gh:*),Read,Glob" \
         --output-format stream-json --verbose 2>&1 | _lib_format_stream_json
-    claude_exit=${PIPESTATUS[0]}
-    jq_exit=${PIPESTATUS[1]}
+    # PIPESTATUS配列は次のコマンドで上書きされるため、一度に保存
+    pipestatus=("${PIPESTATUS[@]}")
+    claude_exit=${pipestatus[0]}
+    jq_exit=${pipestatus[1]}
     if [[ $claude_exit -ne 0 ]]; then
         exit $claude_exit
     fi
