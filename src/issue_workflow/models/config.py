@@ -31,6 +31,7 @@ class WorkflowSettings(BaseModel):
     tdd_required: bool = Field(default=True, description="Enforce TDD workflow")
     quality_gate_required: bool = Field(default=True, description="Enforce quality gate")
     auto_report: bool = Field(default=True, description="Enable automatic progress reporting")
+    ci_review: bool = Field(default=False, description="Use CI-based PR review instead of local")
 
 
 class DDDSettings(BaseModel):

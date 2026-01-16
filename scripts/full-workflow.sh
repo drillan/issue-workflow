@@ -129,8 +129,8 @@ echo ""
 echo "✅ complete-issue 完了"
 echo ""
 
-# Step 4: review-pr + respond-comments（PRレビュー + コメント対応）
-echo "🔍 Step 4/5: review-pr + respond-comments"
+# Step 4: レビュー + respond-comments
+echo "🔍 Step 4/5: レビュー + respond-comments"
 echo "───────────────────────────────────────────────────────────────"
 
 PR_NUM=""
@@ -144,26 +144,37 @@ if [[ -z "$PR_NUM" ]]; then
 else
     echo "📍 PRを検出: #$PR_NUM"
 
-    # review-pr
-    PROMPT_REVIEW="/pr-review-toolkit:review-pr $PR_NUM PRにコメントしてください"
-    if ! lib_run_claude "$PROMPT_REVIEW" "no_exec"; then
-        echo "⚠️ review-pr の実行に失敗しました" >&2
-        exit 1
+    if lib_is_ci_review_enabled; then
+        # CIレビューモード: CI待機のみ
+        echo "⏳ CIチェック完了を待機中...（ci_review モード）"
+        CHECK_OUTPUT=$(gh pr checks "$PR_NUM" --watch 2>&1) || {
+            if [[ "$CHECK_OUTPUT" == *"no checks reported"* ]]; then
+                echo "ℹ️ CIチェックは設定されていません"
+            else
+                echo "⚠️ CIチェックが失敗しました" >&2
+                echo "   詳細: gh pr checks $PR_NUM" >&2
+            fi
+        }
+        echo "✅ CIチェック完了"
+    else
+        # ローカルレビューモード（デフォルト）: review-pr を実行
+        PROMPT_REVIEW="/pr-review-toolkit:review-pr $PR_NUM PRにコメントしてください"
+        if ! lib_run_claude "$PROMPT_REVIEW" "no_exec"; then
+            echo "⚠️ review-pr の実行に失敗しました" >&2
+            exit 1
+        fi
+        echo "✅ review-pr 完了"
     fi
 
     echo ""
-    echo "✅ review-pr 完了"
-    echo ""
 
-    # respond-comments
+    # respond-comments（両モード共通）
     echo "💬 レビューコメントに対応中..."
     PROMPT_RESPOND="/review-pr-comments $PR_NUM"
     if ! lib_run_claude "$PROMPT_RESPOND" "no_exec"; then
         echo "⚠️ respond-comments の実行に失敗しました" >&2
         exit 1
     fi
-
-    echo ""
     echo "✅ respond-comments 完了"
 fi
 
