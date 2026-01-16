@@ -46,7 +46,10 @@ if [[ -n "$WORKTREE_PATH" ]]; then
 else
     # Step 2: add-worktree.sh を実行
     echo "🔧 ワークツリーを作成中..."
-    "$SCRIPT_DIR/add-worktree.sh" "$ISSUE_NUM"
+    if ! "$SCRIPT_DIR/add-worktree.sh" "$ISSUE_NUM"; then
+        echo "⚠️ ワークツリーの作成に失敗しました" >&2
+        exit 1
+    fi
 
     # Step 3: 作成されたディレクトリを検出
     WORKTREE_PATH=$(lib_get_worktree_path "$ISSUE_NUM")
@@ -81,4 +84,6 @@ ${CONTENT_REPLACED}"
 
 # worktreeディレクトリで claude -p を実行（自動化スクリプトのため常に --dangerously-skip-permissions）
 cd "$WORKTREE_PATH"
-exec claude -p "$PROMPT" --dangerously-skip-permissions
+if ! lib_run_claude "$PROMPT"; then
+    exit 1
+fi

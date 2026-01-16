@@ -7,6 +7,13 @@
 # Usage:
 #   source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 
+# shellcheck disable=SC2148
+# ライブラリファイルのため、呼び出し元の設定に依存
+# 単体テスト用: 直接実行された場合のみ設定を適用
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    set -euo pipefail
+fi
+
 # ========================================
 # プロジェクト設定
 # ========================================
@@ -145,7 +152,7 @@ lib_check_unknown_options() {
     local actual_args=${#_LIB_REMAINING_ARGS[@]}
 
     if [[ $actual_args -gt $expected_args ]]; then
-        local first_unknown="${_LIB_REMAINING_ARGS[$expected_args]}"
+        local first_unknown="${_LIB_REMAINING_ARGS[$expected_args]:-}"
         if [[ "$first_unknown" == -* ]]; then
             echo "⚠️ 不明なオプション: $first_unknown" >&2
             return 1
@@ -181,15 +188,16 @@ lib_get_pr_number() {
     # PR番号を取得（エラーを一時ファイルに保存）
     local error_file
     error_file=$(mktemp)
+    # シグナルを受けた場合もクリーンアップ
+    trap 'rm -f "$error_file" 2>/dev/null' RETURN
+
     local pr_num
     if pr_num=$(gh pr view --json number --jq '.number' 2>"$error_file"); then
-        rm -f "$error_file"
         echo "$pr_num"
         return 0
     else
         local error_msg
         error_msg=$(cat "$error_file")
-        rm -f "$error_file"
 
         # PRが存在しない場合は空を返す（正常）
         if [[ "$error_msg" == *"no pull requests found"* ]] || \
@@ -272,10 +280,15 @@ lib_run_claude() {
         # パイプラインの終了コードを取得するためPIPESTATUSを使用
         claude -p "$prompt" --dangerously-skip-permissions --output-format stream-json --verbose 2>&1 | \
             _lib_format_stream_json
-        local exit_code=${PIPESTATUS[0]}
-        if [[ $exit_code -ne 0 ]]; then
-            echo "⚠️ claudeの実行に失敗しました（終了コード: $exit_code）" >&2
-            return $exit_code
+        local claude_exit=${PIPESTATUS[0]}
+        local jq_exit=${PIPESTATUS[1]}
+        if [[ $claude_exit -ne 0 ]]; then
+            echo "⚠️ claudeの実行に失敗しました（終了コード: $claude_exit）" >&2
+            return $claude_exit
+        fi
+        if [[ $jq_exit -ne 0 ]]; then
+            echo "⚠️ 出力のフォーマットに失敗しました（終了コード: $jq_exit）" >&2
+            return $jq_exit
         fi
         return 0
     else
@@ -332,12 +345,37 @@ lib_find_worktree_dir() {
     local padded_num
     padded_num=$(printf "%03d" "$issue_num")
 
+    # プロジェクト名の正規表現メタ文字をエスケープ
+    local escaped_name
+    escaped_name=$(printf '%s\n' "$project_name" | sed 's/[.[\*^$()+?{|]/\\&/g')
+
+    # ディレクトリの読み取り（エラーを適切に処理）
+    local ls_output
+    local ls_exit_code=0
+    ls_output=$(ls "$parent_dir" 2>&1) || ls_exit_code=$?
+    if [[ $ls_exit_code -ne 0 ]]; then
+        # ディレクトリが存在しない場合は正常（空を返す）
+        if [[ "$ls_output" == *"No such file or directory"* ]]; then
+            echo ""
+            return 0
+        fi
+        # 権限エラー等の場合は警告を出力して失敗を返す
+        echo "⚠️ ディレクトリの読み取りに失敗: $parent_dir ($ls_output)" >&2
+        return 1
+    fi
+
     # 複数のworktree命名パターンをサポート:
     # 1. project-name-NNN (ゼロパディング形式: issue-workflow-015)
     # 2. project-name-N (ゼロパディングなし形式: issue-workflow-15)
     # 3. project-name-type-N[-title] (ブランチタイプ形式: issue-workflow-feat-15-add-feature)
     local result
-    result=$(ls "$parent_dir" 2>/dev/null | grep -E "^${project_name}-(${padded_num}$|${issue_num}$|[a-z]+-${issue_num}(-|$))" | head -1) || true
+    local grep_exit=0
+    result=$(echo "$ls_output" | grep -E "^${escaped_name}-(${padded_num}$|${issue_num}$|[a-z]+-${issue_num}(-|$))" | head -1) || grep_exit=$?
+    # grep終了コード: 0=マッチあり, 1=マッチなし, 2=エラー
+    if [[ $grep_exit -eq 2 ]]; then
+        echo "⚠️ grepでエラーが発生しました" >&2
+        return 1
+    fi
     echo "$result"
 }
 

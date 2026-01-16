@@ -5,10 +5,6 @@
 # Example: ./scripts/full-workflow.sh 199
 # Example: ./scripts/full-workflow.sh -v 199
 #
-# 環境変数:
-#   ISSUE_WORKFLOW_LANGUAGE  言語プリセット（デフォルト: generic）
-#                            利用可能: python, typescript, go, rust, generic
-#
 # 以下を順次実行します:
 # 1. worktree作成 + start-issue（計画立案・実装）
 # 2. complete-issue（commit + push + PR作成）
@@ -24,20 +20,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT=$(lib_get_project_root)
 
-# 言語設定（環境変数から取得、デフォルトはgeneric）
-WORKFLOW_LANGUAGE="${ISSUE_WORKFLOW_LANGUAGE:-generic}"
-
 # オプション解析
 lib_parse_options "$@"
 set -- "${_LIB_REMAINING_ARGS[@]}"
 
 # ヘルプ表示
 if lib_should_show_help; then
-    lib_show_usage "full-workflow.sh" "issue対応の全ワークフローを自動実行" "<issue番号>" \
-"
-環境変数:
-  ISSUE_WORKFLOW_LANGUAGE  言語プリセット（デフォルト: generic）
-                           利用可能: python, typescript, go, rust, generic"
+    lib_show_usage "full-workflow.sh" "issue対応の全ワークフローを自動実行" "<issue番号>"
     exit 0
 fi
 
@@ -63,7 +52,6 @@ echo "🚀 Full Workflow: issue #${ISSUE_NUM}"
 if lib_is_verbose; then
     echo "   (verbose mode)"
 fi
-echo "   言語プリセット: $WORKFLOW_LANGUAGE"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
@@ -77,7 +65,10 @@ if [[ -n "$WORKTREE_PATH" ]]; then
     echo "📁 既存のワークツリーを検出: $WORKTREE_PATH"
 else
     echo "🔧 ワークツリーを作成中..."
-    "$SCRIPT_DIR/add-worktree.sh" "$ISSUE_NUM"
+    if ! "$SCRIPT_DIR/add-worktree.sh" "$ISSUE_NUM"; then
+        echo "⚠️ ワークツリーの作成に失敗しました" >&2
+        exit 1
+    fi
 
     WORKTREE_PATH=$(lib_get_worktree_path "$ISSUE_NUM")
 
@@ -91,9 +82,6 @@ fi
 
 cd "$WORKTREE_PATH"
 echo ""
-
-# worktreeに.claude/ディレクトリを初期化
-issue-workflow init -l "$WORKFLOW_LANGUAGE"
 
 # Step 2: start-issue（計画立案・実装）
 echo "📝 Step 2/5: start-issue（計画立案・実装）"

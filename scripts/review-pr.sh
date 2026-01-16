@@ -34,4 +34,6 @@ echo ""
 
 PROMPT="/pr-review-toolkit:review-pr $PR_NUM PRにコメントしてください"
 
-lib_run_claude "$PROMPT"
+if ! lib_run_claude "$PROMPT"; then
+    exit 1
+fi
