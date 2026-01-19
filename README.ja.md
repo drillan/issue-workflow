@@ -42,6 +42,24 @@ issue-workflow init --language python
 /merge-pr 456         # PR #456をマージ
 ```
 
+## アップデート
+
+新バージョンがリリースされたら、ツールキットを更新しコマンド/スキルを同期：
+
+```bash
+# 1. ツールキットを更新
+uv tool install git+https://github.com/drillan/issue-workflow.git
+
+# 2. プロジェクトのコマンドとスキルを更新
+issue-workflow update
+```
+
+`--dry-run`で変更内容をプレビュー：
+
+```bash
+issue-workflow update --dry-run
+```
+
 ## CLIコマンド
 
 | コマンド | 説明 |
@@ -49,6 +67,8 @@ issue-workflow init --language python
 | `issue-workflow init` | プロジェクトにIssue Workflowを初期化 |
 | `issue-workflow init --language <lang>` | 言語プリセットを指定して初期化 |
 | `issue-workflow init --non-interactive` | 対話プロンプトなしで初期化（CI/CD用） |
+| `issue-workflow update` | コマンドとスキルを最新バージョンに更新 |
+| `issue-workflow update --dry-run` | 変更内容をプレビュー（実際の変更なし） |
 | `issue-workflow --version` | バージョンを表示 |
 | `issue-workflow --help` | ヘルプを表示 |
 
