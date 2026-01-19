@@ -13,5 +13,13 @@
     "quality_gate_required": true,
     "auto_report": true,
     "ci_review": true
+  },
+  "documentation": {
+    "paths": ["README.md", "docs/", "specs/"],
+    "changelog": "CHANGELOG.md",
+    "ddd": {
+      "enabled": true,
+      "retcon_writing": true
+    }
   }
 }
