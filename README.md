@@ -42,6 +42,24 @@ After initialization, use Claude Code slash commands to manage your workflow:
 /merge-pr 456         # Merge PR #456
 ```
 
+## Updating
+
+When a new version is released, update the toolkit and sync commands/skills:
+
+```bash
+# 1. Update the toolkit
+uv tool install git+https://github.com/drillan/issue-workflow.git
+
+# 2. Update commands and skills in your project
+issue-workflow update
+```
+
+Use `--dry-run` to preview changes before applying:
+
+```bash
+issue-workflow update --dry-run
+```
+
 ## CLI Commands
 
 | Command | Description |
@@ -49,6 +67,8 @@ After initialization, use Claude Code slash commands to manage your workflow:
 | `issue-workflow init` | Initialize Issue Workflow in project |
 | `issue-workflow init --language <lang>` | Initialize with language preset |
 | `issue-workflow init --non-interactive` | Initialize without interactive prompts (CI/CD) |
+| `issue-workflow update` | Update commands and skills to latest version |
+| `issue-workflow update --dry-run` | Show what would be updated without making changes |
 | `issue-workflow --version` | Show version |
 | `issue-workflow --help` | Show help |
 
