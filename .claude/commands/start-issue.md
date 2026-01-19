@@ -102,6 +102,8 @@ Before implementation, update documentation as specification using **doc-updater
    - Document expected behavior
    - Define configuration options
    - If `documentation.ddd.retcon_writing` is true, write documentation as if the feature already exists
+     - Purpose: Produces clearer, more confident documentation
+     - Example: "Run `--format json`" instead of "will allow users to..."
 
 2. **Update target documents** (from `documentation.paths`):
    - `README.md` - Usage and examples
@@ -181,3 +183,7 @@ Post the plan as a comment on the issue using issue-reporter skill:
 | gh not authenticated | Display `gh auth login` instruction |
 | Uncommitted changes | Ask user to commit or stash changes |
 | Branch creation failed | Display error details |
+| `workflow-config.json` not found | Display error: "Run `/init` to create configuration." |
+| `documentation` section missing | Treat as DDD disabled, inform user |
+| `documentation.paths` missing or empty | Display warning about no documentation targets |
+| doc-updater/tdd-workflow skill not found | Display error with skill installation guidance |
