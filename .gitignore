@@ -223,3 +223,6 @@ ai_working
 
 # debug log files
 /debug
+
+# hachimoku
+/.hachimoku/

@@ -25,7 +25,7 @@
 
 4. **開発効率**
    - Typerで`--help`、`--non-interactive`が自動生成（FR-003, FR-004）
-   - Pydanticで設定ファイルのJSON Schema検証（FR-020）
+   - Pydanticで設定ファイルのJSON Schema検証（FR-027）
    - pytest + TDD workflowで品質担保
 
 ### Alternatives Considered
@@ -61,7 +61,7 @@
 
 ### Rationale
 
-1. **JSON Schema対応**: FR-020要件を満たす
+1. **JSON Schema対応**: FR-027要件を満たす
 2. **Pydantic統合**: 型安全な設定読み込み
 3. **エディタ支援**: JSON Schemaでオートコンプリート
 
@@ -129,37 +129,33 @@
 }
 ```
 
-## 5. Plugin配布方式
+## 5. コンテンツ配布方式
 
-### Decision: GitHub Repository Fragment
+### Decision: CLIバンドル + 外部ツール
 
-### Rationale
+### Rationale (Issue #32で更新)
 
-1. **Claude Code標準**: `github:owner/repo#path`形式でPlugin参照
-2. **バージョン管理**: タグ指定で特定バージョンを参照可能
-3. **自動更新**: リポジトリ更新で即座に反映
+1. **外部プラグイン依存排除**: `commit-commands`, `pr-review-toolkit`への依存をなくし、自作ツールで統一
+2. **git-workflow-haikuバンドル**: commands/とagents/をissue-workflowに取り込み、`init`/`update`でコピー
+3. **hachimoku外部ツール**: `uv tool install hachimoku`で導入、PRレビュー機能を提供
 
-### Plugin構造
+### バンドル構造
 
 ```
-plugin/
-├── commands/           # スラッシュコマンド
+src/issue_workflow/templates/
+├── commands/           # スラッシュコマンド（start-issue, commit-push-pr, merge-pr等）
+├── agents/             # エージェント定義（git-workflow-haiku由来）
 ├── skills/             # バックグラウンドスキル
-├── git-conventions.md  # Git規約（FR-022）
-└── settings.json       # Plugin設定テンプレート
+└── git-conventions.md  # Git規約（FR-029）
 ```
 
 ### インストール方式
 
-CLIの`init`コマンドで`.claude/settings.json`に以下を追加:
-
-```json
-{
-  "plugins": [
-    "github:drillan/issue-workflow#plugin"
-  ]
-}
-```
+CLIの`init`コマンドで以下を実行:
+1. `.claude/commands/`にコマンドファイルをコピー
+2. `.claude/agents/`にエージェントファイルをコピー
+3. `.claude/skills/`にスキルファイルをコピー
+4. `uv tool install hachimoku`でhachimokuをインストール
 
 ## 6. GitHub CLI連携
 
@@ -268,7 +264,7 @@ issue-workflow = "issue_workflow.cli.main:app"
 | CLIフレームワーク | Typer |
 | 設定形式 | JSON + Pydantic |
 | 配布 | PyPI (`uv tool install`) |
-| Plugin配布 | `github:drillan/issue-workflow#plugin` |
+| コンテンツ配布 | CLIバンドル（commands/ + agents/） + hachimoku外部ツール |
 | GitHub連携 | `gh` CLI |
 | テスト | pytest |
 | 品質チェック | ruff + mypy |
