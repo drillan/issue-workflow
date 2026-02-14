@@ -72,7 +72,7 @@ issue-workflow update --dry-run
 | `issue-workflow --version` | Show version |
 | `issue-workflow --help` | Show help |
 
-## Plugin Commands (Slash Commands)
+## Slash Commands
 
 Use these commands within Claude Code. Listed in recommended workflow order:
 

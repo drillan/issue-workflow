@@ -72,7 +72,7 @@ issue-workflow update --dry-run
 | `issue-workflow --version` | バージョンを表示 |
 | `issue-workflow --help` | ヘルプを表示 |
 
-## プラグインコマンド（スラッシュコマンド）
+## スラッシュコマンド
 
 Claude Code内で使用するコマンド。推奨ワークフロー順に記載：
 
