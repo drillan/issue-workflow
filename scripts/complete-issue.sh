@@ -29,7 +29,7 @@ echo ""
 
 PROMPT="以下のスキルを実行してください:
 
-/commit-commands:commit-push-pr
+/commit-push-pr
 
 実装された変更をコミットし、リモートにプッシュして、プルリクエストを作成してください。"
 

@@ -80,17 +80,10 @@ Use these commands within Claude Code. Listed in recommended workflow order:
 |---|---------|-------------|-----------|
 | 1 | `/add-worktree` | Create a new worktree for an Issue (optional) | `<issue-number>` |
 | 2 | `/start-issue` | Load Issue, create branch, and develop implementation plan | `<issue-number>` |
-| - | `/commit-push-pr` | Commit, push, and create PR (Official Plugin) | - |
-| - | `/pr-review-toolkit:review-pr` | Review PR (Official Plugin) | `<pr-number>` |
-| 3 | `/review-pr-comments` | Review and respond to PR review comments | `[pr-number]` (optional) |
-| 4 | `/merge-pr` | Wait for CI checks, then merge PR | `<pr-number>` |
-
-### Official Plugin Integration
-
-This toolkit integrates with official Claude Code plugins:
-
-- **commit-commands** - Provides `/commit-push-pr` for streamlined commit, push, and PR creation
-- **pr-review-toolkit** - Provides `/pr-review-toolkit:review-pr` for comprehensive PR reviews. Can also be used as a [GitHub Action](https://github.com/marketplace/actions/claude-pr-reviewer) for CI integration.
+| 3 | `/commit-push-pr` | Commit, push, and create PR | - |
+| 4 | `/respond-review` | Respond to hachimoku review findings | `[pr-number]` (optional) |
+| 5 | `/review-pr-comments` | Review and respond to PR review comments | `[pr-number]` (optional) |
+| 6 | `/merge-pr` | Wait for CI checks, then merge PR | `<pr-number>` |
 
 ## Auto-Activated Skills
 

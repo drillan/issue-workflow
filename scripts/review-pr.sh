@@ -1,5 +1,5 @@
 #!/bin/bash
-# review-pr.sh - PRをレビューしてコメントを投稿
+# review-pr.sh - hachimokuでPRをレビューし、結果に対応
 #
 # Usage: ./scripts/review-pr.sh [-v|--verbose] [-h|--help]
 #
@@ -29,10 +29,19 @@ fi
 lib_detect_pr_or_exit
 
 echo ""
-echo "🔍 review-pr を実行中..."
+echo "🔍 hachimokuレビューを実行中..."
 echo ""
 
-PROMPT="/pr-review-toolkit:review-pr $PR_NUM PRにコメントしてください"
+if ! 8moku review pr "$PR_NUM"; then
+    echo "⚠️ hachimokuレビューの実行に失敗しました" >&2
+    exit 1
+fi
+
+echo ""
+echo "📝 hachimokuレビュー結果に対応中..."
+echo ""
+
+PROMPT="/respond-review $PR_NUM"
 
 if ! lib_run_claude "$PROMPT"; then
     exit 1

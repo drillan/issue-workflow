@@ -80,17 +80,10 @@ Claude Code内で使用するコマンド。推奨ワークフロー順に記載
 |---|---------|------|------|
 | 1 | `/add-worktree` | Issue用の新規ワークツリーを作成（オプション） | `<issue番号>` |
 | 2 | `/start-issue` | Issueを読み込み、ブランチを作成し、実装計画を策定 | `<issue番号>` |
-| - | `/commit-push-pr` | コミット、プッシュ、PR作成（公式Plugin） | - |
-| - | `/pr-review-toolkit:review-pr` | PRレビュー（公式Plugin） | `<PR番号>` |
-| 3 | `/review-pr-comments` | PRレビューコメントを確認・対応 | `[PR番号]`（省略可） |
-| 4 | `/merge-pr` | CIチェック完了を待機後、PRをマージ | `<PR番号>` |
-
-### 公式Pluginとの連携
-
-本ツールキットは公式Claude Codeプラグインと連携します：
-
-- **commit-commands** - `/commit-push-pr`を提供し、コミット・プッシュ・PR作成を効率化
-- **pr-review-toolkit** - `/pr-review-toolkit:review-pr`を提供し、包括的なPRレビューを実現。[GitHub Action](https://github.com/marketplace/actions/claude-pr-reviewer)としてCI化も可能。
+| 3 | `/commit-push-pr` | コミット、プッシュ、PR作成 | - |
+| 4 | `/respond-review` | hachimokuレビュー結果に対応 | `[PR番号]`（省略可） |
+| 5 | `/review-pr-comments` | PRレビューコメントを確認・対応 | `[PR番号]`（省略可） |
+| 6 | `/merge-pr` | CIチェック完了を待機後、PRをマージ | `<PR番号>` |
 
 ## 自動起動スキル
 

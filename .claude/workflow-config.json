@@ -11,8 +11,7 @@
   "workflow": {
     "tdd_required": true,
     "quality_gate_required": true,
-    "auto_report": true,
-    "ci_review": true
+    "auto_report": true
   },
   "documentation": {
     "paths": ["README.md", "docs/", "specs/"],

@@ -96,7 +96,7 @@ gh pr merge <number> --rebase --delete-branch
 ✅ PR #100 merged successfully
 
 Merge method: squash
-Base branch: main
+Base branch: <default-branch>
 Remote branch: deleted
 Local branch: deleted
 Worktree: deleted (if applicable)

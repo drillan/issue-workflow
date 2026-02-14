@@ -60,7 +60,7 @@ worktreeを作成し、issueの計画立案・実装を開始します。
 ```
 
 **実行内容:**
-- `/commit-commands:commit-push-pr` スキルを実行
+- `/commit-push-pr` コマンドを実行
 - 変更をコミット、プッシュ、PR作成
 
 ### review-pr.sh
@@ -77,8 +77,8 @@ PRをレビューしてコメントを投稿します。
 
 **実行内容:**
 1. `gh pr view` で現在のブランチに紐づくPR番号を自動検出
-2. `/pr-review-toolkit:review-pr` スキルを実行
-3. レビュー結果をPRにコメント
+2. `8moku review pr` でhachimokuレビューを実行
+3. `/respond-review` でレビュー結果に対応
 
 ### respond-comments.sh
 
@@ -133,10 +133,10 @@ PRをマージします（CI完了待機付き）。
 ```
 
 **実行内容:**
-1. worktree作成 + start-issue（計画立案・実装）
-2. complete-issue（commit + push + PR作成）
-3. review-pr（PRレビュー + コメント投稿）
-4. respond-comments（レビューコメントに対応）
+1. worktree準備（作成 or 既存検出）
+2. start-issue（計画立案・実装）
+3. complete-issue（commit + push + PR作成）
+4. hachimokuレビュー + respond-review + respond-comments
 5. merge-pr（CI待機 → マージ → 後処理）
 
 ### add-worktree.sh
