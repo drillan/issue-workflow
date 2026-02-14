@@ -5,6 +5,7 @@ import os
 import subprocess
 from collections.abc import Generator
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
@@ -173,3 +174,92 @@ class TestInitCommand:
         config = json.loads(config_file.read_text())
         # Generic preset has different defaults
         assert config["documentation"]["paths"] == ["README.md"]
+
+
+class TestInitHachimokuSetup:
+    """Tests for hachimoku setup during init (T084)."""
+
+    @pytest.fixture
+    def temp_project(self, tmp_path: Path) -> Generator[Path]:
+        """Create a temporary project directory."""
+        project_dir = tmp_path / "test-project"
+        project_dir.mkdir()
+
+        subprocess.run(["git", "init"], cwd=project_dir, capture_output=True, check=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=project_dir,
+            capture_output=True,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=project_dir,
+            capture_output=True,
+            check=True,
+        )
+
+        original_dir = Path.cwd()
+        os.chdir(project_dir)
+        yield project_dir
+        os.chdir(original_dir)
+
+    def test_init_calls_setup_hachimoku(self, temp_project: Path) -> None:
+        """Test that init command calls setup_hachimoku (T084)."""
+        from issue_workflow.cli.main import app
+
+        with patch("issue_workflow.cli.commands.init.setup_hachimoku") as mock_setup:
+            mock_setup.return_value = (True, True)
+
+            result = runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
+
+            if result.exit_code != 0 and "gh" in result.output.lower():
+                pytest.skip("gh CLI not available or not authenticated")
+
+            mock_setup.assert_called_once_with(temp_project)
+
+    @pytest.mark.usefixtures("temp_project")
+    def test_init_shows_hachimoku_install_message(self) -> None:
+        """Test that init shows hachimoku installation message (T084)."""
+        from issue_workflow.cli.main import app
+
+        with patch("issue_workflow.cli.commands.init.setup_hachimoku") as mock_setup:
+            mock_setup.return_value = (True, True)
+
+            result = runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
+
+            if result.exit_code != 0 and "gh" in result.output.lower():
+                pytest.skip("gh CLI not available or not authenticated")
+
+            assert "hachimoku" in result.output.lower()
+
+    @pytest.mark.usefixtures("temp_project")
+    def test_init_shows_hachimoku_skip_when_already_setup(self) -> None:
+        """Test that init handles already-setup hachimoku (T084)."""
+        from issue_workflow.cli.main import app
+
+        with patch("issue_workflow.cli.commands.init.setup_hachimoku") as mock_setup:
+            mock_setup.return_value = (False, False)
+
+            result = runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
+
+            if result.exit_code != 0 and "gh" in result.output.lower():
+                pytest.skip("gh CLI not available or not authenticated")
+
+            assert result.exit_code == 0
+
+    @pytest.mark.usefixtures("temp_project")
+    def test_init_fails_on_hachimoku_install_error(self) -> None:
+        """Test that init fails when hachimoku installation fails (T084)."""
+        from issue_workflow.cli.main import app
+        from issue_workflow.services.hachimoku import HachimokuInstallError
+
+        with patch("issue_workflow.cli.commands.init.setup_hachimoku") as mock_setup:
+            mock_setup.side_effect = HachimokuInstallError("Install failed")
+
+            result = runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
+
+            if "gh" in result.output.lower() and "not" in result.output.lower():
+                pytest.skip("gh CLI not available or not authenticated")
+
+            assert result.exit_code != 0

@@ -1,0 +1,64 @@
+# /commit-push-pr
+
+変更のコミット、プッシュ、PR作成を一連で実行する。
+
+## Usage
+
+```
+/commit-push-pr
+```
+
+## Instructions
+
+When the user invokes `/commit-push-pr`, use the bundled `pr-creator` agent to execute the complete workflow.
+
+### Step 1: Spawn PR Creator Agent
+
+Use the Task tool to launch the `pr-creator` agent from `.claude/agents/pr-creator.md`:
+
+```
+Task tool with subagent_type: "git-workflow-haiku:pr-creator"
+```
+
+The agent will handle:
+1. Branch management
+2. Commit creation with auto-generated message
+3. Push to remote
+4. PR creation with issue linkage
+
+### Step 2: Base Branch Detection
+
+The agent automatically detects the base branch using:
+```bash
+BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+```
+
+This works regardless of whether the default branch is `main`, `master`, `develop`, etc.
+
+### Step 3: Quality Verification
+
+Before creating the PR, verify that quality checks pass according to `workflow-config.json`:
+```bash
+cat .claude/workflow-config.json
+```
+
+If `workflow.quality_gate_required` is true, run the quality checks defined in `quality.all` before committing.
+
+## Output Format
+
+```
+✅ コミット、プッシュ、PR作成が完了しました
+
+コミット: {COMMIT_HASH} {COMMIT_MESSAGE}
+PR: #{PR_NUMBER} - {PR_TITLE}
+URL: {PR_URL}
+```
+
+## Error Handling
+
+| エラー | 対応 |
+|--------|------|
+| 変更なし | `ℹ️ コミットする変更がありません` |
+| プッシュ失敗 | 原因を表示（認証、ネットワーク等） |
+| PR作成失敗 | 原因を表示（既存PR、権限等） |
+| 品質チェック失敗 | 失敗したチェックを表示、修正を促す |

@@ -922,6 +922,168 @@ class TestDircmpRecursive:
             template_module.get_skills_source_dir = original_func
 
 
+class TestUpdateAgents:
+    """Tests for TemplateService.update_agents method (T076)."""
+
+    def test_detects_added_files(self, tmp_path: Path) -> None:
+        """Test detecting newly added agent files."""
+        source_dir = tmp_path / "source_package" / "agents"
+        source_dir.mkdir(parents=True)
+        (source_dir / "new-agent.md").write_text("# New Agent")
+
+        target_dir = tmp_path / ".claude"
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True)
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_agents_source_dir
+        template_module.get_agents_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_agents(target_dir, dry_run=True)
+            assert result.added_count == 1
+            assert result.agents_changes[0].change_type == FileChangeType.ADDED
+        finally:
+            template_module.get_agents_source_dir = original_func
+
+    def test_detects_updated_files(self, tmp_path: Path) -> None:
+        """Test detecting updated agent files."""
+        source_dir = tmp_path / "source_package" / "agents"
+        source_dir.mkdir(parents=True)
+        (source_dir / "existing.md").write_text("# Updated Content")
+
+        target_dir = tmp_path / ".claude"
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True)
+        (agents_target / "existing.md").write_text("# Old Content")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_agents_source_dir
+        template_module.get_agents_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_agents(target_dir, dry_run=True)
+            assert result.updated_count == 1
+            assert result.agents_changes[0].change_type == FileChangeType.UPDATED
+        finally:
+            template_module.get_agents_source_dir = original_func
+
+    def test_dry_run_does_not_create_files(self, tmp_path: Path) -> None:
+        """Test dry-run does not create agent files."""
+        source_dir = tmp_path / "source_package" / "agents"
+        source_dir.mkdir(parents=True)
+        (source_dir / "new-agent.md").write_text("# New Agent")
+
+        target_dir = tmp_path / ".claude"
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True)
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_agents_source_dir
+        template_module.get_agents_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_agents(target_dir, dry_run=True)
+            assert result.added_count == 1
+            assert result.dry_run is True
+            assert not (agents_target / "new-agent.md").exists()
+        finally:
+            template_module.get_agents_source_dir = original_func
+
+    def test_applies_changes_when_not_dry_run(self, tmp_path: Path) -> None:
+        """Test agent files are actually updated when dry_run=False."""
+        source_dir = tmp_path / "source_package" / "agents"
+        source_dir.mkdir(parents=True)
+        (source_dir / "new-agent.md").write_text("# New Agent Content")
+
+        target_dir = tmp_path / ".claude"
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True)
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_agents_source_dir
+        template_module.get_agents_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_agents(target_dir, dry_run=False)
+            assert result.added_count == 1
+            assert (agents_target / "new-agent.md").exists()
+            assert (agents_target / "new-agent.md").read_text() == "# New Agent Content"
+        finally:
+            template_module.get_agents_source_dir = original_func
+
+    def test_ignores_unmanaged_files(self, tmp_path: Path) -> None:
+        """Test that unmanaged agent files in target are ignored."""
+        source_dir = tmp_path / "source_package" / "agents"
+        source_dir.mkdir(parents=True)
+
+        target_dir = tmp_path / ".claude"
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True)
+        (agents_target / "user-agent.md").write_text("# User Agent")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_agents_source_dir
+        template_module.get_agents_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_agents(target_dir, dry_run=True)
+            assert result.has_changes is False
+        finally:
+            template_module.get_agents_source_dir = original_func
+
+    def test_source_directory_not_found(self, tmp_path: Path) -> None:
+        """Test error when agents source directory does not exist."""
+        from issue_workflow.services.template import SourceDirectoryNotFoundError
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_agents_source_dir
+        template_module.get_agents_source_dir = lambda: tmp_path / "nonexistent"
+
+        try:
+            with pytest.raises(SourceDirectoryNotFoundError):
+                service.update_agents(tmp_path / ".claude")
+        finally:
+            template_module.get_agents_source_dir = original_func
+
+    def test_no_changes_when_identical(self, tmp_path: Path) -> None:
+        """Test no changes detected when agent files are identical."""
+        source_dir = tmp_path / "source_package" / "agents"
+        source_dir.mkdir(parents=True)
+        (source_dir / "same.md").write_text("# Same Content")
+
+        target_dir = tmp_path / ".claude"
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True)
+        (agents_target / "same.md").write_text("# Same Content")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_agents_source_dir
+        template_module.get_agents_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_agents(target_dir, dry_run=True)
+            assert result.added_count == 0
+            assert result.updated_count == 0
+            assert result.has_changes is False
+        finally:
+            template_module.get_agents_source_dir = original_func
+
+
 class TestEdgeCases:
     """Tests for edge cases (T025)."""
 

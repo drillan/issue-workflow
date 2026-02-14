@@ -21,14 +21,19 @@ EXIT_NOT_INITIALIZED = 2
 
 
 def _display_changes(result: UpdateResult, category: str, dry_run: bool) -> None:
-    """Display changes for a category (commands or skills).
+    """Display changes for a category (commands, skills, or agents).
 
     Args:
         result: UpdateResult containing changes
-        category: "Commands" or "Skills"
+        category: "Commands", "Skills", or "Agents"
         dry_run: Whether this is a dry-run
     """
-    changes = result.commands_changes if category == "Commands" else result.skills_changes
+    if category == "Commands":
+        changes = result.commands_changes
+    elif category == "Skills":
+        changes = result.skills_changes
+    else:
+        changes = result.agents_changes
 
     if not changes:
         return
@@ -104,25 +109,28 @@ def _run_update(dry_run: bool = False) -> None:
     if dry_run:
         ui.print_info("[DRY-RUN] Calculating changes...")
     else:
-        ui.print_info("Updating commands and skills...")
+        ui.print_info("Updating commands, skills, and agents...")
 
     # Run updates
     template_service = TemplateService()
 
     commands_result = template_service.update_commands(claude_dir, dry_run=dry_run)
     skills_result = template_service.update_skills(claude_dir, dry_run=dry_run)
+    agents_result = template_service.update_agents(claude_dir, dry_run=dry_run)
 
     # Combine results
     combined_result = UpdateResult(
         commands_changes=commands_result.commands_changes,
         skills_changes=skills_result.skills_changes,
-        errors=commands_result.errors + skills_result.errors,
+        agents_changes=agents_result.agents_changes,
+        errors=commands_result.errors + skills_result.errors + agents_result.errors,
         dry_run=dry_run,
     )
 
     # Display results
     _display_changes(combined_result, "Commands", dry_run)
     _display_changes(combined_result, "Skills", dry_run)
+    _display_changes(combined_result, "Agents", dry_run)
     _display_summary(combined_result)
     _display_errors(combined_result)
 
@@ -141,9 +149,9 @@ def update(
         ),
     ] = False,
 ) -> None:
-    """Update commands and skills to the latest version.
+    """Update commands, skills, and agents to the latest version.
 
-    Updates .claude/commands and .claude/skills directories
+    Updates .claude/commands, .claude/skills, and .claude/agents directories
     with the latest files from the issue-workflow toolkit.
 
     Existing files will be overwritten with newer versions.

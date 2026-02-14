@@ -9,6 +9,11 @@ from issue_workflow.cli import ui
 from issue_workflow.models.config import DDDSettings, DocumentationSettings
 from issue_workflow.models.preset import LanguagePreset
 from issue_workflow.services.github import check_gh_availability
+from issue_workflow.services.hachimoku import (
+    HachimokuInitError,
+    HachimokuInstallError,
+    setup_hachimoku,
+)
 from issue_workflow.services.preset_loader import PresetLoader, PresetNotFoundError
 from issue_workflow.services.template import TemplateService
 
@@ -167,6 +172,20 @@ def _run_init(language: str | None, non_interactive: bool, force: bool) -> None:
     generated_files = template_service.generate_all(preset, claude_dir, documentation)
     for path in generated_files:
         ui.print_success(f"Created {path.relative_to(project_dir)}")
+
+    # Setup hachimoku code review tool
+    ui.print_info("Setting up hachimoku...")
+    try:
+        installed, initialized = setup_hachimoku(project_dir)
+        if installed:
+            ui.print_success("Installed hachimoku")
+        if initialized:
+            ui.print_success("Initialized .hachimoku/")
+        if not installed and not initialized:
+            ui.print_info("hachimoku already configured")
+    except (HachimokuInstallError, HachimokuInitError) as e:
+        ui.print_error(f"Failed to setup hachimoku: {e}")
+        raise typer.Exit(EXIT_GENERAL_ERROR) from e
 
     ui.print_success("Issue Workflow initialized successfully!")
     ui.print_info("Run 'claude' to start using the workflow commands")

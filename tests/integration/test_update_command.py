@@ -246,3 +246,61 @@ class TestEdgeCasesIntegration:
             assert result.exit_code == 0
         finally:
             os.chdir(original_cwd)
+
+
+class TestUpdateAgentsIntegration:
+    """Integration tests for agents update (T086)."""
+
+    def test_update_includes_agents_changes(self, tmp_path: Path) -> None:
+        """Test that update includes agents in the update (T086)."""
+        # Create .claude directory structure
+        claude_dir = tmp_path / ".claude"
+        (claude_dir / "commands").mkdir(parents=True)
+        (claude_dir / "skills").mkdir(parents=True)
+        (claude_dir / "agents").mkdir(parents=True)
+
+        original_cwd = Path.cwd()
+        os.chdir(tmp_path)
+
+        try:
+            result = runner.invoke(app, ["update"])
+            assert result.exit_code == 0
+        finally:
+            os.chdir(original_cwd)
+
+    def test_update_creates_agents_directory(self, tmp_path: Path) -> None:
+        """Test that update creates agents directory if missing (T086)."""
+        claude_dir = tmp_path / ".claude"
+        (claude_dir / "commands").mkdir(parents=True)
+        (claude_dir / "skills").mkdir(parents=True)
+        # No agents directory
+
+        original_cwd = Path.cwd()
+        os.chdir(tmp_path)
+
+        try:
+            result = runner.invoke(app, ["update"])
+            assert result.exit_code == 0
+            # Agents directory should be created
+            assert (claude_dir / "agents").exists()
+        finally:
+            os.chdir(original_cwd)
+
+    def test_update_shows_agents_category(self, tmp_path: Path) -> None:
+        """Test that update shows Agents category in output (T086)."""
+        claude_dir = tmp_path / ".claude"
+        (claude_dir / "commands").mkdir(parents=True)
+        (claude_dir / "skills").mkdir(parents=True)
+        # Empty agents dir to trigger adds
+        (claude_dir / "agents").mkdir(parents=True)
+
+        original_cwd = Path.cwd()
+        os.chdir(tmp_path)
+
+        try:
+            result = runner.invoke(app, ["update"])
+            assert result.exit_code == 0
+            # Should show "Agents" in the output since new agents are added
+            assert "agents" in result.output.lower() or "added" in result.output.lower()
+        finally:
+            os.chdir(original_cwd)
