@@ -244,11 +244,24 @@ class Worktree:
 
 ### 7. ReviewResult
 
-hachimokuによるレビュー結果を保持する。
+hachimokuによるレビュー結果を保持する。1回のレビューセッションは複数エージェントの実行結果を含み、
+各エージェントが個別の指摘を報告する。JSONLファイルの1行が1セッションに対応する。
 
 ```python
 from dataclasses import dataclass
 from enum import Enum
+
+
+class ReviewMode(str, Enum):
+    """レビューモード"""
+    DIFF = "diff"
+    PR = "pr"
+
+
+class AgentResultStatus(str, Enum):
+    """レビューエージェントの実行ステータス"""
+    SUCCESS = "success"
+    ERROR = "error"
 
 
 class ReviewSeverity(str, Enum):
@@ -256,6 +269,7 @@ class ReviewSeverity(str, Enum):
     CRITICAL = "Critical"
     IMPORTANT = "Important"
     SUGGESTION = "Suggestion"
+    NITPICK = "Nitpick"
 
 
 @dataclass(frozen=True)
@@ -277,29 +291,97 @@ class ReviewIssue:
 
 
 @dataclass(frozen=True)
+class ReviewAgentResult:
+    """単一エージェントの実行結果"""
+    status: AgentResultStatus
+    agent_name: str
+    issues: list[ReviewIssue]
+    elapsed_time: float
+    error_message: str | None = None
+
+
+@dataclass(frozen=True)
+class ReviewSummary:
+    """レビューセッションのサマリー統計"""
+    total_issues: int
+    max_severity: ReviewSeverity | None
+    total_elapsed_time: float
+
+
+@dataclass(frozen=True)
 class ReviewResult:
-    """hachimokuによるレビュー結果"""
-    review_mode: str
+    """hachimokuによるレビュー結果（JSONLの1行に対応）"""
+    review_mode: ReviewMode
     commit_hash: str
     branch_name: str
     reviewed_at: str
-    issues: list[ReviewIssue]
+    results: list[ReviewAgentResult]
+    summary: ReviewSummary
+    pr_number: int | None = None
+
+    _COMMIT_HASH_LENGTH = 40
+    _HEX_CHARS = frozenset("0123456789abcdef")
+
+    def __post_init__(self) -> None:
+        """commit_hashの形式を検証"""
+        if len(self.commit_hash) != self._COMMIT_HASH_LENGTH or not all(
+            c in self._HEX_CHARS for c in self.commit_hash.lower()
+        ):
+            msg = f"commit_hash must be a 40-character hexadecimal string, got '{self.commit_hash}'"
+            raise ValueError(msg)
 
     @property
-    def issue_count(self) -> int:
-        return len(self.issues)
+    def all_issues(self) -> list[ReviewIssue]:
+        """成功したエージェント結果から全指摘をフラットに取得"""
+        return [
+            issue
+            for agent_result in self.results
+            if agent_result.status == AgentResultStatus.SUCCESS
+            for issue in agent_result.issues
+        ]
 
     @property
     def has_critical(self) -> bool:
-        return any(i.severity == ReviewSeverity.CRITICAL for i in self.issues)
+        """Critical指摘が存在するか"""
+        return any(issue.severity == ReviewSeverity.CRITICAL for issue in self.all_issues)
 ```
 
-**Source**: `.hachimoku/reviews/pr-{number}.jsonl`（JSONL形式、1行1レビュー結果）
+**Source**: `.hachimoku/reviews/pr-{number}.jsonl` または `.hachimoku/reviews/diff.jsonl`（JSONL形式、1行1レビューセッション）
+
+**Structure**:
+```
+ReviewResult
+├── review_mode: ReviewMode
+├── commit_hash: str (40文字hex)
+├── branch_name: str
+├── reviewed_at: str (ISO 8601)
+├── pr_number: int | None
+├── results: list[ReviewAgentResult]
+│   └── ReviewAgentResult
+│       ├── status: AgentResultStatus
+│       ├── agent_name: str
+│       ├── issues: list[ReviewIssue]
+│       │   └── ReviewIssue
+│       │       ├── agent_name: str
+│       │       ├── severity: ReviewSeverity
+│       │       ├── description: str
+│       │       ├── location: ReviewIssueLocation | None
+│       │       ├── suggestion: str | None
+│       │       └── category: str | None
+│       ├── elapsed_time: float
+│       └── error_message: str | None
+└── summary: ReviewSummary
+    ├── total_issues: int
+    ├── max_severity: ReviewSeverity | None
+    └── total_elapsed_time: float
+```
 
 **Validation Rules**:
-- `review_mode`: "diff" または "pr"
-- `commit_hash`: 40文字のhexadecimal文字列
-- `severity`: "Critical", "Important", "Suggestion"のいずれか
+- `review_mode`: `ReviewMode` enum（"diff" または "pr"）
+- `commit_hash`: 40文字のhexadecimal文字列（`__post_init__`で検証）
+- `status`: `AgentResultStatus` enum（"success" または "error"）
+- `severity`: `ReviewSeverity` enum（"Critical", "Important", "Suggestion", "Nitpick"）
+- `pr_number`: 任意。PRモード時に設定される（diffモード時は通常None）
 
 ## Entity Relationships
 
@@ -346,7 +428,9 @@ class ReviewResult:
 │ - review_mode   │
 │ - commit_hash   │
 │ - branch_name   │
-│ - issues[]      │
+│ - pr_number     │
+│ - results[]     │──▶ ReviewAgentResult[]
+│ - summary       │──▶ ReviewSummary
 └─────────────────┘
 ```
 
