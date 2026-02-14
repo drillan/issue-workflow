@@ -3,13 +3,50 @@
 import pytest
 
 from issue_workflow.models.review import (
+    AgentResultStatus,
     ReviewAgentResult,
     ReviewIssue,
     ReviewIssueLocation,
+    ReviewMode,
     ReviewResult,
     ReviewSeverity,
     ReviewSummary,
 )
+
+
+class TestReviewMode:
+    """Tests for ReviewMode enum."""
+
+    def test_diff_value(self) -> None:
+        assert ReviewMode.DIFF.value == "diff"
+
+    def test_pr_value(self) -> None:
+        assert ReviewMode.PR.value == "pr"
+
+    def test_from_string(self) -> None:
+        assert ReviewMode("diff") == ReviewMode.DIFF
+        assert ReviewMode("pr") == ReviewMode.PR
+
+    def test_invalid_value_raises_error(self) -> None:
+        with pytest.raises(ValueError):
+            ReviewMode("invalid")
+
+
+class TestAgentResultStatus:
+    """Tests for AgentResultStatus enum."""
+
+    def test_success_value(self) -> None:
+        assert AgentResultStatus.SUCCESS.value == "success"
+
+    def test_error_value(self) -> None:
+        assert AgentResultStatus.ERROR.value == "error"
+
+    def test_from_string(self) -> None:
+        assert AgentResultStatus("success") == AgentResultStatus.SUCCESS
+
+    def test_invalid_value_raises_error(self) -> None:
+        with pytest.raises(ValueError):
+            AgentResultStatus("unknown")
 
 
 class TestReviewSeverity:
@@ -104,12 +141,12 @@ class TestReviewAgentResult:
             ),
         ]
         result = ReviewAgentResult(
-            status="success",
+            status=AgentResultStatus.SUCCESS,
             agent_name="code-reviewer",
             issues=issues,
             elapsed_time=109.5,
         )
-        assert result.status == "success"
+        assert result.status == AgentResultStatus.SUCCESS
         assert result.agent_name == "code-reviewer"
         assert len(result.issues) == 1
         assert result.elapsed_time == 109.5
@@ -117,34 +154,25 @@ class TestReviewAgentResult:
 
     def test_error_result(self) -> None:
         result = ReviewAgentResult(
-            status="error",
+            status=AgentResultStatus.ERROR,
             agent_name="pr-test-analyzer",
             issues=[],
             elapsed_time=156.1,
             error_message="Structured output recovery failed",
         )
-        assert result.status == "error"
+        assert result.status == AgentResultStatus.ERROR
         assert result.error_message == "Structured output recovery failed"
         assert result.issues == []
 
     def test_is_frozen(self) -> None:
         result = ReviewAgentResult(
-            status="success",
+            status=AgentResultStatus.SUCCESS,
             agent_name="agent",
             issues=[],
             elapsed_time=1.0,
         )
         with pytest.raises(AttributeError):
-            result.status = "error"  # type: ignore[misc]
-
-    def test_invalid_status_raises_error(self) -> None:
-        with pytest.raises(ValueError, match="status"):
-            ReviewAgentResult(
-                status="unknown",
-                agent_name="agent",
-                issues=[],
-                elapsed_time=1.0,
-            )
+            result.status = AgentResultStatus.ERROR  # type: ignore[misc]
 
 
 class TestReviewSummary:
@@ -183,7 +211,7 @@ class TestReviewResult:
 
     def test_creation(self) -> None:
         result = ReviewResult(
-            review_mode="diff",
+            review_mode=ReviewMode.DIFF,
             commit_hash="a" * 40,
             branch_name="feat/42-some-feature",
             reviewed_at="2026-02-14T12:00:00Z",
@@ -194,14 +222,14 @@ class TestReviewResult:
                 total_elapsed_time=0.0,
             ),
         )
-        assert result.review_mode == "diff"
+        assert result.review_mode == ReviewMode.DIFF
         assert result.commit_hash == "a" * 40
         assert result.branch_name == "feat/42-some-feature"
         assert result.results == []
 
     def test_pr_mode_with_pr_number(self) -> None:
         result = ReviewResult(
-            review_mode="pr",
+            review_mode=ReviewMode.PR,
             commit_hash="b" * 40,
             branch_name="feat/1-test",
             reviewed_at="2026-02-14T12:00:00Z",
@@ -217,7 +245,7 @@ class TestReviewResult:
 
     def test_all_issues_empty(self) -> None:
         result = ReviewResult(
-            review_mode="diff",
+            review_mode=ReviewMode.DIFF,
             commit_hash="a" * 40,
             branch_name="main",
             reviewed_at="2026-02-14T12:00:00Z",
@@ -242,19 +270,19 @@ class TestReviewResult:
             description="issue from agent 2",
         )
         result = ReviewResult(
-            review_mode="diff",
+            review_mode=ReviewMode.DIFF,
             commit_hash="c" * 40,
             branch_name="feat/1-test",
             reviewed_at="2026-02-14T12:00:00Z",
             results=[
                 ReviewAgentResult(
-                    status="success",
+                    status=AgentResultStatus.SUCCESS,
                     agent_name="code-reviewer",
                     issues=[issue1],
                     elapsed_time=100.0,
                 ),
                 ReviewAgentResult(
-                    status="success",
+                    status=AgentResultStatus.SUCCESS,
                     agent_name="type-analyzer",
                     issues=[issue2],
                     elapsed_time=50.0,
@@ -277,19 +305,19 @@ class TestReviewResult:
             description="critical issue",
         )
         result = ReviewResult(
-            review_mode="diff",
+            review_mode=ReviewMode.DIFF,
             commit_hash="d" * 40,
             branch_name="main",
             reviewed_at="2026-02-14T12:00:00Z",
             results=[
                 ReviewAgentResult(
-                    status="success",
+                    status=AgentResultStatus.SUCCESS,
                     agent_name="code-reviewer",
                     issues=[issue],
                     elapsed_time=100.0,
                 ),
                 ReviewAgentResult(
-                    status="error",
+                    status=AgentResultStatus.ERROR,
                     agent_name="pr-test-analyzer",
                     issues=[],
                     elapsed_time=156.0,
@@ -306,13 +334,13 @@ class TestReviewResult:
 
     def test_has_critical_true(self) -> None:
         result = ReviewResult(
-            review_mode="diff",
+            review_mode=ReviewMode.DIFF,
             commit_hash="e" * 40,
             branch_name="main",
             reviewed_at="2026-02-14T12:00:00Z",
             results=[
                 ReviewAgentResult(
-                    status="success",
+                    status=AgentResultStatus.SUCCESS,
                     agent_name="agent",
                     issues=[
                         ReviewIssue(
@@ -334,13 +362,13 @@ class TestReviewResult:
 
     def test_has_critical_false(self) -> None:
         result = ReviewResult(
-            review_mode="diff",
+            review_mode=ReviewMode.DIFF,
             commit_hash="f" * 40,
             branch_name="main",
             reviewed_at="2026-02-14T12:00:00Z",
             results=[
                 ReviewAgentResult(
-                    status="success",
+                    status=AgentResultStatus.SUCCESS,
                     agent_name="agent",
                     issues=[
                         ReviewIssue(
@@ -362,7 +390,7 @@ class TestReviewResult:
 
     def test_is_frozen(self) -> None:
         result = ReviewResult(
-            review_mode="diff",
+            review_mode=ReviewMode.DIFF,
             commit_hash="a" * 40,
             branch_name="main",
             reviewed_at="2026-02-14T12:00:00Z",
@@ -374,12 +402,12 @@ class TestReviewResult:
             ),
         )
         with pytest.raises(AttributeError):
-            result.review_mode = "pr"  # type: ignore[misc]
+            result.review_mode = ReviewMode.PR  # type: ignore[misc]
 
     def test_invalid_review_mode_raises_error(self) -> None:
-        with pytest.raises(ValueError, match="review_mode"):
+        with pytest.raises(ValueError):
             ReviewResult(
-                review_mode="invalid",
+                review_mode=ReviewMode("invalid"),
                 commit_hash="a" * 40,
                 branch_name="main",
                 reviewed_at="2026-02-14T12:00:00Z",
@@ -392,7 +420,7 @@ class TestReviewResult:
             )
 
     def test_valid_review_modes(self) -> None:
-        for mode in ("diff", "pr"):
+        for mode in (ReviewMode.DIFF, ReviewMode.PR):
             result = ReviewResult(
                 review_mode=mode,
                 commit_hash="a" * 40,
@@ -410,7 +438,7 @@ class TestReviewResult:
     def test_invalid_commit_hash_length_raises_error(self) -> None:
         with pytest.raises(ValueError, match="commit_hash"):
             ReviewResult(
-                review_mode="diff",
+                review_mode=ReviewMode.DIFF,
                 commit_hash="abc123",
                 branch_name="main",
                 reviewed_at="2026-02-14T12:00:00Z",
@@ -425,7 +453,7 @@ class TestReviewResult:
     def test_invalid_commit_hash_characters_raises_error(self) -> None:
         with pytest.raises(ValueError, match="commit_hash"):
             ReviewResult(
-                review_mode="diff",
+                review_mode=ReviewMode.DIFF,
                 commit_hash="g" * 40,
                 branch_name="main",
                 reviewed_at="2026-02-14T12:00:00Z",

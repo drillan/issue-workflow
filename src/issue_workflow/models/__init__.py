@@ -18,13 +18,13 @@ from issue_workflow.models.update import FileChangeInfo, FileChangeType, UpdateR
 from issue_workflow.models.worktree import Worktree
 
 __all__ = [
+    "AgentResultStatus",
     "Branch",
     "BranchType",
     "FileChangeInfo",
     "FileChangeType",
     "Issue",
     "PullRequest",
-    "AgentResultStatus",
     "QualityCommands",
     "ReviewAgentResult",
     "ReviewIssue",

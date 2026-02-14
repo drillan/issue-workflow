@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 
 from issue_workflow.models.review import (
+    AgentResultStatus,
+    ReviewMode,
     ReviewSeverity,
 )
 from issue_workflow.services.review_loader import (
@@ -192,7 +194,7 @@ class TestLoadReviews:
 
         results = load_reviews(jsonl_path)
         assert len(results) == 1
-        assert results[0].review_mode == "diff"
+        assert results[0].review_mode == ReviewMode.DIFF
         assert results[0].commit_hash == "a" * 40
         assert results[0].summary.total_issues == 2
         assert len(results[0].results) == 1
@@ -221,7 +223,7 @@ class TestLoadReviews:
 
         results = load_reviews(jsonl_path)
         assert len(results) == 1
-        assert results[0].review_mode == "pr"
+        assert results[0].review_mode == ReviewMode.PR
         assert results[0].pr_number == 210
 
     def test_load_with_error_agent(
@@ -235,8 +237,8 @@ class TestLoadReviews:
         results = load_reviews(jsonl_path)
         assert len(results) == 1
         assert len(results[0].results) == 2
-        assert results[0].results[0].status == "success"
-        assert results[0].results[1].status == "error"
+        assert results[0].results[0].status == AgentResultStatus.SUCCESS
+        assert results[0].results[1].status == AgentResultStatus.ERROR
         assert results[0].results[1].error_message == "Structured output recovery failed"
         # all_issues should only include successful agent results
         assert len(results[0].all_issues) == 1
@@ -317,3 +319,187 @@ class TestLoadReviews:
         results = load_reviews(jsonl_path)
         assert len(results) == 2
         # The function returns all results; caller decides which to use
+
+    def test_missing_results_field_raises_parse_error(
+        self,
+        reviews_dir: Path,
+        sample_review_line: dict[str, object],
+    ) -> None:
+        """Missing required 'results' field should raise ReviewParseError."""
+        del sample_review_line["results"]
+        jsonl_path = reviews_dir / "diff.jsonl"
+        jsonl_path.write_text(json.dumps(sample_review_line) + "\n")
+
+        with pytest.raises(ReviewParseError, match="line 1"):
+            load_reviews(jsonl_path)
+
+    def test_missing_summary_field_raises_parse_error(
+        self,
+        reviews_dir: Path,
+        sample_review_line: dict[str, object],
+    ) -> None:
+        """Missing required 'summary' field should raise ReviewParseError."""
+        del sample_review_line["summary"]
+        jsonl_path = reviews_dir / "diff.jsonl"
+        jsonl_path.write_text(json.dumps(sample_review_line) + "\n")
+
+        with pytest.raises(ReviewParseError, match="line 1"):
+            load_reviews(jsonl_path)
+
+    def test_missing_review_mode_raises_parse_error(
+        self,
+        reviews_dir: Path,
+        sample_review_line: dict[str, object],
+    ) -> None:
+        """Missing required 'review_mode' field should raise ReviewParseError."""
+        del sample_review_line["review_mode"]
+        jsonl_path = reviews_dir / "diff.jsonl"
+        jsonl_path.write_text(json.dumps(sample_review_line) + "\n")
+
+        with pytest.raises(ReviewParseError, match="line 1"):
+            load_reviews(jsonl_path)
+
+    def test_results_not_a_list_raises_parse_error(
+        self,
+        reviews_dir: Path,
+        sample_review_line: dict[str, object],
+    ) -> None:
+        """'results' as a string instead of list should raise ReviewParseError."""
+        sample_review_line["results"] = "not-a-list"
+        jsonl_path = reviews_dir / "diff.jsonl"
+        jsonl_path.write_text(json.dumps(sample_review_line) + "\n")
+
+        with pytest.raises(ReviewParseError, match="list"):
+            load_reviews(jsonl_path)
+
+    def test_summary_not_a_dict_raises_parse_error(
+        self,
+        reviews_dir: Path,
+        sample_review_line: dict[str, object],
+    ) -> None:
+        """'summary' as a list instead of dict should raise ReviewParseError."""
+        sample_review_line["summary"] = ["not-a-dict"]
+        jsonl_path = reviews_dir / "diff.jsonl"
+        jsonl_path.write_text(json.dumps(sample_review_line) + "\n")
+
+        with pytest.raises(ReviewParseError, match="dict"):
+            load_reviews(jsonl_path)
+
+    def test_issues_not_a_list_raises_parse_error(
+        self,
+        reviews_dir: Path,
+    ) -> None:
+        """'issues' as a string inside agent result should raise ReviewParseError."""
+        data = {
+            "review_mode": "diff",
+            "commit_hash": "a" * 40,
+            "branch_name": "main",
+            "reviewed_at": "2026-02-14T12:00:00Z",
+            "results": [
+                {
+                    "status": "success",
+                    "agent_name": "code-reviewer",
+                    "issues": "not-a-list",
+                    "elapsed_time": 10.0,
+                }
+            ],
+            "summary": {
+                "total_issues": 0,
+                "max_severity": None,
+                "total_elapsed_time": 10.0,
+            },
+        }
+        jsonl_path = reviews_dir / "diff.jsonl"
+        jsonl_path.write_text(json.dumps(data) + "\n")
+
+        with pytest.raises(ReviewParseError, match="list"):
+            load_reviews(jsonl_path)
+
+    def test_invalid_severity_raises_parse_error(
+        self,
+        reviews_dir: Path,
+    ) -> None:
+        """Invalid severity value should raise ReviewParseError."""
+        data = {
+            "review_mode": "diff",
+            "commit_hash": "a" * 40,
+            "branch_name": "main",
+            "reviewed_at": "2026-02-14T12:00:00Z",
+            "results": [
+                {
+                    "status": "success",
+                    "agent_name": "code-reviewer",
+                    "issues": [
+                        {
+                            "agent_name": "code-reviewer",
+                            "severity": "InvalidSeverity",
+                            "description": "test",
+                        }
+                    ],
+                    "elapsed_time": 10.0,
+                }
+            ],
+            "summary": {
+                "total_issues": 1,
+                "max_severity": "InvalidSeverity",
+                "total_elapsed_time": 10.0,
+            },
+        }
+        jsonl_path = reviews_dir / "diff.jsonl"
+        jsonl_path.write_text(json.dumps(data) + "\n")
+
+        with pytest.raises(ReviewParseError, match="line 1"):
+            load_reviews(jsonl_path)
+
+    def test_invalid_review_mode_raises_parse_error(
+        self,
+        reviews_dir: Path,
+    ) -> None:
+        """Invalid review_mode value should raise ReviewParseError."""
+        data = {
+            "review_mode": "unknown",
+            "commit_hash": "a" * 40,
+            "branch_name": "main",
+            "reviewed_at": "2026-02-14T12:00:00Z",
+            "results": [],
+            "summary": {
+                "total_issues": 0,
+                "max_severity": None,
+                "total_elapsed_time": 0.0,
+            },
+        }
+        jsonl_path = reviews_dir / "diff.jsonl"
+        jsonl_path.write_text(json.dumps(data) + "\n")
+
+        with pytest.raises(ReviewParseError, match="line 1"):
+            load_reviews(jsonl_path)
+
+    def test_invalid_agent_status_raises_parse_error(
+        self,
+        reviews_dir: Path,
+    ) -> None:
+        """Invalid agent status value should raise ReviewParseError."""
+        data = {
+            "review_mode": "diff",
+            "commit_hash": "a" * 40,
+            "branch_name": "main",
+            "reviewed_at": "2026-02-14T12:00:00Z",
+            "results": [
+                {
+                    "status": "unknown_status",
+                    "agent_name": "code-reviewer",
+                    "issues": [],
+                    "elapsed_time": 10.0,
+                }
+            ],
+            "summary": {
+                "total_issues": 0,
+                "max_severity": None,
+                "total_elapsed_time": 10.0,
+            },
+        }
+        jsonl_path = reviews_dir / "diff.jsonl"
+        jsonl_path.write_text(json.dumps(data) + "\n")
+
+        with pytest.raises(ReviewParseError, match="line 1"):
+            load_reviews(jsonl_path)

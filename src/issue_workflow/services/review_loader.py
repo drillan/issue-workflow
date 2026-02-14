@@ -142,7 +142,7 @@ def _parse_issue(data: dict[str, object]) -> ReviewIssue:
     if isinstance(raw_location, dict):
         location = ReviewIssueLocation(
             file_path=str(raw_location["file_path"]),
-            line_number=int(raw_location["line_number"]),  # type: ignore[arg-type]
+            line_number=int(raw_location["line_number"]),
         )
 
     return ReviewIssue(
@@ -158,12 +158,10 @@ def _parse_issue(data: dict[str, object]) -> ReviewIssue:
 def _parse_summary(data: dict[str, object]) -> ReviewSummary:
     """Parse the review summary from JSONL data."""
     max_severity_raw = data.get("max_severity")
-    max_severity = (
-        ReviewSeverity(str(max_severity_raw)) if max_severity_raw is not None else None
-    )
+    max_severity = ReviewSeverity(str(max_severity_raw)) if max_severity_raw is not None else None
 
     return ReviewSummary(
-        total_issues=int(data["total_issues"]),  # type: ignore[arg-type]
+        total_issues=int(data["total_issues"]),  # type: ignore[call-overload]
         max_severity=max_severity,
         total_elapsed_time=float(data["total_elapsed_time"]),  # type: ignore[arg-type]
     )
