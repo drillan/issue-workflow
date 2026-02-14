@@ -190,6 +190,37 @@ uv run pytest
 uv run ruff check --fix . && uv run ruff format . && uv run mypy .
 ```
 
+### Docker開発環境
+
+クリーンで再現可能なテスト環境をDockerで構築できます。
+
+**前提条件:** Docker, Docker Compose, [gh CLI](https://cli.github.com/)（ホスト側）
+
+**イメージのビルド:**
+
+```bash
+make docker-build
+```
+
+**認証:**
+
+- **GitHub CLI** — ホスト側の `gh auth token` から `GH_TOKEN` が自動注入されます
+- **Claude Code** — 初回起動時に `claude` を実行しOAuthログインを完了してください。認証情報はDockerの名前付きボリューム（`claude-auth`）に永続化され、`--rm` でコンテナを削除しても維持されます
+
+**使い方:**
+
+```bash
+make docker-dev       # 対話的な開発シェル
+make docker-test      # pytest を実行
+make docker-quality   # ruff + mypy を実行
+```
+
+**Claude Code認証のリセット:**
+
+```bash
+docker volume rm issue-workflow_claude-auth
+```
+
 ## トラブルシューティング
 
 ### gh CLI認証エラー
