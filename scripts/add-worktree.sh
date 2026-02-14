@@ -73,6 +73,23 @@ if [[ "$_DEBUG_MODE" == "true" ]]; then
     exit 0
 fi
 
+# .hachimoku/ をworktreeにコピーする
+# Claude CLIの--allowedToolsにcpが含まれないため、スクリプト側で処理する
+_copy_hachimoku_to_worktree() {
+    local source_dir="$PROJECT_ROOT/.hachimoku"
+    [[ ! -d "$source_dir" ]] && return 0
+
+    # Issue番号を含むブランチのworktreeパスを検出
+    local worktree_path
+    worktree_path=$(git worktree list | grep -E "\[.*/${ISSUE_NUM}-" | awk '{print $1}')
+    [[ -z "$worktree_path" ]] && return 0
+
+    # コピー（reviews/*.jsonl は除外）
+    cp -r "$source_dir" "$worktree_path/.hachimoku"
+    find "$worktree_path/.hachimoku/reviews" -name "*.jsonl" -delete 2>/dev/null || true
+    echo ".hachimoku/ をコピーしました: $worktree_path/.hachimoku"
+}
+
 # claude -p で実行
 # --allowedTools: Bash(git, gh), Read, Glob を許可
 cd "$PROJECT_ROOT"
@@ -99,8 +116,14 @@ if lib_is_verbose; then
         echo "⚠️ 出力のフォーマットに失敗しました（終了コード: $jq_exit）" >&2
         exit $jq_exit
     fi
+    _copy_hachimoku_to_worktree
     exit 0
 else
     claude -p "$PROMPT" --allowedTools "Bash(git:*),Bash(gh:*),Read,Glob"
-    exit $?
+    claude_exit=$?
+    if [[ $claude_exit -ne 0 ]]; then
+        exit $claude_exit
+    fi
+    _copy_hachimoku_to_worktree
+    exit 0
 fi

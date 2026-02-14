@@ -71,7 +71,27 @@ This creates:
 2. New worktree directory
 3. Checks out the branch in the worktree
 
-### Step 6: Report Success
+### Step 6: Copy .hachimoku/ Configuration
+
+If `.hachimoku/` directory exists in the repository root, copy it to the new worktree:
+
+```bash
+cp -r .hachimoku/ <worktree-path>/.hachimoku/
+```
+
+Then remove existing review JSONL files (they belong to the main repo):
+
+```bash
+find <worktree-path>/.hachimoku/reviews -name "*.jsonl" -delete 2>/dev/null
+```
+
+This preserves project-specific hachimoku agent customizations (agent configs, prompts, etc.).
+
+If `.hachimoku/` does not exist, skip this step silently.
+
+**Note**: We copy (not `8moku init`) to preserve customized agent configurations.
+
+### Step 7: Report Success
 
 ```
 ✅ Worktree created successfully

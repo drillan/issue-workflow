@@ -1,8 +1,37 @@
 """Worktree service for detection and cleanup."""
 
+import shutil
 from pathlib import Path
 
 from issue_workflow.lib.git import GitError, GitOperations
+
+
+def copy_hachimoku_to_worktree(repo_path: Path, worktree_path: Path) -> bool:
+    """Copy .hachimoku/ directory from main repo to worktree.
+
+    Copies configuration and agent definitions but excludes existing
+    review JSONL files. The reviews/ directory is created empty so
+    new reviews can be saved in the worktree.
+
+    Args:
+        repo_path: Main repository root path.
+        worktree_path: Worktree root path.
+
+    Returns:
+        True if copied, False if .hachimoku/ does not exist in repo_path.
+    """
+    source = repo_path / ".hachimoku"
+    if not source.is_dir():
+        return False
+
+    destination = worktree_path / ".hachimoku"
+    shutil.copytree(
+        source,
+        destination,
+        ignore=shutil.ignore_patterns("*.jsonl"),
+    )
+    (destination / "reviews").mkdir(exist_ok=True)
+    return True
 
 
 def find_worktree_for_branch(repo_path: Path, branch_name: str) -> Path | None:
