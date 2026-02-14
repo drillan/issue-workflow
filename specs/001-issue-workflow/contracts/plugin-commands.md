@@ -1,6 +1,6 @@
 # Plugin Commands Contract
 
-Claude Code Plugin（Skills形式）として提供されるスラッシュコマンド。
+issue-workflowにバンドルされ、`.claude/commands/`にコピーされるスラッシュコマンド。
 
 ---
 
@@ -63,6 +63,45 @@ GitHub Issueを読み込み、ブランチを作成し、実装計画を立案�
 
 ---
 
+## /commit-push-pr
+
+変更のコミット、プッシュ、PR作成を一連で実行する（git-workflow-haikuバンドル）。
+
+### Synopsis
+
+```
+/commit-push-pr
+```
+
+### Behavior
+
+1. **変更検出**: `git status`で変更を確認
+2. **コミット**: 変更内容から適切なコミットメッセージを自動生成
+3. **プッシュ**: リモートブランチにプッシュ（`-u`フラグ付き）
+4. **PR作成**: `gh pr create`でPRを作成
+   - タイトル: ブランチ名からIssue番号とタイトルを推定
+   - ベースブランチ: `git symbolic-ref refs/remotes/origin/HEAD`で自動検出（FR-025）
+
+### Output
+
+```
+✅ コミット、プッシュ、PR作成が完了しました
+
+コミット: abc1234 feat: add new feature
+PR: #300 - Add new feature
+URL: https://github.com/owner/repo/pull/300
+```
+
+### Errors
+
+| エラー | 対応 |
+|--------|------|
+| 変更なし | `ℹ️ コミットする変更がありません` |
+| プッシュ失敗 | 原因を表示（認証、ネットワーク等） |
+| PR作成失敗 | 原因を表示（既存PR、権限等） |
+
+---
+
 ## /merge-pr
 
 PRのCIチェックが完了するまで待機し、マージを実行する。
@@ -89,7 +128,7 @@ PRのCIチェックが完了するまで待機し、マージを実行する。
 2. **CI待機**: `gh pr checks --watch`で完了まで待機
 3. **マージ実行**: 指定戦略でマージ
 4. **後処理**:
-   - mainブランチに切り替え
+   - デフォルトブランチに切り替え（`git symbolic-ref refs/remotes/origin/HEAD`で自動検出、FR-025）
    - リモートブランチ削除（`--delete-branch`）
    - worktree削除（該当する場合）
    - ローカルブランチ削除
@@ -167,9 +206,53 @@ Issue: #200 - [issueタイトル]
 
 ---
 
+## /respond-review
+
+hachimoku JSONL出力を読み取り、レビュー指摘に対応する。
+
+### Synopsis
+
+```
+/respond-review [PR番号]
+```
+
+### Arguments
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `PR番号` | integer | No | GitHub PR番号（省略時は現在のブランチから検出） |
+
+### Behavior
+
+1. **PR特定**: 引数または現在のブランチから`gh pr view --json number`で検出
+2. **JSONL読み込み**: `.hachimoku/reviews/pr-{number}.jsonl`を読み取り
+3. **指摘一覧表示**: 重要度順にテーブル形式で表示
+4. **対応方針決定**: 各指摘への対応方針を決定
+   - Accept: 修正を実装
+   - Reject: 理由を記録してスキップ
+5. **修正実施**: Accept指摘に対する修正を実装
+6. **コミット**: 修正をコミット
+
+### Output
+
+| # | Severity | File | Line | Description | Decision |
+|---|----------|------|------|-------------|----------|
+| 1 | Important | path/file.py | 28 | FR-025参照ミス | ✅ Accept |
+| 2 | Suggestion | .gitignore | 228 | 末尾改行なし | ✅ Accept |
+
+### Errors
+
+| エラー | 対応 |
+|--------|------|
+| PR番号が検出できない | `⚠️ 現在のブランチに紐づくPRが見つかりません` |
+| JSONLファイルが存在しない | `⚠️ レビュー結果が見つかりません。8moku review pr <番号> を実行してください` |
+| JSONLの解析失敗 | `⚠️ レビュー結果ファイルの解析に失敗しました` |
+
+---
+
 ## /review-pr-comments
 
-PRのレビューコメントを確認・対応する。
+PRのレビューコメント（GitHub上の人間レビューア等）を確認・対応する。
 
 ### Synopsis
 

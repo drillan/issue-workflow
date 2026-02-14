@@ -242,6 +242,65 @@ class Worktree:
 - 配置場所: メインリポジトリの親ディレクトリ
 - Format: `../${PROJECT_NAME}-${BRANCH_NAME}` （`/`を`-`に置換）
 
+### 7. ReviewResult
+
+hachimokuによるレビュー結果を保持する。
+
+```python
+from dataclasses import dataclass
+from enum import Enum
+
+
+class ReviewSeverity(str, Enum):
+    """レビュー指摘の重要度"""
+    CRITICAL = "Critical"
+    IMPORTANT = "Important"
+    SUGGESTION = "Suggestion"
+
+
+@dataclass(frozen=True)
+class ReviewIssueLocation:
+    """レビュー指摘の位置情報"""
+    file_path: str
+    line_number: int
+
+
+@dataclass(frozen=True)
+class ReviewIssue:
+    """レビューの個別指摘"""
+    agent_name: str
+    severity: ReviewSeverity
+    description: str
+    location: ReviewIssueLocation | None = None
+    suggestion: str | None = None
+    category: str | None = None
+
+
+@dataclass(frozen=True)
+class ReviewResult:
+    """hachimokuによるレビュー結果"""
+    review_mode: str
+    commit_hash: str
+    branch_name: str
+    reviewed_at: str
+    issues: list[ReviewIssue]
+
+    @property
+    def issue_count(self) -> int:
+        return len(self.issues)
+
+    @property
+    def has_critical(self) -> bool:
+        return any(i.severity == ReviewSeverity.CRITICAL for i in self.issues)
+```
+
+**Source**: `.hachimoku/reviews/pr-{number}.jsonl`（JSONL形式、1行1レビュー結果）
+
+**Validation Rules**:
+- `review_mode`: "diff" または "pr"
+- `commit_hash`: 40文字のhexadecimal文字列
+- `severity`: "Critical", "Important", "Suggestion"のいずれか
+
 ## Entity Relationships
 
 ```
@@ -278,6 +337,17 @@ class Worktree:
 │ - head_ref_name │────▶│ - branch        │
 │ - state         │     │ - project_name  │
 └─────────────────┘     └─────────────────┘
+        │
+        │ reviewed by
+        ▼
+┌─────────────────┐
+│  ReviewResult   │
+│                 │
+│ - review_mode   │
+│ - commit_hash   │
+│ - branch_name   │
+│ - issues[]      │
+└─────────────────┘
 ```
 
 ## State Transitions
@@ -304,7 +374,16 @@ class Worktree:
       │               [Quality Gate]
       │                      │
       │                      ▼
+      │               [/commit-push-pr]
+      │                      │
+      │                      ▼
       │               [PR Created]
+      │                      │
+      │                      ▼
+      │               [8moku review]
+      │                      │
+      │                      ▼
+      │               [/respond-review]
       │                      │
       │                      ▼
       │               [/merge-pr]

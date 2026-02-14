@@ -45,8 +45,8 @@
 - `uv run` または `.venv/bin/python` を使用
 
 ## Active Technologies
-- Python 3.13+ + Typer, Pydantic, Rich, readchar, uv (001-issue-workflow)
-- ファイルベース（`.claude/workflow-config.json`, `.claude/git-conventions.md`） (001-issue-workflow)
+- Python 3.13+ + Typer 0.15+, Pydantic 2.10+, Rich 13.9+, readchar 4.2+, shutil, pathlib, subprocess (001-issue-workflow)
+- ファイルベース（`.claude/workflow-config.json`, `.claude/git-conventions.md`, `.hachimoku/reviews/*.jsonl`） (001-issue-workflow)
 - Python 3.13+ + Typer 0.15+, Pydantic 2.10+, Rich 13.9+, shutil, pathlib (010-update-command)
 - ファイルシステム（`.claude/commands/`, `.claude/skills/`） (010-update-command)
 

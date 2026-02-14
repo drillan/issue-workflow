@@ -47,11 +47,23 @@ issue-workflow init [OPTIONS]
 
 ### Output Files
 
-| ファイル | 内容 |
+| ファイル / ディレクトリ | 内容 |
 |----------|------|
 | `.claude/workflow-config.json` | ワークフロー設定 |
 | `.claude/git-conventions.md` | Git命名規則 |
-| `.claude/settings.json` | Plugin設定（既存の場合は更新） |
+| `.claude/commands/` | バンドルコマンド（start-issue, commit-push-pr, merge-pr等） |
+| `.claude/agents/` | バンドルエージェント（git-workflow-haiku由来） |
+| `.claude/skills/` | バンドルスキル（tdd-workflow, code-quality-gate等） |
+| `.hachimoku/` | hachimoku設定（`8moku init`で生成） |
+
+### hachimoku Integration
+
+1. **インストールチェック**: `shutil.which("8moku")`でインストール済みか確認
+   - 未インストール: `uv tool install hachimoku`を実行
+   - インストール済み: スキップ
+2. **プロジェクト初期化チェック**: `.hachimoku/`ディレクトリの存在を確認
+   - 未初期化: `8moku init`をサブプロセスとして呼び出し
+   - 初期化済み: スキップ
 
 ### Exit Codes
 
