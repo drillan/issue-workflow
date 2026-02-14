@@ -6,11 +6,18 @@ from pathlib import Path
 from issue_workflow.lib.git import GitError, GitOperations
 
 
+def _ignore_review_jsonl(directory: str, files: list[str]) -> set[str]:
+    """Ignore .jsonl files only in reviews/ directory."""
+    if Path(directory).name == "reviews":
+        return {f for f in files if f.endswith(".jsonl")}
+    return set()
+
+
 def copy_hachimoku_to_worktree(repo_path: Path, worktree_path: Path) -> bool:
     """Copy .hachimoku/ directory from main repo to worktree.
 
-    Copies configuration and agent definitions but excludes existing
-    review JSONL files. The reviews/ directory is created empty so
+    Copies configuration and agent definitions but excludes .jsonl files
+    in the reviews/ directory. The reviews/ directory is created empty so
     new reviews can be saved in the worktree.
 
     Args:
@@ -19,17 +26,16 @@ def copy_hachimoku_to_worktree(repo_path: Path, worktree_path: Path) -> bool:
 
     Returns:
         True if copied, False if .hachimoku/ does not exist in repo_path.
+
+    Raises:
+        FileExistsError: If .hachimoku/ already exists in worktree_path.
     """
     source = repo_path / ".hachimoku"
     if not source.is_dir():
         return False
 
     destination = worktree_path / ".hachimoku"
-    shutil.copytree(
-        source,
-        destination,
-        ignore=shutil.ignore_patterns("*.jsonl"),
-    )
+    shutil.copytree(source, destination, ignore=_ignore_review_jsonl)
     (destination / "reviews").mkdir(exist_ok=True)
     return True
 

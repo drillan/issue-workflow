@@ -79,17 +79,21 @@ If `.hachimoku/` directory exists in the repository root, copy it to the new wor
 cp -r .hachimoku/ <worktree-path>/.hachimoku/
 ```
 
-Then remove existing review JSONL files (they belong to the main repo):
+Then remove existing review JSONL files in reviews/ (they belong to the main repo):
 
 ```bash
-find <worktree-path>/.hachimoku/reviews -name "*.jsonl" -delete 2>/dev/null
+if [ -d <worktree-path>/.hachimoku/reviews ]; then
+  find <worktree-path>/.hachimoku/reviews -name "*.jsonl" -delete
+fi
 ```
 
-This preserves project-specific hachimoku agent customizations (agent configs, prompts, etc.).
+This preserves project-specific hachimoku agent customizations (agent configs, review settings).
 
 If `.hachimoku/` does not exist, skip this step silently.
 
 **Note**: We copy (not `8moku init`) to preserve customized agent configurations.
+
+**Note**: When executed via `scripts/add-worktree.sh`, this step is handled by the script itself (Claude CLI `--allowedTools` does not include `cp`).
 
 ### Step 7: Report Success
 

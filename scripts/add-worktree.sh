@@ -80,13 +80,19 @@ _copy_hachimoku_to_worktree() {
     [[ ! -d "$source_dir" ]] && return 0
 
     # Issue番号を含むブランチのworktreeパスを検出
+    # プレフィックスあり(feat/57-)・なし(57-)の両方に対応、最初の1件のみ取得
     local worktree_path
-    worktree_path=$(git worktree list | grep -E "\[.*/${ISSUE_NUM}-" | awk '{print $1}')
-    [[ -z "$worktree_path" ]] && return 0
+    worktree_path=$(git worktree list | grep -E "\[(.*/)?(${ISSUE_NUM})-" | head -1 | awk '{print $1}')
+    if [[ -z "$worktree_path" ]]; then
+        echo "⚠️ worktreeパスを検出できません。.hachimoku/ のコピーをスキップします。" >&2
+        return 1
+    fi
 
     # コピー（reviews/*.jsonl は除外）
     cp -r "$source_dir" "$worktree_path/.hachimoku"
-    find "$worktree_path/.hachimoku/reviews" -name "*.jsonl" -delete 2>/dev/null || true
+    if [[ -d "$worktree_path/.hachimoku/reviews" ]]; then
+        find "$worktree_path/.hachimoku/reviews" -name "*.jsonl" -delete
+    fi
     echo ".hachimoku/ をコピーしました: $worktree_path/.hachimoku"
 }
 
@@ -116,7 +122,9 @@ if lib_is_verbose; then
         echo "⚠️ 出力のフォーマットに失敗しました（終了コード: $jq_exit）" >&2
         exit $jq_exit
     fi
-    _copy_hachimoku_to_worktree
+    if ! _copy_hachimoku_to_worktree; then
+        echo "⚠️ .hachimoku/ のコピーに失敗しました（worktree作成自体は成功）" >&2
+    fi
     exit 0
 else
     claude -p "$PROMPT" --allowedTools "Bash(git:*),Bash(gh:*),Read,Glob"
@@ -124,6 +132,8 @@ else
     if [[ $claude_exit -ne 0 ]]; then
         exit $claude_exit
     fi
-    _copy_hachimoku_to_worktree
+    if ! _copy_hachimoku_to_worktree; then
+        echo "⚠️ .hachimoku/ のコピーに失敗しました（worktree作成自体は成功）" >&2
+    fi
     exit 0
 fi

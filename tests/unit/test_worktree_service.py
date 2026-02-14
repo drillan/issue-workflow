@@ -3,6 +3,8 @@
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from issue_workflow.services.worktree import (
     cleanup_branch_and_worktree,
     cleanup_worktree,
@@ -294,3 +296,60 @@ class TestCopyHachimokuToWorktree:
         agents_dst = worktree / ".hachimoku" / "agents"
         copied_files = sorted(f.name for f in agents_dst.iterdir())
         assert copied_files == ["aggregator.toml", "code-reviewer.toml", "selector.toml"]
+
+    def test_raises_when_destination_already_exists(self, tmp_path: Path) -> None:
+        """Test FileExistsError when .hachimoku/ already exists in worktree."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        hachimoku = repo / ".hachimoku"
+        hachimoku.mkdir()
+        (hachimoku / "config.toml").write_text("")
+        (hachimoku / "reviews").mkdir()
+
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+        (worktree / ".hachimoku").mkdir()
+
+        with pytest.raises(FileExistsError):
+            copy_hachimoku_to_worktree(repo, worktree)
+
+    def test_copies_without_reviews_directory(self, tmp_path: Path) -> None:
+        """Test copy works when source has no reviews/ subdirectory."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        hachimoku = repo / ".hachimoku"
+        hachimoku.mkdir()
+        (hachimoku / "config.toml").write_text('model = "test"')
+        agents = hachimoku / "agents"
+        agents.mkdir()
+        (agents / "code-reviewer.toml").write_text('name = "cr"')
+
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+
+        result = copy_hachimoku_to_worktree(repo, worktree)
+
+        assert result is True
+        assert (worktree / ".hachimoku" / "config.toml").exists()
+        assert (worktree / ".hachimoku" / "agents" / "code-reviewer.toml").exists()
+        assert (worktree / ".hachimoku" / "reviews").is_dir()
+
+    def test_excludes_jsonl_only_in_reviews(self, tmp_path: Path) -> None:
+        """Test that .jsonl files outside reviews/ are preserved."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        hachimoku = repo / ".hachimoku"
+        hachimoku.mkdir()
+        (hachimoku / "config.toml").write_text("")
+        (hachimoku / "state.jsonl").write_text('{"state": "data"}')
+        reviews = hachimoku / "reviews"
+        reviews.mkdir()
+        (reviews / "pr-1.jsonl").write_text('{"review": "data"}')
+
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+
+        copy_hachimoku_to_worktree(repo, worktree)
+
+        assert (worktree / ".hachimoku" / "state.jsonl").exists()
+        assert not (worktree / ".hachimoku" / "reviews" / "pr-1.jsonl").exists()
