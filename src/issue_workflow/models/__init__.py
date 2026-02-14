@@ -5,15 +5,20 @@ from issue_workflow.models.config import QualityCommands, WorkflowConfig, Workfl
 from issue_workflow.models.issue import Issue
 from issue_workflow.models.pr import PullRequest
 from issue_workflow.models.review import (
+    AgentResultStatus,
+    ReviewAgentResult,
     ReviewIssue,
     ReviewIssueLocation,
+    ReviewMode,
     ReviewResult,
     ReviewSeverity,
+    ReviewSummary,
 )
 from issue_workflow.models.update import FileChangeInfo, FileChangeType, UpdateResult
 from issue_workflow.models.worktree import Worktree
 
 __all__ = [
+    "AgentResultStatus",
     "Branch",
     "BranchType",
     "FileChangeInfo",
@@ -21,10 +26,13 @@ __all__ = [
     "Issue",
     "PullRequest",
     "QualityCommands",
+    "ReviewAgentResult",
     "ReviewIssue",
     "ReviewIssueLocation",
+    "ReviewMode",
     "ReviewResult",
     "ReviewSeverity",
+    "ReviewSummary",
     "UpdateResult",
     "WorkflowConfig",
     "WorkflowSettings",
