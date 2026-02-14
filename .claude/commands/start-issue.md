@@ -5,7 +5,7 @@ Load a GitHub Issue, create a branch, and develop an implementation plan.
 ## Usage
 
 ```
-/start-issue <issue-number> [--force]
+/start-issue <issue-number> [--force] [--current-branch]
 ```
 
 ## Arguments
@@ -14,6 +14,7 @@ Load a GitHub Issue, create a branch, and develop an implementation plan.
 |----------|------|----------|-------------|
 | `issue-number` | integer | Yes | GitHub Issue number |
 | `--force` | flag | No | Start implementation without confirmation |
+| `--current-branch` | flag | No | Skip branch creation, use the current branch |
 
 ## Instructions
 
@@ -29,6 +30,8 @@ Verify the issue exists and is open. If not open, warn the user.
 
 ### Step 2: Determine Branch Type
 
+**If `--current-branch` is specified, skip this step entirely.**
+
 Based on the issue labels and content, determine the appropriate branch prefix:
 
 | Label | Prefix |
@@ -43,6 +46,16 @@ Based on the issue labels and content, determine the appropriate branch prefix:
 If no matching label, check title/body for keywords. Default to `feat/`.
 
 ### Step 3: Create Branch
+
+**If `--current-branch` is specified, skip branch creation.** Instead, display the current branch name:
+
+```bash
+git branch --show-current
+```
+
+If the result is empty (detached HEAD), display an error and abort.
+
+**Otherwise (default behavior):**
 
 Generate branch name: `<prefix>/<issue-number>-<normalized-title>`
 
@@ -183,6 +196,7 @@ Post the plan as a comment on the issue using issue-reporter skill:
 | gh not authenticated | Display `gh auth login` instruction |
 | Uncommitted changes | Ask user to commit or stash changes |
 | Branch creation failed | Display error details |
+| Detached HEAD with `--current-branch` | Display error: not on a branch, checkout a branch first |
 | `workflow-config.json` not found | Display error: "Run `/init` to create configuration." |
 | `documentation` section missing | Treat as DDD disabled, inform user |
 | `documentation.paths` missing or empty | Display warning about no documentation targets |
