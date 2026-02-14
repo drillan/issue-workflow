@@ -71,14 +71,30 @@ PRをレビューしてコメントを投稿します。
 # worktreeディレクトリで実行
 ./scripts/review-pr.sh
 
+# レビューのみ実行（対応はしない）
+./scripts/review-pr.sh --review-only
+
+# 対応のみ実行（既存のレビュー結果を使用）
+./scripts/review-pr.sh --respond-only
+
 # 途中経過を表示
 ./scripts/review-pr.sh -v
 ```
 
+**動作モード:**
+
+| モード | オプション | 動作 |
+|---|---|---|
+| レビュー+対応 | なし（デフォルト） | hachimokuレビュー → `/respond-review`（従来動作） |
+| レビューのみ | `--review-only` | hachimokuレビューのみ実行 |
+| 対応のみ | `--respond-only` | `/respond-review` のみ実行（既存JSONL使用） |
+
+`--review-only` と `--respond-only` の同時指定はエラーになります。
+
 **実行内容:**
 1. `gh pr view` で現在のブランチに紐づくPR番号を自動検出
-2. `8moku` でhachimokuレビューを実行
-3. `/respond-review` でレビュー結果に対応
+2. `8moku` でhachimokuレビューを実行（`--respond-only` 時はスキップ）
+3. `/respond-review` でレビュー結果に対応（`--review-only` 時はスキップ）
 
 ### respond-comments.sh
 
