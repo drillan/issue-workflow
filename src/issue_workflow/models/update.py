@@ -44,12 +44,14 @@ class UpdateResult:
     Attributes:
         commands_changes: List of changes to command files
         skills_changes: List of changes to skill directories
+        agents_changes: List of changes to agent files
         errors: List of (path, error_message) tuples
         dry_run: Whether this was a dry-run operation
     """
 
     commands_changes: list[FileChangeInfo] = field(default_factory=list)
     skills_changes: list[FileChangeInfo] = field(default_factory=list)
+    agents_changes: list[FileChangeInfo] = field(default_factory=list)
     errors: list[tuple[Path, str]] = field(default_factory=list)
     dry_run: bool = False
 
@@ -58,7 +60,7 @@ class UpdateResult:
         """Count of added files/directories."""
         return sum(
             1
-            for c in self.commands_changes + self.skills_changes
+            for c in self.commands_changes + self.skills_changes + self.agents_changes
             if c.change_type == FileChangeType.ADDED
         )
 
@@ -67,7 +69,7 @@ class UpdateResult:
         """Count of updated files/directories."""
         return sum(
             1
-            for c in self.commands_changes + self.skills_changes
+            for c in self.commands_changes + self.skills_changes + self.agents_changes
             if c.change_type == FileChangeType.UPDATED
         )
 

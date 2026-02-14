@@ -81,6 +81,7 @@ class TestUpdateResult:
         result = UpdateResult()
         assert result.commands_changes == []
         assert result.skills_changes == []
+        assert result.agents_changes == []
         assert result.errors == []
         assert result.dry_run is False
 
@@ -169,6 +170,73 @@ class TestUpdateResult:
         """Test dry_run flag is stored correctly."""
         result = UpdateResult(dry_run=True)
         assert result.dry_run is True
+
+    def test_added_count_includes_agents_changes(self) -> None:
+        """Test added_count includes agents_changes (T072)."""
+        result = UpdateResult(
+            commands_changes=[
+                FileChangeInfo(
+                    path=Path("a.md"),
+                    change_type=FileChangeType.ADDED,
+                    source_path=Path("s/a.md"),
+                ),
+            ],
+            agents_changes=[
+                FileChangeInfo(
+                    path=Path("agent/"),
+                    change_type=FileChangeType.ADDED,
+                    source_path=Path("s/agent/"),
+                ),
+            ],
+        )
+        assert result.added_count == 2
+
+    def test_updated_count_includes_agents_changes(self) -> None:
+        """Test updated_count includes agents_changes (T072)."""
+        result = UpdateResult(
+            skills_changes=[
+                FileChangeInfo(
+                    path=Path("skill/"),
+                    change_type=FileChangeType.UPDATED,
+                    source_path=Path("s/skill/"),
+                ),
+            ],
+            agents_changes=[
+                FileChangeInfo(
+                    path=Path("agent/"),
+                    change_type=FileChangeType.UPDATED,
+                    source_path=Path("s/agent/"),
+                ),
+            ],
+        )
+        assert result.updated_count == 2
+
+    def test_has_changes_true_from_agents_only(self) -> None:
+        """Test has_changes returns True when only agents_changes has changes."""
+        result = UpdateResult(
+            agents_changes=[
+                FileChangeInfo(
+                    path=Path("agent/"),
+                    change_type=FileChangeType.ADDED,
+                    source_path=Path("s/agent/"),
+                ),
+            ],
+        )
+        assert result.has_changes is True
+
+    def test_agents_changes_unchanged_not_counted(self) -> None:
+        """Test UNCHANGED agents_changes are not counted in added/updated."""
+        result = UpdateResult(
+            agents_changes=[
+                FileChangeInfo(
+                    path=Path("agent/"),
+                    change_type=FileChangeType.UNCHANGED,
+                ),
+            ],
+        )
+        assert result.added_count == 0
+        assert result.updated_count == 0
+        assert result.has_changes is False
 
 
 class TestUnmanagedFilesIgnored:
