@@ -5,9 +5,11 @@ from issue_workflow.models.config import QualityCommands, WorkflowConfig, Workfl
 from issue_workflow.models.issue import Issue
 from issue_workflow.models.pr import PullRequest
 from issue_workflow.models.review import (
+    AgentResultStatus,
     ReviewAgentResult,
     ReviewIssue,
     ReviewIssueLocation,
+    ReviewMode,
     ReviewResult,
     ReviewSeverity,
     ReviewSummary,
@@ -22,10 +24,12 @@ __all__ = [
     "FileChangeType",
     "Issue",
     "PullRequest",
+    "AgentResultStatus",
     "QualityCommands",
     "ReviewAgentResult",
     "ReviewIssue",
     "ReviewIssueLocation",
+    "ReviewMode",
     "ReviewResult",
     "ReviewSeverity",
     "ReviewSummary",

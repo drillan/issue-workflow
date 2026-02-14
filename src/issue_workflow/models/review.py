@@ -4,6 +4,20 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+class ReviewMode(str, Enum):
+    """Review mode for hachimoku."""
+
+    DIFF = "diff"
+    PR = "pr"
+
+
+class AgentResultStatus(str, Enum):
+    """Status of a review agent execution."""
+
+    SUCCESS = "success"
+    ERROR = "error"
+
+
 class ReviewSeverity(str, Enum):
     """Review issue severity level."""
 
@@ -37,19 +51,11 @@ class ReviewIssue:
 class ReviewAgentResult:
     """Result from a single hachimoku review agent."""
 
-    status: str
+    status: AgentResultStatus
     agent_name: str
     issues: list[ReviewIssue]
     elapsed_time: float
     error_message: str | None = None
-
-    _VALID_STATUSES = frozenset({"success", "error"})
-
-    def __post_init__(self) -> None:
-        """Validate invariants after initialization."""
-        if self.status not in self._VALID_STATUSES:
-            msg = f"status must be 'success' or 'error', got '{self.status}'"
-            raise ValueError(msg)
 
 
 @dataclass(frozen=True)
@@ -69,7 +75,7 @@ class ReviewResult:
     A review session contains results from multiple agents.
     """
 
-    review_mode: str
+    review_mode: ReviewMode
     commit_hash: str
     branch_name: str
     reviewed_at: str
@@ -77,15 +83,11 @@ class ReviewResult:
     summary: ReviewSummary
     pr_number: int | None = None
 
-    _VALID_REVIEW_MODES = frozenset({"diff", "pr"})
     _COMMIT_HASH_LENGTH = 40
     _HEX_CHARS = frozenset("0123456789abcdef")
 
     def __post_init__(self) -> None:
         """Validate invariants after initialization."""
-        if self.review_mode not in self._VALID_REVIEW_MODES:
-            msg = f"review_mode must be 'diff' or 'pr', got '{self.review_mode}'"
-            raise ValueError(msg)
         if len(self.commit_hash) != self._COMMIT_HASH_LENGTH or not all(
             c in self._HEX_CHARS for c in self.commit_hash.lower()
         ):
@@ -98,7 +100,7 @@ class ReviewResult:
         return [
             issue
             for agent_result in self.results
-            if agent_result.status == "success"
+            if agent_result.status == AgentResultStatus.SUCCESS
             for issue in agent_result.issues
         ]
 

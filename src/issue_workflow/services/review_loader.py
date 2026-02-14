@@ -4,9 +4,11 @@ import json
 from pathlib import Path
 
 from issue_workflow.models.review import (
+    AgentResultStatus,
     ReviewAgentResult,
     ReviewIssue,
     ReviewIssueLocation,
+    ReviewMode,
     ReviewResult,
     ReviewSeverity,
     ReviewSummary,
@@ -61,7 +63,7 @@ def load_reviews(jsonl_path: Path) -> list[ReviewResult]:
 
     Raises:
         ReviewFileNotFoundError: If the JSONL file does not exist.
-        ReviewParseError: If a line cannot be parsed as valid JSON.
+        ReviewParseError: If a line cannot be parsed.
     """
     if not jsonl_path.exists():
         msg = f"Review file not found: {jsonl_path.name}"
@@ -73,24 +75,30 @@ def load_reviews(jsonl_path: Path) -> list[ReviewResult]:
             continue
         try:
             data = json.loads(line)
+            results.append(_parse_review_result(data))
         except json.JSONDecodeError as e:
             msg = f"Failed to parse JSONL at line {line_number}: {e}"
             raise ReviewParseError(msg) from e
-
-        results.append(_parse_review_result(data))
+        except (KeyError, ValueError, TypeError) as e:
+            msg = f"Invalid review data at line {line_number}: {e}"
+            raise ReviewParseError(msg) from e
 
     return results
 
 
 def _parse_review_result(data: dict[str, object]) -> ReviewResult:
     """Parse a single JSONL line into a ReviewResult."""
-    raw_results = data.get("results", [])
-    assert isinstance(raw_results, list)
+    raw_results = data["results"]
+    if not isinstance(raw_results, list):
+        msg = f"Expected 'results' to be a list, got {type(raw_results).__name__}"
+        raise ReviewParseError(msg)
 
     agent_results = [_parse_agent_result(r) for r in raw_results]
 
-    raw_summary = data.get("summary", {})
-    assert isinstance(raw_summary, dict)
+    raw_summary = data["summary"]
+    if not isinstance(raw_summary, dict):
+        msg = f"Expected 'summary' to be a dict, got {type(raw_summary).__name__}"
+        raise ReviewParseError(msg)
     summary = _parse_summary(raw_summary)
 
     pr_number_raw = data.get("pr_number")
@@ -99,7 +107,7 @@ def _parse_review_result(data: dict[str, object]) -> ReviewResult:
         pr_number = int(pr_number_raw)
 
     return ReviewResult(
-        review_mode=str(data["review_mode"]),
+        review_mode=ReviewMode(str(data["review_mode"])),
         commit_hash=str(data["commit_hash"]),
         branch_name=str(data["branch_name"]),
         reviewed_at=str(data["reviewed_at"]),
@@ -111,16 +119,18 @@ def _parse_review_result(data: dict[str, object]) -> ReviewResult:
 
 def _parse_agent_result(data: dict[str, object]) -> ReviewAgentResult:
     """Parse an agent result from JSONL data."""
-    raw_issues = data.get("issues", [])
-    assert isinstance(raw_issues, list)
+    raw_issues = data["issues"]
+    if not isinstance(raw_issues, list):
+        msg = f"Expected 'issues' to be a list, got {type(raw_issues).__name__}"
+        raise ReviewParseError(msg)
 
     issues = [_parse_issue(i) for i in raw_issues]
 
     return ReviewAgentResult(
-        status=str(data["status"]),
+        status=AgentResultStatus(str(data["status"])),
         agent_name=str(data["agent_name"]),
         issues=issues,
-        elapsed_time=float(str(data.get("elapsed_time", 0))),
+        elapsed_time=float(data["elapsed_time"]),  # type: ignore[arg-type]
         error_message=str(data["error_message"]) if data.get("error_message") else None,
     )
 
@@ -132,7 +142,7 @@ def _parse_issue(data: dict[str, object]) -> ReviewIssue:
     if isinstance(raw_location, dict):
         location = ReviewIssueLocation(
             file_path=str(raw_location["file_path"]),
-            line_number=int(str(raw_location["line_number"])),
+            line_number=int(raw_location["line_number"]),  # type: ignore[arg-type]
         )
 
     return ReviewIssue(
@@ -148,10 +158,12 @@ def _parse_issue(data: dict[str, object]) -> ReviewIssue:
 def _parse_summary(data: dict[str, object]) -> ReviewSummary:
     """Parse the review summary from JSONL data."""
     max_severity_raw = data.get("max_severity")
-    max_severity = ReviewSeverity(str(max_severity_raw)) if max_severity_raw is not None else None
+    max_severity = (
+        ReviewSeverity(str(max_severity_raw)) if max_severity_raw is not None else None
+    )
 
     return ReviewSummary(
-        total_issues=int(str(data.get("total_issues", 0))),
+        total_issues=int(data["total_issues"]),  # type: ignore[arg-type]
         max_severity=max_severity,
-        total_elapsed_time=float(str(data.get("total_elapsed_time", 0))),
+        total_elapsed_time=float(data["total_elapsed_time"]),  # type: ignore[arg-type]
     )
