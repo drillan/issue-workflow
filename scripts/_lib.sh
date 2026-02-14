@@ -226,7 +226,7 @@ lib_detect_pr_or_exit() {
     if [[ -z "$pr_num" ]]; then
         echo "⚠️ 現在のブランチに紐づくPRが見つかりません" >&2
         echo "" >&2
-        echo "先に complete-issue.sh を実行してPRを作成してください。" >&2
+        echo "先に create-pr.sh を実行してPRを作成してください。" >&2
         exit 1
     fi
 

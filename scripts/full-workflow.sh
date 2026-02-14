@@ -8,7 +8,7 @@
 # 以下を順次実行します:
 # 1. worktree準備（作成 or 既存検出）
 # 2. start-issue（計画立案・実装）
-# 3. complete-issue（commit + push + PR作成）
+# 3. create-pr（commit + push + PR作成）
 # 4. hachimokuレビュー + respond-review + respond-comments
 # 5. merge-pr（CI待機 → マージ → 後処理）
 
@@ -110,8 +110,8 @@ echo ""
 echo "✅ start-issue 完了"
 echo ""
 
-# Step 3: complete-issue（commit + push + PR作成）
-echo "📤 Step 3/5: complete-issue（commit + push + PR作成）"
+# Step 3: create-pr（commit + push + PR作成）
+echo "📤 Step 3/5: create-pr（commit + push + PR作成）"
 echo "───────────────────────────────────────────────────────────────"
 
 PROMPT_COMPLETE="以下のスキルを実行してください:
@@ -121,12 +121,12 @@ PROMPT_COMPLETE="以下のスキルを実行してください:
 実装された変更をコミットし、リモートにプッシュして、プルリクエストを作成してください。"
 
 if ! lib_run_claude "$PROMPT_COMPLETE" "no_exec"; then
-    echo "⚠️ complete-issue の実行に失敗しました" >&2
+    echo "⚠️ create-pr の実行に失敗しました" >&2
     exit 1
 fi
 
 echo ""
-echo "✅ complete-issue 完了"
+echo "✅ create-pr 完了"
 echo ""
 
 # Step 4: hachimokuレビュー + respond-review + respond-comments
@@ -146,7 +146,7 @@ else
 
     # Step 4a: hachimokuによるローカルレビュー
     echo "🔍 hachimokuレビューを実行中..."
-    if ! 8moku review pr "$PR_NUM"; then
+    if ! 8moku "$PR_NUM"; then
         echo "⚠️ hachimokuレビューの実行に失敗しました" >&2
         exit 1
     fi

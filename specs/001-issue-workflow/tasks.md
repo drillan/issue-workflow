@@ -480,7 +480,7 @@ Task: "Create Worktree dataclass in src/issue_workflow/models/worktree.py"
 
 ### 17b. Script Updates
 
-- [ ] T093 [P] Update scripts/full-workflow.sh — Step 3: `/commit-commands:commit-push-pr`→`/commit-push-pr`に変更。Step 4: `/pr-review-toolkit:review-pr`→`8moku review pr`直接呼び出しに変更。`lib_is_ci_review_enabled`分岐を削除。`/respond-review`ステップを追加
+- [ ] T093 [P] Update scripts/full-workflow.sh — Step 3: `/commit-commands:commit-push-pr`→`/commit-push-pr`に変更。Step 4: `/pr-review-toolkit:review-pr`→`8moku <番号>`直接呼び出しに変更。`lib_is_ci_review_enabled`分岐を削除。`/respond-review`ステップを追加
 - [ ] T094 [P] Update scripts/_lib.sh — `lib_is_ci_review_enabled()`関数を削除
 
 ### 17c. Quality & Validation

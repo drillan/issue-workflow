@@ -341,7 +341,7 @@ def get_default_branch() -> str:
 | 旧（外部プラグイン） | 新（Issue #32後） |
 |---------------------|-------------------|
 | `/commit-commands:commit-push-pr` | `/commit-push-pr`（バンドルコマンド） |
-| `/pr-review-toolkit:review-pr` | `8moku review pr <番号>`（直接呼び出し） |
+| `/pr-review-toolkit:review-pr` | `8moku <番号>`（直接呼び出し） |
 | `ci_review`設定 | 削除（hachimokuに統一） |
 | `.claude/settings.json` Plugin設定 | 不要（バンドル方式） |
 
@@ -349,7 +349,7 @@ def get_default_branch() -> str:
 
 `scripts/full-workflow.sh` の主な変更:
 - Step 3: `/commit-commands:commit-push-pr` → `/commit-push-pr`
-- Step 4: `/pr-review-toolkit:review-pr` → `8moku review pr`直接呼び出し
+- Step 4: `/pr-review-toolkit:review-pr` → `8moku <番号>`直接呼び出し
 - Step 4: `ci_review`モード分岐を削除
 - Step 4: `/respond-review`（hachimoku JSONL対応）を追加
 

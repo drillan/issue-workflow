@@ -11,7 +11,7 @@ issue対応ワークフローを自動化するスクリプト集です。
          ↓
     [計画立案・実装]
          ↓
-./scripts/complete-issue.sh      # worktreeで実行
+./scripts/create-pr.sh      # worktreeで実行
          ↓
     [commit + push + PR作成]
          ↓
@@ -47,16 +47,16 @@ worktreeを作成し、issueの計画立案・実装を開始します。
 2. worktreeディレクトリに移動
 3. `/start-issue` コマンドを実行（--force でプランモードスキップ）
 
-### complete-issue.sh
+### create-pr.sh
 
-実装完了後、変更をコミットしてPRを作成します。
+変更をコミット、プッシュしてPRを作成します。
 
 ```bash
 # worktreeディレクトリで実行
-./scripts/complete-issue.sh
+./scripts/create-pr.sh
 
 # 途中経過を表示
-./scripts/complete-issue.sh -v
+./scripts/create-pr.sh -v
 ```
 
 **実行内容:**
@@ -77,7 +77,7 @@ PRをレビューしてコメントを投稿します。
 
 **実行内容:**
 1. `gh pr view` で現在のブランチに紐づくPR番号を自動検出
-2. `8moku review pr` でhachimokuレビューを実行
+2. `8moku` でhachimokuレビューを実行
 3. `/respond-review` でレビュー結果に対応
 
 ### respond-comments.sh
@@ -135,7 +135,7 @@ PRをマージします（CI完了待機付き）。
 **実行内容:**
 1. worktree準備（作成 or 既存検出）
 2. start-issue（計画立案・実装）
-3. complete-issue（commit + push + PR作成）
+3. create-pr（commit + push + PR作成）
 4. hachimokuレビュー + respond-review + respond-comments
 5. merge-pr（CI待機 → マージ → 後処理）
 
@@ -158,7 +158,7 @@ issueに対応するworktreeを作成します（setup-issue.sh から呼び出�
 | `setup-issue.sh` | mainリポジトリ |
 | `add-worktree.sh` | mainリポジトリ |
 | `full-workflow.sh` | mainリポジトリ |
-| `complete-issue.sh` | worktree |
+| `create-pr.sh` | worktree |
 | `review-pr.sh` | worktree |
 | `respond-comments.sh` | worktree |
 | `merge-pr.sh` | worktree |

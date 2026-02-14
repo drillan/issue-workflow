@@ -32,7 +32,7 @@ echo ""
 echo "🔍 hachimokuレビューを実行中..."
 echo ""
 
-if ! 8moku review pr "$PR_NUM"; then
+if ! 8moku "$PR_NUM"; then
     echo "⚠️ hachimokuレビューの実行に失敗しました" >&2
     exit 1
 fi

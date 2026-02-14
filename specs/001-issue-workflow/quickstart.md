@@ -100,7 +100,7 @@ uv run ruff check --fix . && uv run ruff format . && uv run mypy .
 hachimoku CLIでPRレビューを実行:
 
 ```bash
-8moku review pr 300
+8moku 300
 ```
 
 レビュー結果は`.hachimoku/reviews/pr-300.jsonl`に出力されます。
