@@ -30,6 +30,7 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 # 環境変数
 ENV PATH="/home/${USER_NAME}/.local/bin:${PATH}"
 ENV UV_PROJECT_ENVIRONMENT="/home/${USER_NAME}/.venv"
+ENV UV_TOOL_BIN_DIR="/home/${USER_NAME}/.local/bin"
 ENV TERM=xterm-256color
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8

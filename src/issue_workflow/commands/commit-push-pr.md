@@ -30,10 +30,11 @@ The agent will handle:
 
 The agent automatically detects the base branch using:
 ```bash
-BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+BASE_BRANCH=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+git remote set-head origin "$BASE_BRANCH"
 ```
 
-This works regardless of whether the default branch is `main`, `master`, `develop`, etc.
+This queries the GitHub API for the actual default branch and syncs the local reference.
 
 ### Step 3: Quality Verification
 

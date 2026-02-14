@@ -22,7 +22,8 @@ Your workflow has 4 phases. Execute them in order. Do NOT skip phases.
 
 1. Detect base branch:
    ```bash
-   BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+   BASE_BRANCH=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+   git remote set-head origin "$BASE_BRANCH"
    ```
 
 2. Fetch PR details:
@@ -74,8 +75,9 @@ Your workflow has 4 phases. Execute them in order. Do NOT skip phases.
 
 1. Switch to base branch:
    ```bash
-   BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
-   git checkout "$BASE_BRANCH"
+   DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+   git remote set-head origin "$DEFAULT_BRANCH"
+   git checkout "$DEFAULT_BRANCH"
    ```
 
 2. Pull latest changes:

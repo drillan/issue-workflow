@@ -43,6 +43,8 @@ class TestSetupHachimoku:
                 "tool",
                 "install",
                 "hachimoku",
+                "--from",
+                "git+https://github.com/drillan/hachimoku.git",
             ]
             assert mock_run.call_args_list[1][0][0] == ["8moku", "init"]
 

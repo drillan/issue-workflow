@@ -48,7 +48,7 @@ When a new version is released, update the toolkit and sync commands/skills:
 
 ```bash
 # 1. Update the toolkit
-uv tool install git+https://github.com/drillan/issue-workflow.git
+uv tool install --reinstall git+https://github.com/drillan/issue-workflow.git
 
 # 2. Update commands and skills in your project
 issue-workflow update

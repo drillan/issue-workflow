@@ -35,7 +35,14 @@ def setup_hachimoku(project_dir: Path) -> tuple[bool, bool]:
     if shutil.which("8moku") is None:
         try:
             result = subprocess.run(
-                ["uv", "tool", "install", "hachimoku"],
+                [
+                    "uv",
+                    "tool",
+                    "install",
+                    "hachimoku",
+                    "--from",
+                    "git+https://github.com/drillan/hachimoku.git",
+                ],
                 capture_output=True,
                 text=True,
                 check=False,

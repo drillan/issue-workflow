@@ -63,9 +63,11 @@ gh pr merge <number> --rebase --delete-branch
 
 ### Step 4: Post-Merge Cleanup
 
-1. Switch to main branch:
+1. Switch to default branch (auto-detected):
    ```bash
-   git checkout main
+   DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+   git remote set-head origin "$DEFAULT_BRANCH"
+   git checkout "$DEFAULT_BRANCH"
    ```
 
 2. Pull latest changes:

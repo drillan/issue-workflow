@@ -17,7 +17,8 @@ Before starting, gather context:
 3. Staged and unstaged changes: `git diff HEAD`
 4. Detect base branch:
    ```bash
-   BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+   BASE_BRANCH=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+   git remote set-head origin "$BASE_BRANCH"
    ```
 5. Base branch comparison: `git diff $BASE_BRANCH...HEAD`
 6. Recent commits: `git log --oneline -10`
@@ -31,7 +32,8 @@ Execute these steps in order. Do NOT skip or combine steps.
 1. Check current branch: `git branch --show-current`
 2. Detect base branch:
    ```bash
-   BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+   BASE_BRANCH=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+   git remote set-head origin "$BASE_BRANCH"
    ```
 3. If on the base branch:
    - Create new branch: `git checkout -b feature/<name>`
@@ -87,7 +89,8 @@ Save this number as `ISSUE_NUMBER` for use in Step 5.
 
 1. Analyze full changeset:
    ```bash
-   BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+   BASE_BRANCH=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+   git remote set-head origin "$BASE_BRANCH"
    git log $BASE_BRANCH...HEAD   # get all commits
    git diff $BASE_BRANCH...HEAD  # get full diff
    ```

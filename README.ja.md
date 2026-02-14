@@ -48,7 +48,7 @@ issue-workflow init --language python
 
 ```bash
 # 1. ツールキットを更新
-uv tool install git+https://github.com/drillan/issue-workflow.git
+uv tool install --reinstall git+https://github.com/drillan/issue-workflow.git
 
 # 2. プロジェクトのコマンドとスキルを更新
 issue-workflow update
