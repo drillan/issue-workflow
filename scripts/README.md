@@ -23,6 +23,10 @@ issue対応ワークフローを自動化するスクリプト集です。
          ↓
     [レビューコメントに対応]
          ↓
+./scripts/push-changes.sh           # worktreeで実行
+         ↓
+    [commit + push（PR既存時はPR作成スキップ）]
+         ↓
 ./scripts/merge-pr.sh            # worktreeで実行
          ↓
     [CI待機 → マージ → 後処理]
@@ -96,6 +100,23 @@ PRをレビューしてコメントを投稿します。
 2. `8moku` でhachimokuレビューを実行（`--respond-only` 時はスキップ）
 3. `/respond-review` でレビュー結果に対応（`--review-only` 時はスキップ）
 
+### push-changes.sh
+
+レビュー対応後の変更をコミットしてプッシュします。PRが既に存在する場合はcommit + pushのみ実行し、PR作成をスキップします。
+
+```bash
+# worktreeディレクトリで実行
+./scripts/push-changes.sh
+
+# 途中経過を表示
+./scripts/push-changes.sh -v
+```
+
+**実行内容:**
+- `/commit-push-pr` コマンドを実行
+- PRが既に存在する場合: commit + push のみ
+- PRが存在しない場合: commit + push + PR作成
+
 ### respond-comments.sh
 
 PRのレビューコメントに対応します。
@@ -152,7 +173,7 @@ PRをマージします（CI完了待機付き）。
 1. worktree準備（作成 or 既存検出）
 2. start-issue（計画立案・実装）
 3. create-pr（commit + push + PR作成）
-4. hachimokuレビュー + respond-review + respond-comments
+4. hachimokuレビュー + respond-review + respond-comments + push-changes
 5. merge-pr（CI待機 → マージ → 後処理）
 
 ### add-worktree.sh
@@ -177,6 +198,7 @@ issueに対応するworktreeを作成します（setup-issue.sh から呼び出�
 | `create-pr.sh` | worktree |
 | `review-pr.sh` | worktree |
 | `respond-comments.sh` | worktree |
+| `push-changes.sh` | worktree |
 | `merge-pr.sh` | worktree |
 
 ## 前提条件

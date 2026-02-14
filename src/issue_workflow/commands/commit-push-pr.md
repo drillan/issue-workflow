@@ -24,7 +24,8 @@ The agent will handle:
 1. Branch management
 2. Commit creation with auto-generated message
 3. Push to remote
-4. PR creation with issue linkage
+4. PR existence check
+5. PR creation with issue linkage (only if no PR exists for the branch)
 
 ### Step 2: Base Branch Detection
 
@@ -47,6 +48,8 @@ If `workflow.quality_gate_required` is true, run the quality checks defined in `
 
 ## Output Format
 
+### PRが新規作成された場合
+
 ```
 ✅ コミット、プッシュ、PR作成が完了しました
 
@@ -55,11 +58,22 @@ PR: #{PR_NUMBER} - {PR_TITLE}
 URL: {PR_URL}
 ```
 
+### PRが既に存在する場合
+
+```
+✅ コミット、プッシュが完了しました（PR作成スキップ）
+
+コミット: {COMMIT_HASH} {COMMIT_MESSAGE}
+プッシュ: {BRANCH_NAME}
+既存PR: #{PR_NUMBER}
+```
+
 ## Error Handling
 
 | エラー | 対応 |
 |--------|------|
 | 変更なし | `ℹ️ コミットする変更がありません` |
 | プッシュ失敗 | 原因を表示（認証、ネットワーク等） |
-| PR作成失敗 | 原因を表示（既存PR、権限等） |
+| PR既存 | `ℹ️ PRが既に存在するためPR作成をスキップし、commit + pushのみ実行しました` |
+| PR作成失敗 | 原因を表示（権限等） |
 | 品質チェック失敗 | 失敗したチェックを表示、修正を促す |

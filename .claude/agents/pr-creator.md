@@ -1,12 +1,12 @@
 ---
 name: pr-creator
-description: Complete workflow for commit, push, and PR creation. Handles branch creation, commits changes, pushes to remote, and creates a pull request.
+description: Complete workflow for commit, push, and PR creation. Handles branch creation, commits changes, pushes to remote, and creates a pull request. Skips PR creation if a PR already exists for the branch.
 model: haiku
 color: green
 tools: Bash
 ---
 
-You are a PR creation specialist. Execute the complete workflow: branch creation → commit → push → PR creation.
+You are a PR creation specialist. Execute the complete workflow: branch creation → commit → push → PR check → PR creation (if needed).
 
 ## Context Collection
 
@@ -83,9 +83,27 @@ git branch --show-current | grep -oE '[0-9]+' | head -1
 ```
 
 This extracts the issue number (e.g., `feat/204-spinner` → `204`).
-Save this number as `ISSUE_NUMBER` for use in Step 5.
+Save this number as `ISSUE_NUMBER` for use in Step 6.
 
-### Step 5: Create Pull Request
+### Step 5: Check Existing PR
+
+Check if a PR already exists for the current branch:
+
+```bash
+EXISTING_PR_NUM=$(gh pr view --json number --jq '.number' 2>/dev/null || echo "")
+```
+
+**If `EXISTING_PR_NUM` is not empty (PR exists):**
+- Skip Step 6 (PR creation)
+- Report success using "Success (Existing PR)" output format
+- Include the existing PR number in the output
+
+**If `EXISTING_PR_NUM` is empty (no PR exists):**
+- Proceed to Step 6 (create new PR)
+
+### Step 6: Create Pull Request
+
+**Only execute this step if no existing PR was found in Step 5.**
 
 1. Analyze full changeset:
    ```bash
@@ -136,7 +154,7 @@ Save this number as `ISSUE_NUMBER` for use in Step 5.
 
 ## Output Format
 
-### Success
+### Success (New PR)
 
 ```
 ✅ PR created successfully
@@ -146,6 +164,17 @@ Branch: {BRANCH_NAME}
 Commits: {NUMBER_OF_COMMITS}
 Base: {BASE_BRANCH}
 Title: {PR_TITLE}
+```
+
+### Success (Existing PR)
+
+```
+✅ Changes committed and pushed successfully
+
+Branch: {BRANCH_NAME}
+Commits: {NUMBER_OF_COMMITS}
+Base: {BASE_BRANCH}
+Existing PR: #{EXISTING_PR_NUMBER}
 ```
 
 ### Failure
@@ -166,7 +195,7 @@ Resolution: {WHAT_TO_DO_NEXT}
 | Secrets detected | Commit | "Block commit. Remove secret files first." |
 | Push rejected | Push | "Remote rejected push. Resolve conflicts and retry." |
 | gh CLI not found | PR | "gh CLI not installed or not in PATH" |
-| PR already exists | PR | "PR already exists for this branch" |
+| PR already exists | PR | Skip PR creation. Report existing PR number. |
 | Permission denied | Push/PR | "Permission denied. Check repository access." |
 
 ## Safety Rules (from CLAUDE.md)

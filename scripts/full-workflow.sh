@@ -9,7 +9,7 @@
 # 1. worktree準備（作成 or 既存検出）
 # 2. start-issue（計画立案・実装）
 # 3. create-pr（commit + push + PR作成）
-# 4. hachimokuレビュー + respond-review + respond-comments
+# 4. hachimokuレビュー + respond-review + respond-comments + push-changes
 # 5. merge-pr（CI待機 → マージ → 後処理）
 
 set -euo pipefail
@@ -173,6 +173,26 @@ else
         exit 1
     fi
     echo "✅ respond-comments 完了"
+
+    echo ""
+
+    # Step 4d: レビュー対応後の変更をpush（変更がある場合のみ）
+    if [[ -n "$(git status --porcelain)" ]]; then
+        echo "📤 レビュー対応後の変更をプッシュ中..."
+        PROMPT_PUSH="以下のスキルを実行してください:
+
+/commit-push-pr
+
+レビュー対応後の変更をコミットし、リモートにプッシュしてください。PRが既に存在する場合はPR作成をスキップしてください。"
+
+        if ! lib_run_claude "$PROMPT_PUSH" "no_exec"; then
+            echo "⚠️ push-changes の実行に失敗しました" >&2
+            exit 1
+        fi
+        echo "✅ push-changes 完了"
+    else
+        echo "ℹ️ レビュー対応後の変更はありません。push-changesをスキップします。"
+    fi
 fi
 
 echo ""
