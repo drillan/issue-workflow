@@ -226,3 +226,6 @@ ai_working
 
 # hachimoku
 /.hachimoku/
+
+# issue-workflow
+.issue-workflow/logs
