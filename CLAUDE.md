@@ -49,6 +49,8 @@
 - ファイルベース（`.claude/workflow-config.json`, `.claude/git-conventions.md`, `.hachimoku/reviews/*.jsonl`） (001-issue-workflow)
 - Python 3.13+ + Typer 0.15+, Pydantic 2.10+, Rich 13.9+, shutil, pathlib (010-update-command)
 - ファイルシステム（`.claude/skills/`, `.claude/agents/`） (010-update-command)
+- Python 3.13+ + Typer 0.15+, Pydantic 2.10+, Rich 13.9+ (既存依存) (011-workflow-subcommands)
+- ファイルベース (`.issue-workflow/logs/YYYY-MM-DD/*.jsonl`) (011-workflow-subcommands)
 
 ## Recent Changes
 - 001-issue-workflow: Updated to Python 3.13+ with latest dependencies (Typer 0.15+, Pydantic 2.10+, Rich 13.9+)
