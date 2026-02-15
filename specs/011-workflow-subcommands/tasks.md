@@ -75,7 +75,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T019 [US1] Implement start-issue subcommand in `src/issue_workflow/cli/commands/start_issue.py` — Typer app 定義、issue_number 引数、--worktree/--verbose/--timeout オプション、依存チェック → worktree準備（任意） → ClaudeRunner.run → ExecutionLogger.log → 終了コード
+- [ ] T019 [US1] Implement start-issue subcommand in `src/issue_workflow/cli/commands/start_issue.py` — Typer app 定義、issue_number 引数、--worktree/--verbose/--timeout オプション、依存チェック → worktree準備（任意） → ClaudeRunner.run → ExecutionLogger.log → 終了コード。開始・完了メッセージ表示（cli-contract.md Console Output 参照）。`--help` に `--dangerously-skip-permissions` セキュリティ通知を含める（FR-002）
 - [ ] T020 [US1] Register start-issue subcommand in `src/issue_workflow/cli/main.py` — `_register_commands()` に追加
 - [ ] T021 [US1] Run US1 tests and verify all pass (`uv run pytest tests/unit/test_start_issue_command.py tests/integration/test_start_issue_command.py -v`)
 
@@ -96,7 +96,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] Implement create-pr subcommand in `src/issue_workflow/cli/commands/create_pr.py` — Typer app 定義、引数なし、--verbose/--timeout オプション、依存チェック → ClaudeRunner.run → ExecutionLogger.log
+- [ ] T024 [US2] Implement create-pr subcommand in `src/issue_workflow/cli/commands/create_pr.py` — Typer app 定義、引数なし、--verbose/--timeout オプション、依存チェック → ClaudeRunner.run → ExecutionLogger.log。開始・完了メッセージ表示（cli-contract.md Console Output 参照）。`--help` にセキュリティ通知を含める（FR-002）
 - [ ] T025 [US2] Register create-pr subcommand in `src/issue_workflow/cli/main.py` — `_register_commands()` に追加
 - [ ] T026 [US2] Run US2 tests and verify all pass (`uv run pytest tests/unit/test_create_pr_command.py tests/integration/test_create_pr_command.py -v`)
 
@@ -117,7 +117,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Implement review-pr subcommand in `src/issue_workflow/cli/commands/review_pr.py` — Typer app 定義、pr_number オプション引数、--review-only/--respond-only/--verbose/--timeout オプション、依存チェック → PR番号検出 → 8moku実行（任意） → ClaudeRunner.run（任意） → ログ記録
+- [ ] T029 [US3] Implement review-pr subcommand in `src/issue_workflow/cli/commands/review_pr.py` — Typer app 定義、pr_number オプション引数、--review-only/--respond-only/--verbose/--timeout オプション、依存チェック → PR番号検出 → 8moku実行（任意） → ClaudeRunner.run（任意） → ログ記録。開始・完了メッセージ表示（cli-contract.md Console Output 参照）。`--help` にセキュリティ通知を含める（FR-002）
 - [ ] T030 [US3] Register review-pr subcommand in `src/issue_workflow/cli/main.py` — `_register_commands()` に追加
 - [ ] T031 [US3] Run US3 tests and verify all pass (`uv run pytest tests/unit/test_review_pr_command.py tests/integration/test_review_pr_command.py -v`)
 
@@ -133,12 +133,12 @@
 
 ### Tests for User Story 4
 
-- [ ] T032 [P] [US4] Write unit test for push-changes command in `tests/unit/test_push_changes_command.py` — 依存チェック、ClaudeRunner.run 呼び出し（プロンプトにPR作成スキップ指示を含む）、ログ記録
-- [ ] T033 [P] [US4] Write integration test for push-changes command in `tests/integration/test_push_changes_command.py` — CliRunner での E2E テスト
+- [ ] T032 [P] [US4] Write unit test for push-changes command in `tests/unit/test_push_changes_command.py` — 依存チェック（`claude` + `gh`）、PR番号自動検出（FR-015a）、ClaudeRunner.run 呼び出し（プロンプトにPR作成スキップ指示を含む）、ログ記録（ログファイル名にPR番号を含む）
+- [ ] T033 [P] [US4] Write integration test for push-changes command in `tests/integration/test_push_changes_command.py` — CliRunner での E2E テスト、PR番号自動検出によるログファイル名検証
 
 ### Implementation for User Story 4
 
-- [ ] T034 [US4] Implement push-changes subcommand in `src/issue_workflow/cli/commands/push_changes.py` — Typer app 定義、引数なし、--verbose/--timeout オプション、cli-contract.md のプロンプト（PR作成スキップ指示付き）
+- [ ] T034 [US4] Implement push-changes subcommand in `src/issue_workflow/cli/commands/push_changes.py` — Typer app 定義、引数なし、--verbose/--timeout オプション、依存チェック（`claude` + `gh`） → PR番号自動検出（FR-015a、ログファイル名に使用） → ClaudeRunner.run → ExecutionLogger.log。開始・完了メッセージ表示（cli-contract.md Console Output 参照）。`--help` にセキュリティ通知を含める（FR-002）
 - [ ] T035 [US4] Register push-changes subcommand in `src/issue_workflow/cli/main.py` — `_register_commands()` に追加
 - [ ] T036 [US4] Run US4 tests and verify all pass (`uv run pytest tests/unit/test_push_changes_command.py tests/integration/test_push_changes_command.py -v`)
 
@@ -159,7 +159,7 @@
 
 ### Implementation for User Story 5
 
-- [ ] T039 [US5] Implement respond-comments subcommand in `src/issue_workflow/cli/commands/respond_comments.py` — Typer app 定義、pr_number オプション引数、--verbose/--timeout オプション、依存チェック → PR番号検出 → ClaudeRunner.run → ログ記録
+- [ ] T039 [US5] Implement respond-comments subcommand in `src/issue_workflow/cli/commands/respond_comments.py` — Typer app 定義、pr_number オプション引数、--verbose/--timeout オプション、依存チェック → PR番号検出 → ClaudeRunner.run → ログ記録。開始・完了メッセージ表示（cli-contract.md Console Output 参照）。`--help` にセキュリティ通知を含める（FR-002）
 - [ ] T040 [US5] Register respond-comments subcommand in `src/issue_workflow/cli/main.py` — `_register_commands()` に追加
 - [ ] T041 [US5] Run US5 tests and verify all pass (`uv run pytest tests/unit/test_respond_comments_command.py tests/integration/test_respond_comments_command.py -v`)
 
@@ -180,7 +180,7 @@
 
 ### Implementation for User Story 6
 
-- [ ] T044 [US6] Implement merge-pr subcommand in `src/issue_workflow/cli/commands/merge_pr.py` — Typer app 定義、pr_number オプション引数、--verbose/--timeout オプション、依存チェック → PR番号検出 → ClaudeRunner.run → ログ記録
+- [ ] T044 [US6] Implement merge-pr subcommand in `src/issue_workflow/cli/commands/merge_pr.py` — Typer app 定義、pr_number オプション引数、--verbose/--timeout オプション、依存チェック → PR番号検出 → ClaudeRunner.run → ログ記録。開始・完了メッセージ表示（cli-contract.md Console Output 参照）。`--help` にセキュリティ通知を含める（FR-002）
 - [ ] T045 [US6] Register merge-pr subcommand in `src/issue_workflow/cli/main.py` — `_register_commands()` に追加
 - [ ] T046 [US6] Run US6 tests and verify all pass (`uv run pytest tests/unit/test_merge_pr_command.py tests/integration/test_merge_pr_command.py -v`)
 
@@ -203,7 +203,7 @@
 ### Implementation for User Story 7
 
 - [ ] T050 [US7] Implement WorkflowContext dataclass in `src/issue_workflow/models/workflow_context.py` — data-model.md の定義に従い、step_results, has_error, cwd_for_skill/cwd_for_merge, log_number_for_step
-- [ ] T051 [US7] Implement run subcommand in `src/issue_workflow/cli/commands/run.py` — Typer app 定義、issue_number 引数、--worktree/--verbose/--timeout オプション、WorkflowContext を使って Step 0〜4 を順次実行、各ステップ失敗で即時終了
+- [ ] T051 [US7] Implement run subcommand in `src/issue_workflow/cli/commands/run.py` — Typer app 定義、issue_number 引数、--worktree/--verbose/--timeout オプション、WorkflowContext を使って順次実行: Step 0（worktree準備、任意）→ Step 1（start-issue）→ Step 2（create-pr）→ Step 3a（8moku review）→ Step 3b（respond-review）→ Step 3c（push-changes）→ Step 4（merge-pr）。各ステップ失敗で即時終了。開始・完了メッセージ表示（cli-contract.md Console Output 参照）。`--help` にセキュリティ通知を含める（FR-002）
 - [ ] T052 [US7] Register run subcommand in `src/issue_workflow/cli/main.py` — `_register_commands()` に追加
 - [ ] T053 [US7] Run US7 tests and verify all pass (`uv run pytest tests/unit/test_workflow_context.py tests/unit/test_run_command.py tests/integration/test_run_command.py -v`)
 
