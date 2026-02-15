@@ -2,8 +2,11 @@
 
 import json
 import subprocess
+import time
 from collections.abc import Callable
 from pathlib import Path
+
+from pydantic import ValidationError
 
 from issue_workflow.models.claude_result import ClaudeResult
 
@@ -77,7 +80,15 @@ class ClaudeRunner:
             )
 
         raw_stdout = proc.stdout
-        result = ClaudeResult.model_validate_json(raw_stdout)
+
+        try:
+            result = ClaudeResult.model_validate_json(raw_stdout)
+        except (ValidationError, ValueError):
+            return ClaudeResult(
+                exit_code=proc.returncode,
+                is_error=True,
+                raw_json=raw_stdout,
+            )
 
         return ClaudeResult(
             **result.model_dump(),
@@ -113,6 +124,7 @@ class ClaudeRunner:
         )
 
         last_result_line: str = ""
+        start_time = time.monotonic()
 
         try:
             assert proc.stdout is not None
@@ -143,7 +155,9 @@ class ClaudeRunner:
                 if event_type == "result":
                     last_result_line = line
 
-            proc.wait(timeout=timeout_seconds)
+            elapsed = time.monotonic() - start_time
+            remaining = max(0, timeout_seconds - elapsed)
+            proc.wait(timeout=remaining)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
@@ -154,15 +168,18 @@ class ClaudeRunner:
             )
 
         if last_result_line:
-            result = ClaudeResult.model_validate_json(last_result_line)
-            return ClaudeResult(
-                **result.model_dump(),
-                exit_code=proc.returncode,
-                raw_json=last_result_line,
-            )
+            try:
+                result = ClaudeResult.model_validate_json(last_result_line)
+                return ClaudeResult(
+                    **result.model_dump(),
+                    exit_code=proc.returncode,
+                    raw_json=last_result_line,
+                )
+            except (ValidationError, ValueError):
+                pass
 
         return ClaudeResult(
             exit_code=proc.returncode,
             is_error=proc.returncode != 0,
-            raw_json="{}",
+            raw_json=last_result_line or "{}",
         )

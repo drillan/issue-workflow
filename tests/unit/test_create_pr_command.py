@@ -153,6 +153,25 @@ class TestCreatePrBasic:
             assert any("[create-pr] Done" in c and "exit_code=0" in c for c in all_calls)
 
 
+class TestCreatePrErrorHandling:
+    """Error handling tests."""
+
+    def test_logger_io_error_continues_with_correct_exit_code(
+        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_logger: MagicMock
+    ) -> None:
+        """OSError in ExecutionLogger.log() prints warning but returns correct exit code."""
+        mock_logger.log.side_effect = OSError("Permission denied")
+
+        with patch(f"{_MOD}.ui") as mock_ui:
+            from issue_workflow.cli.commands.create_pr import _run_create_pr
+
+            exit_code = _run_create_pr(verbose=False, timeout=3600)
+
+            assert exit_code == 0
+            warning_calls = [str(c) for c in mock_ui.console.print.call_args_list]
+            assert any("log" in c.lower() for c in warning_calls)
+
+
 class TestCreatePrVerbose:
     """Verbose mode tests."""
 

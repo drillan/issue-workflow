@@ -1,6 +1,5 @@
 """Create-pr subcommand for issue-workflow CLI."""
 
-import json
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
@@ -8,6 +7,7 @@ from typing import Annotated
 import typer
 
 from issue_workflow.cli import ui
+from issue_workflow.cli.commands._common import build_log_result, on_tool_use
 from issue_workflow.models.execution_log import ExecutionLog
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
 from issue_workflow.services.dependency_checker import (
@@ -19,32 +19,6 @@ from issue_workflow.services.execution_logger import LOG_BASE_DIR_NAME, Executio
 COMMAND_NAME: str = "create-pr"
 
 EXIT_SUCCESS: int = 0
-
-
-def _build_log_result(raw_json: str, exit_code: int, timeout: int) -> dict[str, object]:
-    """Build the result dict for ExecutionLog.
-
-    Args:
-        raw_json: Raw JSON output from claude -p.
-        exit_code: Process exit code.
-        timeout: Timeout value in seconds.
-
-    Returns:
-        Parsed JSON dict or error info dict.
-    """
-    if exit_code == -1:
-        return {"error": "timeout", "timeout_seconds": timeout}
-    try:
-        parsed: dict[str, object] = json.loads(raw_json)
-        return parsed
-    except (json.JSONDecodeError, TypeError):
-        return {"error": "parse_error", "raw": raw_json}
-
-
-def _on_tool_use(name: str, input_str: str) -> None:
-    """Print tool use event in verbose mode."""
-    truncated = input_str[:80] + "..." if len(input_str) > 80 else input_str
-    ui.console.print(f"\u25cf {name}({truncated})")
 
 
 def _run_create_pr(
@@ -74,11 +48,11 @@ def _run_create_pr(
         cwd=None,
         timeout_seconds=timeout,
         verbose=verbose,
-        on_tool_use=_on_tool_use if verbose else None,
+        on_tool_use=on_tool_use if verbose else None,
     )
 
     # Log execution
-    log_result = _build_log_result(result.raw_json, result.exit_code, timeout)
+    log_result = build_log_result(result.raw_json, result.exit_code, timeout)
     entry = ExecutionLog(
         timestamp=datetime.now().astimezone(),
         command=COMMAND_NAME,
@@ -86,8 +60,11 @@ def _run_create_pr(
         exit_code=result.exit_code,
         result=log_result,
     )
-    logger = ExecutionLogger(base_dir=Path.cwd() / LOG_BASE_DIR_NAME)
-    logger.log(entry)
+    try:
+        logger = ExecutionLogger(base_dir=Path.cwd() / LOG_BASE_DIR_NAME)
+        logger.log(entry)
+    except OSError:
+        ui.console.print("\\[create-pr] Warning: Failed to write log file.")
 
     # Done message
     ui.console.print(f"\\[create-pr] Done. (exit_code={result.exit_code})")

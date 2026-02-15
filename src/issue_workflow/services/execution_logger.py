@@ -16,7 +16,7 @@ class ExecutionLogger:
         """Initialize with base log directory.
 
         Args:
-            base_dir: Base directory for log files (e.g., project root).
+            base_dir: Base directory for log storage (e.g., .issue-workflow directory).
         """
         self._base_dir = base_dir
 
@@ -45,8 +45,8 @@ class ExecutionLogger:
     ) -> Path:
         """Generate log file path.
 
-        Format: base_dir/logs/YYYY-MM-DD/<command>-<number>-<ISO8601>.jsonl
-        or: base_dir/logs/YYYY-MM-DD/<command>-<ISO8601>.jsonl (without number)
+        Format: base_dir/logs/YYYY-MM-DD/<command>-<number>-YYYY-MM-DDThh-mm-ss.jsonl
+        or: base_dir/logs/YYYY-MM-DD/<command>-YYYY-MM-DDThh-mm-ss.jsonl (without number)
 
         Args:
             command: Subcommand name (e.g., "start-issue").

@@ -1,6 +1,5 @@
 """Start-issue subcommand for issue-workflow CLI."""
 
-import json
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
@@ -8,7 +7,8 @@ from typing import Annotated
 import typer
 
 from issue_workflow.cli import ui
-from issue_workflow.lib.git import GitOperations
+from issue_workflow.cli.commands._common import build_log_result, on_tool_use
+from issue_workflow.lib.git import GitError, GitOperations
 from issue_workflow.models.execution_log import ExecutionLog
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
 from issue_workflow.services.dependency_checker import (
@@ -24,24 +24,12 @@ from issue_workflow.services.worktree import (
 
 COMMAND_NAME: str = "start-issue"
 
-SECURITY_NOTICE: str = (
-    "\n\n\u26a0\ufe0f  Security: This command uses --dangerously-skip-permissions to bypass"
-    " Claude Code's permission checks for automated execution."
-    " Only run in trusted environments."
-)
-
 WORKTREE_BRANCH_PREFIX: str = "feat/"
 
 EXIT_SUCCESS: int = 0
 
 
-def _on_tool_use(name: str, input_str: str) -> None:
-    """Print tool use event in verbose mode."""
-    truncated = input_str[:80] + "..." if len(input_str) > 80 else input_str
-    ui.console.print(f"\u25cf {name}({truncated})")
-
-
-def _prepare_worktree(issue_number: int) -> Path:
+def _prepare_worktree(issue_number: int) -> Path | None:
     """Prepare worktree for the given issue.
 
     Detects existing worktree or creates a new one.
@@ -50,7 +38,7 @@ def _prepare_worktree(issue_number: int) -> Path:
         issue_number: GitHub Issue number.
 
     Returns:
-        Path to the worktree directory.
+        Path to the worktree directory, or None if creation failed.
     """
     git = GitOperations()
     branch_name = f"{WORKTREE_BRANCH_PREFIX}{issue_number}-issue"
@@ -62,30 +50,16 @@ def _prepare_worktree(issue_number: int) -> Path:
 
     worktree_path = git.repo_path.parent / f"{git.repo_path.name}-{branch_name.replace('/', '-')}"
     ui.print_info(f"Creating worktree: {worktree_path}")
-    git.worktree_add(worktree_path, branch_name, new_branch=True)
+
+    try:
+        git.worktree_add(worktree_path, branch_name, new_branch=True)
+    except GitError as e:
+        ui.print_error(f"Failed to create worktree: {e}")
+        return None
+
     copy_hachimoku_to_worktree(git.repo_path, worktree_path)
 
     return worktree_path
-
-
-def _build_log_result(raw_json: str, exit_code: int, timeout: int) -> dict[str, object]:
-    """Build the result dict for ExecutionLog.
-
-    Args:
-        raw_json: Raw JSON output from claude -p.
-        exit_code: Process exit code.
-        timeout: Timeout value in seconds.
-
-    Returns:
-        Parsed JSON dict or error info dict.
-    """
-    if exit_code == -1:
-        return {"error": "timeout", "timeout_seconds": timeout}
-    try:
-        parsed: dict[str, object] = json.loads(raw_json)
-        return parsed
-    except (json.JSONDecodeError, TypeError):
-        return {"error": "parse_error", "raw": raw_json}
 
 
 def _run_start_issue(
@@ -115,6 +89,8 @@ def _run_start_issue(
     cwd: Path | None = None
     if worktree:
         cwd = _prepare_worktree(issue_number)
+        if cwd is None:
+            return 1
 
     # Console output (escape brackets for Rich markup)
     mode_suffix = " (verbose mode)" if verbose else ""
@@ -127,11 +103,11 @@ def _run_start_issue(
         cwd=cwd,
         timeout_seconds=timeout,
         verbose=verbose,
-        on_tool_use=_on_tool_use if verbose else None,
+        on_tool_use=on_tool_use if verbose else None,
     )
 
     # Log execution
-    log_result = _build_log_result(result.raw_json, result.exit_code, timeout)
+    log_result = build_log_result(result.raw_json, result.exit_code, timeout)
     entry = ExecutionLog(
         timestamp=datetime.now().astimezone(),
         command=COMMAND_NAME,
@@ -139,8 +115,11 @@ def _run_start_issue(
         exit_code=result.exit_code,
         result=log_result,
     )
-    logger = ExecutionLogger(base_dir=Path.cwd() / LOG_BASE_DIR_NAME)
-    logger.log(entry)
+    try:
+        logger = ExecutionLogger(base_dir=Path.cwd() / LOG_BASE_DIR_NAME)
+        logger.log(entry)
+    except OSError:
+        ui.console.print("\\[start-issue] Warning: Failed to write log file.")
 
     # Done message
     ui.console.print(f"\\[start-issue] Done. (exit_code={result.exit_code})")

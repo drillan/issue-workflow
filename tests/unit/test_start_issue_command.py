@@ -323,6 +323,56 @@ class TestStartIssueWorktree:
         assert call_kwargs.kwargs.get("cwd") is None
 
 
+class TestStartIssueErrorHandling:
+    """Error handling tests."""
+
+    def test_worktree_git_error_shows_message_and_exits(
+        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_logger: MagicMock
+    ) -> None:
+        """GitError in _prepare_worktree prints error and raises typer.Exit."""
+        from issue_workflow.lib.git import GitError
+
+        with (
+            patch(f"{_MOD}.find_worktree_for_branch", return_value=None),
+            patch(f"{_MOD}.GitOperations") as mock_git_cls,
+            patch(f"{_MOD}.ui") as mock_ui,
+        ):
+            mock_git = MagicMock()
+            mock_git.repo_path = Path("/tmp/repo")
+            mock_git.worktree_add.side_effect = GitError("branch already exists")
+            mock_git_cls.return_value = mock_git
+
+            from issue_workflow.cli.commands.start_issue import _run_start_issue
+
+            exit_code = _run_start_issue(
+                issue_number=199, worktree=True, verbose=False, timeout=3600
+            )
+
+            assert exit_code == 1
+            # Check error message was printed
+            error_calls = [str(c) for c in mock_ui.print_error.call_args_list]
+            assert any("worktree" in c.lower() for c in error_calls)
+
+    def test_logger_io_error_continues_with_correct_exit_code(
+        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_logger: MagicMock
+    ) -> None:
+        """OSError in ExecutionLogger.log() prints warning but returns correct exit code."""
+        mock_logger.log.side_effect = OSError("Permission denied")
+
+        with patch(f"{_MOD}.ui") as mock_ui:
+            from issue_workflow.cli.commands.start_issue import _run_start_issue
+
+            exit_code = _run_start_issue(
+                issue_number=199, worktree=False, verbose=False, timeout=3600
+            )
+
+            # Command should still succeed (claude ran fine)
+            assert exit_code == 0
+            # Warning should be printed
+            warning_calls = [str(c) for c in mock_ui.console.print.call_args_list]
+            assert any("log" in c.lower() for c in warning_calls)
+
+
 class TestStartIssueLogEntry:
     """Log entry content tests."""
 
