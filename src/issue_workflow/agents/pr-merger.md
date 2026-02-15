@@ -154,6 +154,9 @@ Resolution: Fix CI issues and try again
 4. **Always cleanup worktrees** - Execute Phase 4 cleanup even on small PRs
 5. **Always return to base branch** - End Phase 4 on base branch (verify with `git branch`)
 6. **Never modify unrelated branches** - Only touch the merged branch and worktrees
+7. **Show diff summary for large PRs** - Before merge, show a summary of changes if the PR has significant diffs
+8. **Warn about breaking changes** - If commit messages contain "BREAKING CHANGE", "breaking:", or "!" in conventional commit type, warn the user before proceeding
+9. **Suggest squash for many commits** - If the PR has more than 5 commits and the user did not specify a merge strategy, suggest `--squash`
 
 ## Tool Restrictions
 

@@ -17,7 +17,7 @@ When the user invokes `/commit-push-pr`, use the bundled `pr-creator` agent to e
 Use the Task tool to launch the `pr-creator` agent from `.claude/agents/pr-creator.md`:
 
 ```
-Task tool with subagent_type: "git-workflow-haiku:pr-creator"
+Task tool with subagent_type: "pr-creator"
 ```
 
 The agent will handle:
