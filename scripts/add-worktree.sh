@@ -88,11 +88,17 @@ _copy_hachimoku_to_worktree() {
         return 1
     fi
 
-    # コピー（reviews/*.jsonl は除外）
-    cp -r "$source_dir" "$worktree_path/.hachimoku"
-    if [[ -d "$worktree_path/.hachimoku/reviews" ]]; then
-        find "$worktree_path/.hachimoku/reviews" -name "*.jsonl" -delete
+    # コピー（既にgit-trackedな .hachimoku/ がある場合はスキップ）
+    if [[ ! -d "$worktree_path/.hachimoku" ]]; then
+        cp -r "$source_dir" "$worktree_path/.hachimoku"
     fi
+
+    # reviews/ を確保（git は空ディレクトリを追跡しないため）
+    mkdir -p "$worktree_path/.hachimoku/reviews"
+
+    # 既存の review JSONL を削除（メインリポジトリのレビュー結果を引き継がない）
+    find "$worktree_path/.hachimoku/reviews" -name "*.jsonl" -delete 2>/dev/null || true
+
     echo ".hachimoku/ をコピーしました: $worktree_path/.hachimoku"
 }
 

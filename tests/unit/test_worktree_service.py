@@ -3,8 +3,6 @@
 import subprocess
 from pathlib import Path
 
-import pytest
-
 from issue_workflow.services.worktree import (
     cleanup_branch_and_worktree,
     cleanup_worktree,
@@ -297,21 +295,37 @@ class TestCopyHachimokuToWorktree:
         copied_files = sorted(f.name for f in agents_dst.iterdir())
         assert copied_files == ["aggregator.toml", "code-reviewer.toml", "selector.toml"]
 
-    def test_raises_when_destination_already_exists(self, tmp_path: Path) -> None:
-        """Test FileExistsError when .hachimoku/ already exists in worktree."""
+    def test_replaces_existing_hachimoku_in_worktree(self, tmp_path: Path) -> None:
+        """Test that git-tracked .hachimoku/ (without reviews/) is replaced correctly."""
         repo = tmp_path / "repo"
         repo.mkdir()
         hachimoku = repo / ".hachimoku"
         hachimoku.mkdir()
-        (hachimoku / "config.toml").write_text("")
+        (hachimoku / "config.toml").write_text('model = "updated"')
+        agents = hachimoku / "agents"
+        agents.mkdir()
+        (agents / "code-reviewer.toml").write_text('name = "cr"')
         (hachimoku / "reviews").mkdir()
 
+        # Simulate git-tracked .hachimoku/ in worktree (no reviews/, stale config)
         worktree = tmp_path / "worktree"
         worktree.mkdir()
-        (worktree / ".hachimoku").mkdir()
+        wt_hachimoku = worktree / ".hachimoku"
+        wt_hachimoku.mkdir()
+        (wt_hachimoku / "config.toml").write_text('model = "stale"')
+        wt_agents = wt_hachimoku / "agents"
+        wt_agents.mkdir()
+        (wt_agents / "code-reviewer.toml").write_text('name = "old"')
+        # No reviews/ directory (git doesn't track empty dirs)
 
-        with pytest.raises(FileExistsError):
-            copy_hachimoku_to_worktree(repo, worktree)
+        result = copy_hachimoku_to_worktree(repo, worktree)
+
+        assert result is True
+        assert (worktree / ".hachimoku" / "config.toml").read_text() == 'model = "updated"'
+        assert (
+            worktree / ".hachimoku" / "agents" / "code-reviewer.toml"
+        ).read_text() == 'name = "cr"'
+        assert (worktree / ".hachimoku" / "reviews").is_dir()
 
     def test_copies_without_reviews_directory(self, tmp_path: Path) -> None:
         """Test copy works when source has no reviews/ subdirectory."""

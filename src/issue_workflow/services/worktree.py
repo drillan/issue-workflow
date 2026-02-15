@@ -20,22 +20,22 @@ def copy_hachimoku_to_worktree(repo_path: Path, worktree_path: Path) -> bool:
     in the reviews/ directory. The reviews/ directory is created empty so
     new reviews can be saved in the worktree.
 
+    If .hachimoku/ already exists in the worktree (e.g. git-tracked files),
+    it is replaced with the project root's copy.
+
     Args:
         repo_path: Main repository root path.
         worktree_path: Worktree root path.
 
     Returns:
         True if copied, False if .hachimoku/ does not exist in repo_path.
-
-    Raises:
-        FileExistsError: If .hachimoku/ already exists in worktree_path.
     """
     source = repo_path / ".hachimoku"
     if not source.is_dir():
         return False
 
     destination = worktree_path / ".hachimoku"
-    shutil.copytree(source, destination, ignore=_ignore_review_jsonl)
+    shutil.copytree(source, destination, ignore=_ignore_review_jsonl, dirs_exist_ok=True)
     (destination / "reviews").mkdir(exist_ok=True)
     return True
 

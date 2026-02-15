@@ -73,23 +73,26 @@ This creates:
 
 ### Step 6: Copy .hachimoku/ Configuration
 
-If `.hachimoku/` directory exists in the repository root, copy it to the new worktree:
+If `.hachimoku/` directory exists in the repository root, copy it to the new worktree.
+
+If `.hachimoku/` is already present in the worktree (git-tracked), skip the copy. Otherwise copy from the repository root:
 
 ```bash
-cp -r .hachimoku/ <worktree-path>/.hachimoku/
+if [ ! -d <worktree-path>/.hachimoku ]; then
+  cp -r .hachimoku/ <worktree-path>/.hachimoku/
+fi
 ```
 
-Then remove existing review JSONL files in reviews/ (they belong to the main repo):
+Then ensure `reviews/` directory exists (git doesn't track empty directories) and remove any stale JSONL files:
 
 ```bash
-if [ -d <worktree-path>/.hachimoku/reviews ]; then
-  find <worktree-path>/.hachimoku/reviews -name "*.jsonl" -delete
-fi
+mkdir -p <worktree-path>/.hachimoku/reviews
+find <worktree-path>/.hachimoku/reviews -name "*.jsonl" -delete 2>/dev/null || true
 ```
 
 This preserves project-specific hachimoku agent customizations (agent configs, review settings).
 
-If `.hachimoku/` does not exist, skip this step silently.
+If `.hachimoku/` does not exist in the repository root, skip this step silently.
 
 **Note**: We copy (not `8moku init`) to preserve customized agent configurations.
 
