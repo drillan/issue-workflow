@@ -1,3 +1,8 @@
+---
+name: review-pr-comments
+description: Review and respond to PR review comments.
+---
+
 # /review-pr-comments
 
 Review and respond to PR review comments.
@@ -120,9 +125,9 @@ For each comment, choose:
 
 | Error | Action |
 |-------|--------|
-| PR not detected | `⚠️ No PR found for current branch` |
+| PR not detected | `No PR found for current branch` |
 | PR not found | Display error message |
-| No comments | `ℹ️ No review comments found` |
+| No comments | `No review comments found` |
 | API error | Display error details |
 
 ## Tips

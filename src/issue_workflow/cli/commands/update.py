@@ -10,7 +10,7 @@ from issue_workflow.models.update import FileChangeType, UpdateResult
 from issue_workflow.services.template import SourceDirectoryNotFoundError, TemplateService
 
 app = typer.Typer(
-    help="Update commands and skills to latest version",
+    help="Update skills and agents to latest version",
     invoke_without_command=True,
 )
 
@@ -21,19 +21,14 @@ EXIT_NOT_INITIALIZED = 2
 
 
 def _display_changes(result: UpdateResult, category: str, dry_run: bool) -> None:
-    """Display changes for a category (commands, skills, or agents).
+    """Display changes for a category (skills or agents).
 
     Args:
         result: UpdateResult containing changes
-        category: "Commands", "Skills", or "Agents"
+        category: "Skills" or "Agents"
         dry_run: Whether this is a dry-run
     """
-    if category == "Commands":
-        changes = result.commands_changes
-    elif category == "Skills":
-        changes = result.skills_changes
-    else:
-        changes = result.agents_changes
+    changes = result.skills_changes if category == "Skills" else result.agents_changes
 
     if not changes:
         return
@@ -109,26 +104,23 @@ def _run_update(dry_run: bool = False) -> None:
     if dry_run:
         ui.print_info("[DRY-RUN] Calculating changes...")
     else:
-        ui.print_info("Updating commands, skills, and agents...")
+        ui.print_info("Updating skills and agents...")
 
     # Run updates
     template_service = TemplateService()
 
-    commands_result = template_service.update_commands(claude_dir, dry_run=dry_run)
     skills_result = template_service.update_skills(claude_dir, dry_run=dry_run)
     agents_result = template_service.update_agents(claude_dir, dry_run=dry_run)
 
     # Combine results
     combined_result = UpdateResult(
-        commands_changes=commands_result.commands_changes,
         skills_changes=skills_result.skills_changes,
         agents_changes=agents_result.agents_changes,
-        errors=commands_result.errors + skills_result.errors + agents_result.errors,
+        errors=skills_result.errors + agents_result.errors,
         dry_run=dry_run,
     )
 
     # Display results
-    _display_changes(combined_result, "Commands", dry_run)
     _display_changes(combined_result, "Skills", dry_run)
     _display_changes(combined_result, "Agents", dry_run)
     _display_summary(combined_result)
@@ -149,9 +141,9 @@ def update(
         ),
     ] = False,
 ) -> None:
-    """Update commands, skills, and agents to the latest version.
+    """Update skills and agents to the latest version.
 
-    Updates .claude/commands, .claude/skills, and .claude/agents directories
+    Updates .claude/skills and .claude/agents directories
     with the latest files from the issue-workflow toolkit.
 
     Existing files will be overwritten with newer versions.

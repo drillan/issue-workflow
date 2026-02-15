@@ -1,3 +1,8 @@
+---
+name: add-worktree
+description: Create a new worktree for an Issue.
+---
+
 # /add-worktree
 
 Create a new worktree for an Issue.
@@ -100,7 +105,7 @@ If `.hachimoku/` does not exist in the repository root, skip this step silently.
 ### Step 7: Report Success
 
 ```
-✅ Worktree created successfully
+Worktree created successfully
 
 Issue: #200 - [Issue title]
 Branch: feat/200-add-feature
@@ -115,7 +120,7 @@ To start working:
 ### Success
 
 ```
-✅ Worktree created successfully
+Worktree created successfully
 
 Issue: #<number> - <title>
 Branch: <branch-name>
@@ -128,7 +133,7 @@ To start working:
 ### Already Exists
 
 ```
-⚠️ Worktree already exists
+Worktree already exists
 
 Issue: #<number> - <title>
 Existing path: <existing-path>

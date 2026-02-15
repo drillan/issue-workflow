@@ -27,9 +27,8 @@ class TestUpdateCommandExecution:
 
     def test_update_with_claude_dir_succeeds(self, tmp_path: Path) -> None:
         """Test update succeeds when .claude/ directory exists."""
-        # Create .claude directory with commands and skills
+        # Create .claude directory with skills
         claude_dir = tmp_path / ".claude"
-        (claude_dir / "commands").mkdir(parents=True)
         (claude_dir / "skills").mkdir(parents=True)
 
         original_cwd = Path.cwd()
@@ -46,7 +45,6 @@ class TestUpdateCommandExecution:
         """Test update shows summary of changes made."""
         # Create .claude directory
         claude_dir = tmp_path / ".claude"
-        (claude_dir / "commands").mkdir(parents=True)
         (claude_dir / "skills").mkdir(parents=True)
 
         original_cwd = Path.cwd()
@@ -74,7 +72,6 @@ class TestDryRunOption:
         """Test --dry-run shows [DRY-RUN] indicator."""
         # Create .claude directory
         claude_dir = tmp_path / ".claude"
-        (claude_dir / "commands").mkdir(parents=True)
         (claude_dir / "skills").mkdir(parents=True)
 
         original_cwd = Path.cwd()
@@ -89,15 +86,9 @@ class TestDryRunOption:
 
     def test_dry_run_does_not_modify_files(self, tmp_path: Path) -> None:
         """Test --dry-run does not modify any files."""
-        # Create .claude directory with a file
+        # Create .claude directory
         claude_dir = tmp_path / ".claude"
-        commands_dir = claude_dir / "commands"
-        commands_dir.mkdir(parents=True)
         (claude_dir / "skills").mkdir(parents=True)
-
-        # Create a marker file to verify it's not modified
-        marker_file = commands_dir / "marker.md"
-        marker_file.write_text("Original content")
 
         original_cwd = Path.cwd()
         os.chdir(tmp_path)
@@ -105,8 +96,6 @@ class TestDryRunOption:
         try:
             result = runner.invoke(app, ["update", "--dry-run"])
             assert result.exit_code == 0
-            # Marker file should still exist with original content
-            assert marker_file.read_text() == "Original content"
         finally:
             os.chdir(original_cwd)
 
@@ -114,7 +103,6 @@ class TestDryRunOption:
         """Test --dry-run shows 'would be' or similar message."""
         # Create .claude directory
         claude_dir = tmp_path / ".claude"
-        (claude_dir / "commands").mkdir(parents=True)
         (claude_dir / "skills").mkdir(parents=True)
 
         original_cwd = Path.cwd()
@@ -135,35 +123,34 @@ class TestDryRunOption:
 
 
 class TestSourceDirectoryNotFoundHandling:
-    """Tests for SourceDirectoryNotFoundError handling in CLI (Critical #1)."""
+    """Tests for SourceDirectoryNotFoundError handling in CLI."""
 
     def test_source_directory_not_found_shows_reinstall_message(self, tmp_path: Path) -> None:
         """Test that SourceDirectoryNotFoundError shows helpful reinstall message."""
         # Create .claude directory
         claude_dir = tmp_path / ".claude"
-        (claude_dir / "commands").mkdir(parents=True)
         (claude_dir / "skills").mkdir(parents=True)
 
         original_cwd = Path.cwd()
         os.chdir(tmp_path)
 
-        # Mock get_commands_source_dir to return non-existent path
+        # Mock get_skills_source_dir to return non-existent path
         import issue_workflow.services.template as template_module
 
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: tmp_path / "nonexistent"
+        original_func = template_module.get_skills_source_dir
+        template_module.get_skills_source_dir = lambda: tmp_path / "nonexistent"
 
         try:
             result = runner.invoke(app, ["update"])
             assert result.exit_code == 1
             assert "installation" in result.output.lower() or "reinstall" in result.output.lower()
         finally:
-            template_module.get_commands_source_dir = original_func
+            template_module.get_skills_source_dir = original_func
             os.chdir(original_cwd)
 
 
 class TestExitCodeOne:
-    """Tests for exit code 1 on file operation errors (Important #4)."""
+    """Tests for exit code 1 on file operation errors."""
 
     def test_file_operation_error_returns_exit_code_1(self, tmp_path: Path) -> None:
         """Test that file operation errors result in exit code 1."""
@@ -171,15 +158,14 @@ class TestExitCodeOne:
 
         # Create .claude directory
         claude_dir = tmp_path / ".claude"
-        (claude_dir / "commands").mkdir(parents=True)
         (claude_dir / "skills").mkdir(parents=True)
 
         original_cwd = Path.cwd()
         os.chdir(tmp_path)
 
-        # Mock shutil.copy2 to raise OSError
-        with patch("issue_workflow.services.template.shutil.copy2") as mock_copy:
-            mock_copy.side_effect = OSError("Permission denied")
+        # Mock shutil.copytree to raise OSError (skills use copytree)
+        with patch("issue_workflow.services.template.shutil.copytree") as mock_copytree:
+            mock_copytree.side_effect = OSError("Permission denied")
 
             try:
                 result = runner.invoke(app, ["update"])
@@ -193,15 +179,14 @@ class TestExitCodeOne:
 
         # Create .claude directory
         claude_dir = tmp_path / ".claude"
-        (claude_dir / "commands").mkdir(parents=True)
         (claude_dir / "skills").mkdir(parents=True)
 
         original_cwd = Path.cwd()
         os.chdir(tmp_path)
 
-        # Mock shutil.copy2 to raise OSError
-        with patch("issue_workflow.services.template.shutil.copy2") as mock_copy:
-            mock_copy.side_effect = OSError("Permission denied")
+        # Mock shutil.copytree to raise OSError (skills use copytree)
+        with patch("issue_workflow.services.template.shutil.copytree") as mock_copytree:
+            mock_copytree.side_effect = OSError("Permission denied")
 
             try:
                 result = runner.invoke(app, ["update"])
@@ -232,10 +217,10 @@ class TestEdgeCasesIntegration:
             os.chdir(original_cwd)
 
     def test_partial_claude_dir_structure(self, tmp_path: Path) -> None:
-        """Test update with only .claude/ dir (no commands/skills subdirs)."""
+        """Test update with only .claude/ dir (no skills subdirs)."""
         claude_dir = tmp_path / ".claude"
         claude_dir.mkdir(parents=True)
-        # No commands or skills subdirectories
+        # No skills or agents subdirectories
 
         original_cwd = Path.cwd()
         os.chdir(tmp_path)
@@ -255,7 +240,6 @@ class TestUpdateAgentsIntegration:
         """Test that update includes agents in the update (T086)."""
         # Create .claude directory structure
         claude_dir = tmp_path / ".claude"
-        (claude_dir / "commands").mkdir(parents=True)
         (claude_dir / "skills").mkdir(parents=True)
         (claude_dir / "agents").mkdir(parents=True)
 
@@ -271,7 +255,6 @@ class TestUpdateAgentsIntegration:
     def test_update_creates_agents_directory(self, tmp_path: Path) -> None:
         """Test that update creates agents directory if missing (T086)."""
         claude_dir = tmp_path / ".claude"
-        (claude_dir / "commands").mkdir(parents=True)
         (claude_dir / "skills").mkdir(parents=True)
         # No agents directory
 
@@ -289,7 +272,6 @@ class TestUpdateAgentsIntegration:
     def test_update_shows_agents_category(self, tmp_path: Path) -> None:
         """Test that update shows Agents category in output (T086)."""
         claude_dir = tmp_path / ".claude"
-        (claude_dir / "commands").mkdir(parents=True)
         (claude_dir / "skills").mkdir(parents=True)
         # Empty agents dir to trigger adds
         (claude_dir / "agents").mkdir(parents=True)

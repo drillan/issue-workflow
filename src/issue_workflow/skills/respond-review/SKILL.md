@@ -1,3 +1,8 @@
+---
+name: respond-review
+description: Read hachimoku JSONL output and respond to review feedback.
+---
+
 # /respond-review
 
 hachimoku JSONL出力を読み取り、レビュー指摘に対応する。
@@ -48,12 +53,12 @@ gh pr list --head $(git branch --show-current) --json number --jq '.[0].number'
 
 PRが検出できない場合:
 ```
-⚠️ 現在のブランチに紐づくPRが見つかりません。PR番号を指定するか --diff を使用してください。
+現在のブランチに紐づくPRが見つかりません。PR番号を指定するか --diff を使用してください。
 ```
 
 ファイルが存在しない場合:
 ```
-⚠️ レビュー結果が見つかりません。
+レビュー結果が見つかりません。
   PR型: `8moku {NUMBER}` を実行してください
   diff型: `8moku` を実行してください
 ```
@@ -102,13 +107,13 @@ JSONL ファイルの各行は **1つのレビューセッション** を表す 
    - `status: "success"` のエージェントから `issues[]` を収集
    - `status: "error"` のエージェントはスキップし、警告を表示:
      ```
-     ⚠️ エージェント "{agent_name}" はエラーで終了しました: {error_message}
+     エージェント "{agent_name}" はエラーで終了しました: {error_message}
      ```
 4. 全エージェントの `issues[]` をフラット化して1つのリストにまとめる
 
 パースに失敗した場合:
 ```
-⚠️ レビュー結果ファイルの解析に失敗しました
+レビュー結果ファイルの解析に失敗しました
 ```
 
 ### Step 3: Display Review Table
@@ -144,8 +149,8 @@ Total Issues: {summary.total_issues} | Max Severity: {summary.max_severity}
 
 | # | Severity | Agent | File | Line | Description | Decision |
 |---|----------|-------|------|------|-------------|----------|
-| 1 | Critical | code-reviewer | path/file.py | 28 | Description | ✅ Accept |
-| 2 | Important | type-analyzer | path/other.py | 42 | Description | ❌ Reject: cosmetic only |
+| 1 | Critical | code-reviewer | path/file.py | 28 | Description | Accept |
+| 2 | Important | type-analyzer | path/other.py | 42 | Description | Reject: cosmetic only |
 
 ### Step 5: Implement Fixes
 
@@ -174,16 +179,16 @@ Accepted: {COUNT} | Rejected: {COUNT}
 
 | # | Decision | File | Action |
 |---|----------|------|--------|
-| 1 | ✅ Accept | path/file.py | Fixed: added error handling |
-| 2 | ❌ Reject | .gitignore | Reason: cosmetic only |
+| 1 | Accept | path/file.py | Fixed: added error handling |
+| 2 | Reject | .gitignore | Reason: cosmetic only |
 ```
 
 ## Error Handling
 
 | エラー | 対応 |
 |--------|------|
-| PR番号が検出できない | `⚠️ 現在のブランチに紐づくPRが見つかりません。PR番号を指定するか --diff を使用してください。` |
-| JSONLファイルが存在しない | `⚠️ レビュー結果が見つかりません。8moku <番号> または 8moku を実行してください` |
-| JSONLの解析失敗 | `⚠️ レビュー結果ファイルの解析に失敗しました` |
-| エージェントがエラー終了 | `⚠️ エージェント "{name}" はエラーで終了しました: {message}` （他のエージェント結果は続行） |
+| PR番号が検出できない | `現在のブランチに紐づくPRが見つかりません。PR番号を指定するか --diff を使用してください。` |
+| JSONLファイルが存在しない | `レビュー結果が見つかりません。8moku <番号> または 8moku を実行してください` |
+| JSONLの解析失敗 | `レビュー結果ファイルの解析に失敗しました` |
+| エージェントがエラー終了 | `エージェント "{name}" はエラーで終了しました: {message}` （他のエージェント結果は続行） |
 | 修正の適用失敗 | 失敗した修正を報告、他の修正は続行 |
