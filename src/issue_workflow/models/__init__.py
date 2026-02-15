@@ -17,6 +17,7 @@ from issue_workflow.models.review import (
     ReviewSummary,
 )
 from issue_workflow.models.update import FileChangeInfo, FileChangeType, UpdateResult
+from issue_workflow.models.workflow_context import WorkflowContext
 from issue_workflow.models.worktree import Worktree
 
 __all__ = [
@@ -39,6 +40,7 @@ __all__ = [
     "ReviewSummary",
     "UpdateResult",
     "WorkflowConfig",
+    "WorkflowContext",
     "WorkflowSettings",
     "Worktree",
 ]

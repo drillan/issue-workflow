@@ -121,17 +121,17 @@ class TestRunBasic:
         second_call = mock_runner.run.call_args_list[1]
         assert second_call[0][0] == "/commit-push-pr"
 
-    def test_step2_calls_detect_pr_number(
+    def test_step2_calls_detect_pr_number_with_cwd(
         self,
         all_mocks: None,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """detect_pr_number is called after create-pr succeeds."""
+        """detect_pr_number is called with cwd=None (no worktree)."""
         from issue_workflow.cli.commands.run import _run_workflow
 
         _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=3600)
 
-        mock_pr_detector.assert_called_once()
+        mock_pr_detector.assert_called_once_with(cwd=None)
 
     def test_step3a_calls_8moku_subprocess(
         self,
@@ -281,6 +281,45 @@ class TestRunStepFailure:
             assert instance.run.call_count == 2
             mock_pr_detector.assert_not_called()
 
+    def test_detect_pr_system_exit_stops_workflow(
+        self,
+        mock_deps: MagicMock,
+        mock_runner: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """detect_pr_number raising SystemExit is caught and returns 1."""
+        with patch(f"{_MOD}.detect_pr_number", side_effect=SystemExit(1)):
+            from issue_workflow.cli.commands.run import _run_workflow
+
+            exit_code = _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=3600)
+
+            assert exit_code == 1
+            # 2 Claude calls (start-issue, create-pr) before detect_pr_number failure
+            assert mock_runner.run.call_count == 2
+            mock_subprocess.assert_not_called()
+
+    def test_step3a_timeout_stops_workflow(
+        self,
+        mock_deps: MagicMock,
+        mock_runner: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+    ) -> None:
+        """8moku subprocess.TimeoutExpired is caught and returns 1."""
+        import subprocess as sp
+
+        with patch(
+            f"{_MOD}.subprocess.run", side_effect=sp.TimeoutExpired(cmd="8moku", timeout=600)
+        ):
+            from issue_workflow.cli.commands.run import _run_workflow
+
+            exit_code = _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=600)
+
+            assert exit_code == 1
+            # 2 Claude calls before 8moku timeout
+            assert mock_runner.run.call_count == 2
+
     def test_step3a_failure_stops_before_respond(
         self,
         mock_deps: MagicMock,
@@ -426,6 +465,19 @@ class TestRunWorktree:
         for call in mock_runner.run.call_args_list:
             assert call.kwargs.get("cwd") is None
 
+    def test_detect_pr_called_with_worktree_cwd(
+        self,
+        all_mocks: None,
+        mock_prepare_worktree: MagicMock,
+        mock_pr_detector: MagicMock,
+    ) -> None:
+        """detect_pr_number is called with cwd=worktree_path when --worktree."""
+        from issue_workflow.cli.commands.run import _run_workflow
+
+        _run_workflow(issue_number=199, worktree=True, verbose=False, timeout=3600)
+
+        mock_pr_detector.assert_called_once_with(cwd=Path("/tmp/wt"))
+
 
 class TestRunVerbose:
     """Verbose mode tests."""
@@ -459,3 +511,16 @@ class TestRunTimeout:
 
         for call in mock_runner.run.call_args_list:
             assert call.kwargs.get("timeout_seconds") == 600
+
+    def test_custom_timeout_forwarded_to_8moku(
+        self,
+        all_mocks: None,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """Custom timeout is forwarded to 8moku subprocess.run."""
+        from issue_workflow.cli.commands.run import _run_workflow
+
+        _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=600)
+
+        mock_subprocess.assert_called_once()
+        assert mock_subprocess.call_args.kwargs.get("timeout") == 600

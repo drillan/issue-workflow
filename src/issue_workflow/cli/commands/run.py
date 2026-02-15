@@ -141,17 +141,27 @@ def _run_workflow(
         return 1
 
     # Detect PR number after create-pr
-    ctx.pr_number = detect_pr_number()
+    try:
+        pr_number: int = detect_pr_number(cwd=ctx.cwd_for_skill)
+    except SystemExit:
+        _print_failure("detect-pr")
+        return 1
+    ctx.pr_number = pr_number
 
     # Step 3a: hachimoku review (subprocess, no ClaudeResult)
     ui.console.print(f"\\[{COMMAND_NAME}] Step 3/4: review (hachimoku) Starting...")
     try:
         hachimoku_result = subprocess.run(
-            ["8moku", str(ctx.pr_number)],
+            ["8moku", str(pr_number)],
             capture_output=True,
             text=True,
             check=False,
+            timeout=timeout,
         )
+    except subprocess.TimeoutExpired:
+        ui.print_error(f"8moku timed out after {timeout} seconds")
+        _print_failure("review (hachimoku)")
+        return 1
     except OSError as e:
         ui.print_error(f"Failed to execute 8moku: {e}")
         _print_failure("review (hachimoku)")
@@ -177,8 +187,8 @@ def _run_workflow(
         ctx,
         "Step 3/4: review (respond)",
         "review-pr",
-        f"/respond-review {ctx.pr_number}",
-        {"pr_number": ctx.pr_number},
+        f"/respond-review {pr_number}",
+        {"pr_number": pr_number},
         cwd=ctx.cwd_for_skill,
         verbose=verbose,
         timeout=timeout,
@@ -192,7 +202,7 @@ def _run_workflow(
         "Step 3/4: push-changes",
         "push-changes",
         PUSH_CHANGES_PROMPT,
-        {"pr_number": ctx.pr_number},
+        {"pr_number": pr_number},
         cwd=ctx.cwd_for_skill,
         verbose=verbose,
         timeout=timeout,
@@ -205,8 +215,8 @@ def _run_workflow(
         ctx,
         "Step 4/4: merge-pr",
         "merge-pr",
-        f"/merge-pr {ctx.pr_number}",
-        {"pr_number": ctx.pr_number},
+        f"/merge-pr {pr_number}",
+        {"pr_number": pr_number},
         cwd=ctx.cwd_for_merge,
         verbose=verbose,
         timeout=timeout,

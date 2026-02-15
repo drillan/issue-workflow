@@ -73,3 +73,33 @@ class TestDetectPrNumber:
 
         detect_pr_number()
         mock_get_pr.assert_called_once_with("feat/55-some-feature")
+
+    @patch("issue_workflow.services.pr_detector.get_pr_for_branch")
+    @patch("issue_workflow.services.pr_detector.GitOperations")
+    def test_cwd_passed_to_git_operations(
+        self, mock_git_ops: MagicMock, mock_get_pr: MagicMock
+    ) -> None:
+        """Test cwd parameter is forwarded to GitOperations(repo_path=)."""
+        from pathlib import Path
+
+        mock_instance = MagicMock()
+        mock_instance.get_current_branch.return_value = "feat/10-cwd"
+        mock_git_ops.return_value = mock_instance
+        mock_get_pr.return_value = MagicMock(success=True, data={"number": 10}, error=None)
+
+        detect_pr_number(cwd=Path("/tmp/worktree"))
+
+        mock_git_ops.assert_called_once_with(repo_path=Path("/tmp/worktree"))
+
+    @patch("issue_workflow.services.pr_detector.get_pr_for_branch")
+    @patch("issue_workflow.services.pr_detector.GitOperations")
+    def test_cwd_defaults_to_none(self, mock_git_ops: MagicMock, mock_get_pr: MagicMock) -> None:
+        """Test cwd defaults to None when not specified."""
+        mock_instance = MagicMock()
+        mock_instance.get_current_branch.return_value = "feat/11-default"
+        mock_git_ops.return_value = mock_instance
+        mock_get_pr.return_value = MagicMock(success=True, data={"number": 11}, error=None)
+
+        detect_pr_number()
+
+        mock_git_ops.assert_called_once_with(repo_path=None)
