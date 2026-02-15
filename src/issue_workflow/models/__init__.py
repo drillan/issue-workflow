@@ -1,7 +1,9 @@
 """Data models for issue-workflow."""
 
 from issue_workflow.models.branch import Branch, BranchType
+from issue_workflow.models.claude_result import ClaudeResult
 from issue_workflow.models.config import QualityCommands, WorkflowConfig, WorkflowSettings
+from issue_workflow.models.execution_log import ExecutionLog
 from issue_workflow.models.issue import Issue
 from issue_workflow.models.pr import PullRequest
 from issue_workflow.models.review import (
@@ -21,6 +23,8 @@ __all__ = [
     "AgentResultStatus",
     "Branch",
     "BranchType",
+    "ClaudeResult",
+    "ExecutionLog",
     "FileChangeInfo",
     "FileChangeType",
     "Issue",
