@@ -185,28 +185,33 @@ lib_get_pr_number() {
         return 1
     fi
 
+    # ブランチ名を取得（gh pr list --head に必要）
+    local branch_name
+    branch_name=$(git branch --show-current)
+
+    if [[ -z "$branch_name" ]]; then
+        echo "⚠️ 現在のブランチを検出できません（detached HEAD状態の可能性があります）" >&2
+        return 1
+    fi
+
     # PR番号を取得（エラーを一時ファイルに保存）
     local error_file
     error_file=$(mktemp)
     # シグナルを受けた場合もクリーンアップ
     trap 'rm -f "$error_file" 2>/dev/null' RETURN
 
-    local pr_num
-    if pr_num=$(gh pr view --json number --jq '.number' 2>"$error_file"); then
-        echo "$pr_num"
+    local pr_output
+    if pr_output=$(gh pr list --head "$branch_name" --state open --json number --jq '.[0].number' 2>"$error_file"); then
+        # gh pr list はPR未検出時に空配列を返し、jqが "null" を出力する
+        if [[ -z "$pr_output" || "$pr_output" == "null" ]]; then
+            echo ""
+            return 0
+        fi
+        echo "$pr_output"
         return 0
     else
         local error_msg
         error_msg=$(cat "$error_file")
-
-        # PRが存在しない場合は空を返す（正常）
-        if [[ "$error_msg" == *"no pull requests found"* ]] || \
-           [[ "$error_msg" == *"Could not resolve"* ]]; then
-            echo ""
-            return 0
-        fi
-
-        # その他のエラー
         echo "⚠️ PR情報の取得に失敗しました: $error_msg" >&2
         return 1
     fi

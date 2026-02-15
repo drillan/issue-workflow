@@ -270,6 +270,8 @@ def get_pr_for_branch(branch_name: str) -> GhResult:
                 "list",
                 "--head",
                 branch_name,
+                "--state",
+                "open",
                 "--json",
                 "number,title,state,mergeable,baseRefName,headRefName",
                 "--limit",

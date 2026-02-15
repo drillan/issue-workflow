@@ -96,7 +96,7 @@ PRをレビューしてコメントを投稿します。
 `--review-only` と `--respond-only` の同時指定はエラーになります。
 
 **実行内容:**
-1. `gh pr view` で現在のブランチに紐づくPR番号を自動検出
+1. `gh pr list --state open` で現在のブランチに紐づくオープンPR番号を自動検出
 2. `8moku` でhachimokuレビューを実行（`--respond-only` 時はスキップ）
 3. `/respond-review` でレビュー結果に対応（`--review-only` 時はスキップ）
 
@@ -130,7 +130,7 @@ PRのレビューコメントに対応します。
 ```
 
 **実行内容:**
-1. `gh pr view` でPR番号を自動検出
+1. `gh pr list --state open` でオープンPR番号を自動検出
 2. `/review-pr-comments` コマンドを実行
 3. レビューコメントへの対応
 
@@ -147,7 +147,7 @@ PRをマージします（CI完了待機付き）。
 ```
 
 **実行内容:**
-1. `gh pr view` でPR番号を自動検出
+1. `gh pr list --state open` でオープンPR番号を自動検出
 2. `/merge-pr` コマンドを実行
 3. CIチェック完了まで待機
 4. squash mergeを実行
