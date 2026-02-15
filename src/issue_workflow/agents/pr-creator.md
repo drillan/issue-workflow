@@ -90,15 +90,21 @@ Save this number as `ISSUE_NUMBER` for use in Step 6.
 Check if a PR already exists for the current branch:
 
 ```bash
-EXISTING_PR_NUM=$(gh pr list --head "$(git branch --show-current)" --state open --json number --jq '.[0].number // empty' 2>/dev/null || echo "")
+EXISTING_PR_NUM=$(gh pr list --head "$(git branch --show-current)" --state open --json number --jq '.[0].number // empty')
+PR_CHECK_EXIT=$?
 ```
 
-**If `EXISTING_PR_NUM` is not empty (PR exists):**
+**If command failed (`PR_CHECK_EXIT` non-zero):**
+- Report failure with Phase: pr-check
+- Do NOT proceed to PR creation
+- Include the error output in the failure report
+
+**If command succeeded and `EXISTING_PR_NUM` is not empty (PR exists):**
 - Skip Step 6 (PR creation)
 - Report success using "Success (Existing PR)" output format
 - Include the existing PR number in the output
 
-**If `EXISTING_PR_NUM` is empty (no PR exists):**
+**If command succeeded and `EXISTING_PR_NUM` is empty (no PR exists):**
 - Proceed to Step 6 (create new PR)
 
 ### Step 6: Create Pull Request
@@ -196,6 +202,7 @@ Resolution: {WHAT_TO_DO_NEXT}
 | Push rejected | Push | "Remote rejected push. Resolve conflicts and retry." |
 | gh CLI not found | PR | "gh CLI not installed or not in PATH" |
 | PR already exists | PR | Skip PR creation. Report existing PR number. |
+| gh pr list failure | PR Check | "Failed to check existing PRs. Check authentication, network, or API status." |
 | Permission denied | Push/PR | "Permission denied. Check repository access." |
 
 ## Safety Rules (from CLAUDE.md)

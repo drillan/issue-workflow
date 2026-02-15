@@ -197,21 +197,22 @@ lib_get_pr_number() {
     # PR番号を取得（エラーを一時ファイルに保存）
     local error_file
     error_file=$(mktemp)
-    # シグナルを受けた場合もクリーンアップ
-    trap 'rm -f "$error_file" 2>/dev/null' RETURN
 
     local pr_output
     if pr_output=$(gh pr list --head "$branch_name" --state open --json number --jq '.[0].number' 2>"$error_file"); then
         # gh pr list はPR未検出時に空配列を返し、jqが "null" を出力する
         if [[ -z "$pr_output" || "$pr_output" == "null" ]]; then
+            rm -f "$error_file"
             echo ""
             return 0
         fi
+        rm -f "$error_file"
         echo "$pr_output"
         return 0
     else
         local error_msg
         error_msg=$(cat "$error_file")
+        rm -f "$error_file"
         echo "⚠️ PR情報の取得に失敗しました: $error_msg" >&2
         return 1
     fi
