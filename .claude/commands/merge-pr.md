@@ -20,92 +20,42 @@ Default: `--squash` (squash commits into one)
 
 ## Instructions
 
-When the user invokes `/merge-pr <number>`, follow these steps:
+When the user invokes `/merge-pr <number>`, use the bundled `pr-merger` agent to execute the complete workflow.
 
-### Step 1: Verify PR Status
+### Step 1: Spawn PR Merger Agent
 
-```bash
-gh pr view <number> --json number,title,state,mergeable,baseRefName,headRefName
+Use the Task tool to launch the `pr-merger` agent from `.claude/agents/pr-merger.md`:
+
+```
+Task tool with subagent_type: "pr-merger"
 ```
 
-Check:
-- PR exists
-- PR is not already merged
-- PR is not closed
-- PR is mergeable (no conflicts)
+Pass the PR number and any merge strategy flags as the prompt (e.g., `"123"`, `"456 --merge"`, `"789 --rebase"`).
 
-### Step 2: Wait for CI
-
-```bash
-gh pr checks <number> --watch
-```
-
-If CI fails:
-- Report failed checks
-- Ask user if they want to proceed anyway (not recommended)
-
-### Step 3: Execute Merge
-
-Default (squash):
-```bash
-gh pr merge <number> --squash --delete-branch
-```
-
-With merge commit:
-```bash
-gh pr merge <number> --merge --delete-branch
-```
-
-With rebase:
-```bash
-gh pr merge <number> --rebase --delete-branch
-```
-
-### Step 4: Post-Merge Cleanup
-
-1. Switch to default branch (auto-detected):
-   ```bash
-   DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
-   git remote set-head origin "$DEFAULT_BRANCH"
-   git checkout "$DEFAULT_BRANCH"
-   ```
-
-2. Pull latest changes:
-   ```bash
-   git pull
-   ```
-
-3. Check for associated worktree:
-   - Find worktree for the merged branch
-   - If found, remove it:
-     ```bash
-     git worktree remove <path>
-     git worktree prune
-     ```
-
-4. Delete local branch (already done by --delete-branch, but verify):
-   ```bash
-   git branch -d <branch-name>
-   ```
+The agent will handle:
+1. PR validation (existence, state, mergeability)
+2. CI check waiting
+3. Merge execution with specified strategy
+4. Post-merge cleanup (branch switch, pull, worktree removal)
 
 ## Output Format
 
-### Success
+### 成功
 
 ```
-✅ PR #100 merged successfully
+PR #100 merged successfully
 
 Merge method: squash
-Base branch: main
+Base branch: <default-branch>
 Remote branch: deleted
 Local branch: deleted
 Worktree: deleted (if applicable)
 ```
 
-### Failure
+### 失敗
 
 ```
-❌ Failed to merge PR #100
+Failed to merge PR #100
 
 Cause: [specific cause]
 Resolution: [suggestion]
@@ -113,18 +63,11 @@ Resolution: [suggestion]
 
 ## Error Handling
 
-| Error | Action |
-|-------|--------|
-| PR not found | `⚠️ PR #N not found` |
-| PR already merged | `ℹ️ PR #N is already merged` |
-| PR closed | `⚠️ PR #N is closed` |
-| Has conflicts | Provide conflict resolution guidance |
-| CI failed | Show failed checks and ask for confirmation |
-| Merge blocked | Show block reason (branch protection, etc.) |
-
-## Safety Checks
-
-1. **Never force merge** without explicit user confirmation
-2. **Always show diff** before merge if changes are large
-3. **Warn about breaking changes** if detected in commit messages
-4. **Suggest squash** for PRs with many small commits
+| エラー | 対応 |
+|--------|------|
+| PR not found | `PR #N not found` |
+| PR already merged | `PR #N is already merged` |
+| PR closed | `PR #N is closed` |
+| Has conflicts | コンフリクト解消手順を表示 |
+| CI failed | 失敗したチェックを表示、確認を求める |
+| Merge blocked | ブロック理由を表示（ブランチ保護等） |
