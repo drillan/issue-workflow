@@ -48,7 +48,7 @@ The agent will handle:
 ### 成功
 
 ```
-PR #100 merged successfully
+✅ PR #100 merged successfully
 
 Merge method: squash
 Base branch: <default-branch>
@@ -60,7 +60,7 @@ Worktree: deleted (if applicable)
 ### 失敗
 
 ```
-Failed to merge PR #100
+❌ Failed to merge PR #100
 
 Cause: [specific cause]
 Resolution: [suggestion]

@@ -56,7 +56,7 @@ If `workflow.quality_gate_required` is true, run the quality checks defined in `
 ### PRが新規作成された場合
 
 ```
-コミット、プッシュ、PR作成が完了しました
+✅ コミット、プッシュ、PR作成が完了しました
 
 コミット: {COMMIT_HASH} {COMMIT_MESSAGE}
 PR: #{PR_NUMBER} - {PR_TITLE}
@@ -66,7 +66,7 @@ URL: {PR_URL}
 ### PRが既に存在する場合
 
 ```
-コミット、プッシュが完了しました（PR作成スキップ）
+✅ コミット、プッシュが完了しました（PR作成スキップ）
 
 コミット: {COMMIT_HASH} {COMMIT_MESSAGE}
 プッシュ: {BRANCH_NAME}
@@ -77,8 +77,8 @@ URL: {PR_URL}
 
 | エラー | 対応 |
 |--------|------|
-| 変更なし | `コミットする変更がありません` |
+| 変更なし | `ℹ️ コミットする変更がありません` |
 | プッシュ失敗 | 原因を表示（認証、ネットワーク等） |
-| PR既存 | `PRが既に存在するためPR作成をスキップし、commit + pushのみ実行しました` |
+| PR既存 | `ℹ️ PRが既に存在するためPR作成をスキップし、commit + pushのみ実行しました` |
 | PR作成失敗 | 原因を表示（権限等） |
 | 品質チェック失敗 | 失敗したチェックを表示、修正を促す |
