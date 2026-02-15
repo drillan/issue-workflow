@@ -43,7 +43,9 @@ def _register_commands() -> None:
     from issue_workflow.cli.commands import init as init_cmd
     from issue_workflow.cli.commands import update as update_cmd
     from issue_workflow.cli.commands.create_pr import create_pr
+    from issue_workflow.cli.commands.merge_pr import merge_pr
     from issue_workflow.cli.commands.push_changes import push_changes
+    from issue_workflow.cli.commands.respond_comments import respond_comments
     from issue_workflow.cli.commands.review_pr import review_pr
     from issue_workflow.cli.commands.start_issue import start_issue
 
@@ -53,6 +55,8 @@ def _register_commands() -> None:
     app.command("create-pr")(create_pr)
     app.command("review-pr")(review_pr)
     app.command("push-changes")(push_changes)
+    app.command("respond-comments")(respond_comments)
+    app.command("merge-pr")(merge_pr)
 
 
 _register_commands()

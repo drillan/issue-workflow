@@ -4,9 +4,8 @@ from typing import Annotated
 
 import typer
 
-from issue_workflow.cli import ui
-from issue_workflow.cli.commands._common import EXIT_SUCCESS, log_execution, on_tool_use
-from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
+from issue_workflow.cli.commands._common import EXIT_SUCCESS, run_claude_skill
+from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS
 from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
     check_dependencies,
@@ -28,30 +27,9 @@ def _run_create_pr(
     Returns:
         Exit code (0 for success, non-zero for failure).
     """
-    # Dependency check
     check_dependencies([CLAUDE_DEPENDENCY])
 
-    # Console output (escape brackets for Rich markup)
-    mode_suffix = " (verbose mode)" if verbose else ""
-    ui.console.print(f"\\[create-pr] Starting...{mode_suffix}")
-
-    # Execute claude -p
-    runner = ClaudeRunner()
-    result = runner.run(
-        "/commit-push-pr",
-        cwd=None,
-        timeout_seconds=timeout,
-        verbose=verbose,
-        on_tool_use=on_tool_use if verbose else None,
-    )
-
-    # Log execution
-    log_execution(COMMAND_NAME, {}, result, timeout)
-
-    # Done message
-    ui.console.print(f"\\[create-pr] Done. (exit_code={result.exit_code})")
-
-    return result.exit_code
+    return run_claude_skill(COMMAND_NAME, "/commit-push-pr", {}, verbose=verbose, timeout=timeout)
 
 
 def create_pr(

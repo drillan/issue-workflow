@@ -1,11 +1,209 @@
 """Unit tests for shared command helpers."""
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from issue_workflow.cli.commands._common import build_log_result, on_tool_use
 from tests.conftest import make_claude_result
 
 _MOD = "issue_workflow.cli.commands._common"
+
+
+class TestRunClaudeSkill:
+    """Tests for run_claude_skill shared helper."""
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_returns_exit_code_from_claude_result(
+        self, mock_runner_cls: MagicMock, mock_log: MagicMock
+    ) -> None:
+        """Returns the exit_code from ClaudeResult."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result(exit_code=0)
+
+        from issue_workflow.cli.commands._common import run_claude_skill
+
+        exit_code = run_claude_skill("test-cmd", "/test-prompt", {}, verbose=False, timeout=3600)
+
+        assert exit_code == 0
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_returns_nonzero_exit_code(
+        self, mock_runner_cls: MagicMock, mock_log: MagicMock
+    ) -> None:
+        """Returns nonzero exit_code when Claude fails."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result(
+            exit_code=1, is_error=True
+        )
+
+        from issue_workflow.cli.commands._common import run_claude_skill
+
+        exit_code = run_claude_skill("test-cmd", "/test-prompt", {}, verbose=False, timeout=3600)
+
+        assert exit_code == 1
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_passes_prompt_to_runner(self, mock_runner_cls: MagicMock, mock_log: MagicMock) -> None:
+        """Prompt is forwarded to ClaudeRunner.run."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
+
+        from issue_workflow.cli.commands._common import run_claude_skill
+
+        run_claude_skill("test-cmd", "/my-skill 123", {}, verbose=False, timeout=3600)
+
+        call_args = mock_runner_cls.return_value.run.call_args
+        assert call_args[0][0] == "/my-skill 123"
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_passes_cwd_to_runner(self, mock_runner_cls: MagicMock, mock_log: MagicMock) -> None:
+        """cwd is forwarded to ClaudeRunner.run."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
+
+        from issue_workflow.cli.commands._common import run_claude_skill
+
+        test_path = Path("/tmp/test")
+        run_claude_skill("test-cmd", "/test", {}, cwd=test_path, verbose=False, timeout=3600)
+
+        call_kwargs = mock_runner_cls.return_value.run.call_args
+        assert call_kwargs.kwargs.get("cwd") == test_path
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_cwd_defaults_to_none(self, mock_runner_cls: MagicMock, mock_log: MagicMock) -> None:
+        """cwd defaults to None when not specified."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
+
+        from issue_workflow.cli.commands._common import run_claude_skill
+
+        run_claude_skill("test-cmd", "/test", {}, verbose=False, timeout=3600)
+
+        call_kwargs = mock_runner_cls.return_value.run.call_args
+        assert call_kwargs.kwargs.get("cwd") is None
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_passes_verbose_to_runner(
+        self, mock_runner_cls: MagicMock, mock_log: MagicMock
+    ) -> None:
+        """verbose=True is forwarded to ClaudeRunner.run."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
+
+        from issue_workflow.cli.commands._common import run_claude_skill
+
+        run_claude_skill("test-cmd", "/test", {}, verbose=True, timeout=3600)
+
+        call_kwargs = mock_runner_cls.return_value.run.call_args
+        assert call_kwargs.kwargs.get("verbose") is True
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_passes_timeout_to_runner(
+        self, mock_runner_cls: MagicMock, mock_log: MagicMock
+    ) -> None:
+        """Custom timeout is forwarded to ClaudeRunner.run."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
+
+        from issue_workflow.cli.commands._common import run_claude_skill
+
+        run_claude_skill("test-cmd", "/test", {}, verbose=False, timeout=600)
+
+        call_kwargs = mock_runner_cls.return_value.run.call_args
+        assert call_kwargs.kwargs.get("timeout_seconds") == 600
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_verbose_passes_on_tool_use_callback(
+        self, mock_runner_cls: MagicMock, mock_log: MagicMock
+    ) -> None:
+        """Verbose mode passes on_tool_use callback."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
+
+        from issue_workflow.cli.commands._common import run_claude_skill
+
+        run_claude_skill("test-cmd", "/test", {}, verbose=True, timeout=3600)
+
+        call_kwargs = mock_runner_cls.return_value.run.call_args
+        assert call_kwargs.kwargs.get("on_tool_use") is not None
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_non_verbose_no_on_tool_use_callback(
+        self, mock_runner_cls: MagicMock, mock_log: MagicMock
+    ) -> None:
+        """Non-verbose mode does not pass on_tool_use callback."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
+
+        from issue_workflow.cli.commands._common import run_claude_skill
+
+        run_claude_skill("test-cmd", "/test", {}, verbose=False, timeout=3600)
+
+        call_kwargs = mock_runner_cls.return_value.run.call_args
+        assert call_kwargs.kwargs.get("on_tool_use") is None
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_calls_log_execution_with_correct_args(
+        self, mock_runner_cls: MagicMock, mock_log: MagicMock
+    ) -> None:
+        """log_execution is called with command_name, log_args, result, timeout."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
+
+        from issue_workflow.cli.commands._common import run_claude_skill
+
+        run_claude_skill("test-cmd", "/test", {"pr_number": 300}, verbose=False, timeout=600)
+
+        mock_log.assert_called_once()
+        assert mock_log.call_args[0][0] == "test-cmd"
+        assert mock_log.call_args[0][1] == {"pr_number": 300}
+        assert mock_log.call_args[0][3] == 600
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_starting_message_printed(
+        self, mock_runner_cls: MagicMock, mock_log: MagicMock
+    ) -> None:
+        """Console shows '[command] Starting...'."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
+
+        with patch(f"{_MOD}.ui") as mock_ui:
+            from issue_workflow.cli.commands._common import run_claude_skill
+
+            run_claude_skill("test-cmd", "/test", {}, verbose=False, timeout=3600)
+
+            all_calls = [str(c) for c in mock_ui.console.print.call_args_list]
+            assert any("[test-cmd] Starting" in c for c in all_calls)
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_done_message_printed(self, mock_runner_cls: MagicMock, mock_log: MagicMock) -> None:
+        """Console shows '[command] Done. (exit_code=N)'."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
+
+        with patch(f"{_MOD}.ui") as mock_ui:
+            from issue_workflow.cli.commands._common import run_claude_skill
+
+            run_claude_skill("test-cmd", "/test", {}, verbose=False, timeout=3600)
+
+            all_calls = [str(c) for c in mock_ui.console.print.call_args_list]
+            assert any("[test-cmd] Done" in c and "exit_code=0" in c for c in all_calls)
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
+    def test_verbose_starting_message(
+        self, mock_runner_cls: MagicMock, mock_log: MagicMock
+    ) -> None:
+        """Verbose mode shows '(verbose mode)' in starting message."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
+
+        with patch(f"{_MOD}.ui") as mock_ui:
+            from issue_workflow.cli.commands._common import run_claude_skill
+
+            run_claude_skill("test-cmd", "/test", {}, verbose=True, timeout=3600)
+
+            all_calls = [str(c) for c in mock_ui.console.print.call_args_list]
+            assert any("verbose mode" in c for c in all_calls)
 
 
 class TestBuildLogResult:
