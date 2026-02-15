@@ -1,24 +1,18 @@
 """Create-pr subcommand for issue-workflow CLI."""
 
-from datetime import datetime
-from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from issue_workflow.cli import ui
-from issue_workflow.cli.commands._common import build_log_result, on_tool_use
-from issue_workflow.models.execution_log import ExecutionLog
+from issue_workflow.cli.commands._common import EXIT_SUCCESS, log_execution, on_tool_use
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
 from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
     check_dependencies,
 )
-from issue_workflow.services.execution_logger import LOG_BASE_DIR_NAME, ExecutionLogger
 
 COMMAND_NAME: str = "create-pr"
-
-EXIT_SUCCESS: int = 0
 
 
 def _run_create_pr(
@@ -52,19 +46,7 @@ def _run_create_pr(
     )
 
     # Log execution
-    log_result = build_log_result(result.raw_json, result.exit_code, timeout)
-    entry = ExecutionLog(
-        timestamp=datetime.now().astimezone(),
-        command=COMMAND_NAME,
-        args={},
-        exit_code=result.exit_code,
-        result=log_result,
-    )
-    try:
-        logger = ExecutionLogger(base_dir=Path.cwd() / LOG_BASE_DIR_NAME)
-        logger.log(entry)
-    except OSError:
-        ui.console.print("\\[create-pr] Warning: Failed to write log file.")
+    log_execution(COMMAND_NAME, {}, result, timeout)
 
     # Done message
     ui.console.print(f"\\[create-pr] Done. (exit_code={result.exit_code})")
