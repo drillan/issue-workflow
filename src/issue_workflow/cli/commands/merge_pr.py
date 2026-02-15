@@ -4,9 +4,8 @@ from typing import Annotated
 
 import typer
 
-from issue_workflow.cli import ui
-from issue_workflow.cli.commands._common import EXIT_SUCCESS, log_execution, on_tool_use
-from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
+from issue_workflow.cli.commands._common import EXIT_SUCCESS, run_claude_skill
+from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS
 from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
     GH_DEPENDENCY,
@@ -32,36 +31,20 @@ def _run_merge_pr(
     Returns:
         Exit code (0 for success, non-zero for failure).
     """
-    # Dependency check: gh only needed when pr_number not specified
     deps = [CLAUDE_DEPENDENCY]
     if pr_number is None:
         deps.append(GH_DEPENDENCY)
     check_dependencies(deps)
 
-    # PR number detection
     resolved_pr = detect_pr_number(pr_number)
 
-    # Console output
-    mode_suffix = " (verbose mode)" if verbose else ""
-    ui.console.print(f"\\[merge-pr] Starting...{mode_suffix}")
-
-    # Execute claude -p (cwd=None: always run from main repository)
-    runner = ClaudeRunner()
-    result = runner.run(
+    return run_claude_skill(
+        COMMAND_NAME,
         f"/merge-pr {resolved_pr}",
-        cwd=None,
-        timeout_seconds=timeout,
+        {"pr_number": resolved_pr},
         verbose=verbose,
-        on_tool_use=on_tool_use if verbose else None,
+        timeout=timeout,
     )
-
-    # Log execution
-    log_execution(COMMAND_NAME, {"pr_number": resolved_pr}, result, timeout)
-
-    # Done message
-    ui.console.print(f"\\[merge-pr] Done. (exit_code={result.exit_code})")
-
-    return result.exit_code
 
 
 def merge_pr(

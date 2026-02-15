@@ -10,7 +10,6 @@ from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
     GH_DEPENDENCY,
 )
-from tests.conftest import make_claude_result
 
 # Module path prefix for patching
 _MOD = "issue_workflow.cli.commands.respond_comments"
@@ -24,19 +23,9 @@ def mock_deps() -> Iterator[MagicMock]:
 
 
 @pytest.fixture()
-def mock_runner() -> Iterator[MagicMock]:
-    """Mock ClaudeRunner with a successful result."""
-    with patch(f"{_MOD}.ClaudeRunner") as cls:
-        instance = MagicMock()
-        instance.run.return_value = make_claude_result()
-        cls.return_value = instance
-        yield instance
-
-
-@pytest.fixture()
-def mock_log_execution() -> Iterator[MagicMock]:
-    """Mock log_execution to do nothing."""
-    with patch(f"{_MOD}.log_execution") as m:
+def mock_run_skill() -> Iterator[MagicMock]:
+    """Mock run_claude_skill to return 0."""
+    with patch(f"{_MOD}.run_claude_skill", return_value=0) as m:
         yield m
 
 
@@ -53,8 +42,7 @@ class TestRespondCommentsBasic:
     def test_calls_detect_pr_number(
         self,
         mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
+        mock_run_skill: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """detect_pr_number is called with the provided pr_number."""
@@ -67,8 +55,7 @@ class TestRespondCommentsBasic:
     def test_calls_detect_pr_number_with_none(
         self,
         mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
+        mock_run_skill: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """detect_pr_number is called with None when pr_number omitted."""
@@ -78,44 +65,52 @@ class TestRespondCommentsBasic:
 
         mock_pr_detector.assert_called_once_with(None)
 
-    def test_calls_claude_runner_with_review_pr_comments_prompt(
+    def test_run_skill_called_with_command_name(
         self,
         mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
+        mock_run_skill: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """ClaudeRunner.run is called with '/review-pr-comments {pr_number}'."""
+        """run_claude_skill is called with command_name='respond-comments'."""
+        from issue_workflow.cli.commands.respond_comments import _run_respond_comments
+
+        _run_respond_comments(pr_number=300, verbose=False, timeout=3600)
+
+        assert mock_run_skill.call_args[0][0] == "respond-comments"
+
+    def test_run_skill_called_with_review_pr_comments_prompt(
+        self,
+        mock_deps: MagicMock,
+        mock_run_skill: MagicMock,
+        mock_pr_detector: MagicMock,
+    ) -> None:
+        """run_claude_skill is called with '/review-pr-comments {pr_number}'."""
         from issue_workflow.cli.commands.respond_comments import _run_respond_comments
 
         _run_respond_comments(pr_number=None, verbose=False, timeout=3600)
 
-        mock_runner.run.assert_called_once()
-        call_args = mock_runner.run.call_args
-        assert call_args[0][0] == "/review-pr-comments 300"
+        assert mock_run_skill.call_args[0][1] == "/review-pr-comments 300"
 
-    def test_calls_log_execution(
+    def test_run_skill_log_args_contain_pr_number(
         self,
         mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
+        mock_run_skill: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """log_execution is called after execution."""
+        """run_claude_skill log_args contains pr_number."""
         from issue_workflow.cli.commands.respond_comments import _run_respond_comments
 
-        _run_respond_comments(pr_number=None, verbose=False, timeout=3600)
+        _run_respond_comments(pr_number=300, verbose=False, timeout=3600)
 
-        mock_log_execution.assert_called_once()
+        assert mock_run_skill.call_args[0][2] == {"pr_number": 300}
 
     def test_returns_zero_exit_code_on_success(
         self,
         mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
+        mock_run_skill: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """Returns exit_code=0 when claude succeeds."""
+        """Returns exit_code=0 when run_claude_skill returns 0."""
         from issue_workflow.cli.commands.respond_comments import _run_respond_comments
 
         exit_code = _run_respond_comments(pr_number=None, verbose=False, timeout=3600)
@@ -125,12 +120,11 @@ class TestRespondCommentsBasic:
     def test_returns_nonzero_when_claude_fails(
         self,
         mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
+        mock_run_skill: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """Returns nonzero exit_code when ClaudeResult has nonzero exit_code."""
-        mock_runner.run.return_value = make_claude_result(exit_code=1, is_error=True)
+        """Returns nonzero exit_code when run_claude_skill returns nonzero."""
+        mock_run_skill.return_value = 1
 
         from issue_workflow.cli.commands.respond_comments import _run_respond_comments
 
@@ -139,53 +133,12 @@ class TestRespondCommentsBasic:
         assert exit_code == 1
 
 
-class TestRespondCommentsConsoleOutput:
-    """Console output tests."""
-
-    def test_console_output_starting_message(
-        self,
-        mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
-        mock_pr_detector: MagicMock,
-    ) -> None:
-        """Output contains '[respond-comments] Starting...'."""
-        with patch(f"{_MOD}.ui") as mock_ui:
-            from issue_workflow.cli.commands.respond_comments import (
-                _run_respond_comments,
-            )
-
-            _run_respond_comments(pr_number=None, verbose=False, timeout=3600)
-
-            all_calls = [str(c) for c in mock_ui.console.print.call_args_list]
-            assert any("[respond-comments] Starting" in c for c in all_calls)
-
-    def test_console_output_done_message(
-        self,
-        mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
-        mock_pr_detector: MagicMock,
-    ) -> None:
-        """Output contains '[respond-comments] Done. (exit_code=0)'."""
-        with patch(f"{_MOD}.ui") as mock_ui:
-            from issue_workflow.cli.commands.respond_comments import (
-                _run_respond_comments,
-            )
-
-            _run_respond_comments(pr_number=None, verbose=False, timeout=3600)
-
-            all_calls = [str(c) for c in mock_ui.console.print.call_args_list]
-            assert any("[respond-comments] Done" in c and "exit_code=0" in c for c in all_calls)
-
-
 class TestRespondCommentsDependencies:
     """Tests for dependency checking."""
 
     def test_pr_number_none_requires_claude_and_gh(
         self,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
+        mock_run_skill: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """pr_number=None requires claude + gh."""
@@ -202,8 +155,7 @@ class TestRespondCommentsDependencies:
 
     def test_pr_number_explicit_requires_claude_only(
         self,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
+        mock_run_skill: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Explicit pr_number requires only claude (no gh for auto-detection)."""
@@ -222,78 +174,40 @@ class TestRespondCommentsDependencies:
 class TestRespondCommentsVerbose:
     """Verbose mode tests."""
 
-    def test_verbose_passes_verbose_to_runner(
+    def test_verbose_forwarded_to_run_skill(
         self,
         mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
+        mock_run_skill: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """verbose=True is forwarded to ClaudeRunner.run."""
+        """verbose=True is forwarded to run_claude_skill."""
         from issue_workflow.cli.commands.respond_comments import _run_respond_comments
 
         _run_respond_comments(pr_number=300, verbose=True, timeout=3600)
 
-        call_kwargs = mock_runner.run.call_args
-        assert call_kwargs.kwargs.get("verbose") is True
-
-    def test_verbose_starting_message(
-        self,
-        mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
-        mock_pr_detector: MagicMock,
-    ) -> None:
-        """Verbose mode shows '(verbose mode)' in starting message."""
-        with patch(f"{_MOD}.ui") as mock_ui:
-            from issue_workflow.cli.commands.respond_comments import (
-                _run_respond_comments,
-            )
-
-            _run_respond_comments(pr_number=300, verbose=True, timeout=3600)
-
-            all_calls = [str(c) for c in mock_ui.console.print.call_args_list]
-            assert any("verbose mode" in c for c in all_calls)
-
-    def test_verbose_passes_on_tool_use_callback(
-        self,
-        mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
-        mock_pr_detector: MagicMock,
-    ) -> None:
-        """Verbose mode passes on_tool_use callback to ClaudeRunner.run."""
-        from issue_workflow.cli.commands.respond_comments import _run_respond_comments
-
-        _run_respond_comments(pr_number=300, verbose=True, timeout=3600)
-
-        call_kwargs = mock_runner.run.call_args
-        assert call_kwargs.kwargs.get("on_tool_use") is not None
+        assert mock_run_skill.call_args.kwargs.get("verbose") is True
 
 
 class TestRespondCommentsTimeout:
     """Timeout option tests."""
 
-    def test_custom_timeout_passed_to_runner(
+    def test_custom_timeout_forwarded_to_run_skill(
         self,
         mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
+        mock_run_skill: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """Custom --timeout value is forwarded to ClaudeRunner.run."""
+        """Custom --timeout value is forwarded to run_claude_skill."""
         from issue_workflow.cli.commands.respond_comments import _run_respond_comments
 
         _run_respond_comments(pr_number=300, verbose=False, timeout=600)
 
-        call_kwargs = mock_runner.run.call_args
-        assert call_kwargs.kwargs.get("timeout_seconds") == 600
+        assert mock_run_skill.call_args.kwargs.get("timeout") == 600
 
     def test_default_timeout_is_3600(
         self,
         mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
+        mock_run_skill: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Default timeout is DEFAULT_TIMEOUT_SECONDS (3600)."""
@@ -301,51 +215,4 @@ class TestRespondCommentsTimeout:
 
         _run_respond_comments(pr_number=300, verbose=False, timeout=DEFAULT_TIMEOUT_SECONDS)
 
-        call_kwargs = mock_runner.run.call_args
-        assert call_kwargs.kwargs.get("timeout_seconds") == 3600
-
-
-class TestRespondCommentsLogArgs:
-    """Tests for log_execution call arguments."""
-
-    def test_log_command_name(
-        self,
-        mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
-        mock_pr_detector: MagicMock,
-    ) -> None:
-        """log_execution is called with command_name='respond-comments'."""
-        from issue_workflow.cli.commands.respond_comments import _run_respond_comments
-
-        _run_respond_comments(pr_number=300, verbose=False, timeout=3600)
-
-        assert mock_log_execution.call_args[0][0] == "respond-comments"
-
-    def test_log_args_contain_pr_number(
-        self,
-        mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
-        mock_pr_detector: MagicMock,
-    ) -> None:
-        """log_execution args dict contains pr_number."""
-        from issue_workflow.cli.commands.respond_comments import _run_respond_comments
-
-        _run_respond_comments(pr_number=300, verbose=False, timeout=3600)
-
-        assert mock_log_execution.call_args[0][1] == {"pr_number": 300}
-
-    def test_log_timeout_passed(
-        self,
-        mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
-        mock_pr_detector: MagicMock,
-    ) -> None:
-        """log_execution receives timeout value."""
-        from issue_workflow.cli.commands.respond_comments import _run_respond_comments
-
-        _run_respond_comments(pr_number=300, verbose=False, timeout=600)
-
-        assert mock_log_execution.call_args[0][3] == 600
+        assert mock_run_skill.call_args.kwargs.get("timeout") == 3600

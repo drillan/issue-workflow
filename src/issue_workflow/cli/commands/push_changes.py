@@ -5,8 +5,8 @@ from typing import Annotated
 import typer
 
 from issue_workflow.cli import ui
-from issue_workflow.cli.commands._common import EXIT_SUCCESS, log_execution, on_tool_use
-from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
+from issue_workflow.cli.commands._common import EXIT_SUCCESS, run_claude_skill
+from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS
 from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
     GH_DEPENDENCY,
@@ -34,7 +34,6 @@ def _run_push_changes(
     Returns:
         Exit code (0 for success, non-zero for failure).
     """
-    # Dependency check
     check_dependencies([CLAUDE_DEPENDENCY, GH_DEPENDENCY])
 
     # PR number auto-detection (FR-015a) for log filename
@@ -47,27 +46,13 @@ def _run_push_changes(
         )
         raise typer.Exit(code=1) from None
 
-    # Console output
-    mode_suffix = " (verbose mode)" if verbose else ""
-    ui.console.print(f"\\[push-changes] Starting...{mode_suffix}")
-
-    # Execute claude -p
-    runner = ClaudeRunner()
-    result = runner.run(
+    return run_claude_skill(
+        COMMAND_NAME,
         PUSH_CHANGES_PROMPT,
-        cwd=None,
-        timeout_seconds=timeout,
+        {"pr_number": pr_number},
         verbose=verbose,
-        on_tool_use=on_tool_use if verbose else None,
+        timeout=timeout,
     )
-
-    # Log execution
-    log_execution(COMMAND_NAME, {"pr_number": pr_number}, result, timeout)
-
-    # Done message
-    ui.console.print(f"\\[push-changes] Done. (exit_code={result.exit_code})")
-
-    return result.exit_code
 
 
 def push_changes(

@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 from typer.testing import CliRunner
 
 from issue_workflow.cli.main import app
-from tests.conftest import make_claude_result
 
 runner = CliRunner()
 
@@ -16,20 +15,16 @@ _MOD = "issue_workflow.cli.commands.push_changes"
 class TestPushChangesCliExecution:
     """CliRunner E2E tests for push-changes."""
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
     def test_basic_execution_succeeds(
         self,
         mock_deps: MagicMock,
         mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
         """issue-workflow push-changes succeeds."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
         result = runner.invoke(app, ["push-changes"])
 
         assert result.exit_code == 0
@@ -48,108 +43,56 @@ class TestPushChangesCliExecution:
         assert result.exit_code == 0
         assert "push-changes" in result.output
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
     def test_verbose_option_accepted(
         self,
         mock_deps: MagicMock,
         mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
         """-v option is accepted."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
         result = runner.invoke(app, ["push-changes", "-v"])
 
         assert result.exit_code == 0
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
     def test_timeout_option_accepted(
         self,
         mock_deps: MagicMock,
         mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
         """--timeout option is accepted."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
         result = runner.invoke(app, ["push-changes", "--timeout", "600"])
 
         assert result.exit_code == 0
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
-    @patch(f"{_MOD}.detect_pr_number", return_value=300)
-    @patch(f"{_MOD}.check_dependencies")
-    def test_output_contains_starting_message(
-        self,
-        mock_deps: MagicMock,
-        mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
-    ) -> None:
-        """Output contains [push-changes] Starting... message."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
-        result = runner.invoke(app, ["push-changes"])
-
-        assert "[push-changes] Starting" in result.output
-
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
-    @patch(f"{_MOD}.detect_pr_number", return_value=300)
-    @patch(f"{_MOD}.check_dependencies")
-    def test_output_contains_done_message(
-        self,
-        mock_deps: MagicMock,
-        mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
-    ) -> None:
-        """Output contains [push-changes] Done. message."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
-        result = runner.invoke(app, ["push-changes"])
-
-        assert "[push-changes] Done." in result.output
-
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=1)
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
     def test_nonzero_exit_code_propagated(
         self,
         mock_deps: MagicMock,
         mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
-        """Non-zero exit code from ClaudeResult is propagated."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result(
-            exit_code=1, is_error=True
-        )
-
+        """Non-zero exit code from run_claude_skill is propagated."""
         result = runner.invoke(app, ["push-changes"])
 
         assert result.exit_code == 1
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
     def test_no_arguments_accepted(
         self,
         mock_deps: MagicMock,
         mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
         """push-changes does not accept positional arguments."""
         result = runner.invoke(app, ["push-changes", "extra-arg"])

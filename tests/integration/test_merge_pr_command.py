@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 from typer.testing import CliRunner
 
 from issue_workflow.cli.main import app
-from tests.conftest import make_claude_result
 
 runner = CliRunner()
 
@@ -16,38 +15,30 @@ _MOD = "issue_workflow.cli.commands.merge_pr"
 class TestMergePrCliExecution:
     """CliRunner E2E tests for merge-pr."""
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
     def test_basic_execution_with_pr_number(
         self,
         mock_deps: MagicMock,
         mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
         """issue-workflow merge-pr 300 succeeds."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
         result = runner.invoke(app, ["merge-pr", "300"])
 
         assert result.exit_code == 0
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
     def test_execution_without_pr_number(
         self,
         mock_deps: MagicMock,
         mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
         """issue-workflow merge-pr (no PR number) uses detect_pr_number."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
         result = runner.invoke(app, ["merge-pr"])
 
         assert result.exit_code == 0
@@ -67,94 +58,44 @@ class TestMergePrCliExecution:
         assert result.exit_code == 0
         assert "merge-pr" in result.output
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
     def test_verbose_option_accepted(
         self,
         mock_deps: MagicMock,
         mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
         """-v option is accepted."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
         result = runner.invoke(app, ["merge-pr", "300", "-v"])
 
         assert result.exit_code == 0
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
     def test_timeout_option_accepted(
         self,
         mock_deps: MagicMock,
         mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
         """--timeout option is accepted."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
         result = runner.invoke(app, ["merge-pr", "300", "--timeout", "600"])
 
         assert result.exit_code == 0
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
-    @patch(f"{_MOD}.detect_pr_number", return_value=300)
-    @patch(f"{_MOD}.check_dependencies")
-    def test_output_contains_starting_message(
-        self,
-        mock_deps: MagicMock,
-        mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
-    ) -> None:
-        """Output contains [merge-pr] Starting... message."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
-        result = runner.invoke(app, ["merge-pr", "300"])
-
-        assert "[merge-pr] Starting" in result.output
-
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
-    @patch(f"{_MOD}.detect_pr_number", return_value=300)
-    @patch(f"{_MOD}.check_dependencies")
-    def test_output_contains_done_message(
-        self,
-        mock_deps: MagicMock,
-        mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
-    ) -> None:
-        """Output contains [merge-pr] Done. message."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
-        result = runner.invoke(app, ["merge-pr", "300"])
-
-        assert "[merge-pr] Done." in result.output
-
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=1)
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
     def test_nonzero_exit_code_propagated(
         self,
         mock_deps: MagicMock,
         mock_detect: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
-        """Non-zero exit code from ClaudeResult is propagated."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result(
-            exit_code=1, is_error=True
-        )
-
+        """Non-zero exit code from run_claude_skill is propagated."""
         result = runner.invoke(app, ["merge-pr", "300"])
 
         assert result.exit_code == 1
