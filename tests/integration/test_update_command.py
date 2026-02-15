@@ -86,9 +86,13 @@ class TestDryRunOption:
 
     def test_dry_run_does_not_modify_files(self, tmp_path: Path) -> None:
         """Test --dry-run does not modify any files."""
-        # Create .claude directory
+        # Create .claude directory with a marker skill
         claude_dir = tmp_path / ".claude"
-        (claude_dir / "skills").mkdir(parents=True)
+        skills_dir = claude_dir / "skills"
+        marker_skill = skills_dir / "marker-skill"
+        marker_skill.mkdir(parents=True)
+        marker_file = marker_skill / "SKILL.md"
+        marker_file.write_text("Original content")
 
         original_cwd = Path.cwd()
         os.chdir(tmp_path)
@@ -96,6 +100,8 @@ class TestDryRunOption:
         try:
             result = runner.invoke(app, ["update", "--dry-run"])
             assert result.exit_code == 0
+            # Marker skill should still exist with original content
+            assert marker_file.read_text() == "Original content"
         finally:
             os.chdir(original_cwd)
 

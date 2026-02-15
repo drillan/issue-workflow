@@ -749,6 +749,70 @@ class TestUpdateAgents:
         finally:
             template_module.get_agents_source_dir = original_func
 
+    def test_copy_permission_error_records_error(self, tmp_path: Path) -> None:
+        """Test that permission errors during shutil.copy2 in update_agents are recorded."""
+        from unittest.mock import patch
+
+        # Setup source with new agent file
+        source_dir = tmp_path / "source_package" / "agents"
+        source_dir.mkdir(parents=True)
+        (source_dir / "new-agent.md").write_text("# New Agent")
+
+        target_dir = tmp_path / ".claude"
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True)
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_agents_source_dir
+        template_module.get_agents_source_dir = lambda: source_dir
+
+        with patch("issue_workflow.services.template.shutil.copy2") as mock_copy:
+            mock_copy.side_effect = OSError("Permission denied")
+
+            try:
+                result = service.update_agents(target_dir, dry_run=False)
+                assert result.has_errors
+                assert any("Permission denied" in str(err) for _, err in result.errors)
+            except OSError:
+                pytest.fail("OSError should be caught and recorded, not raised")
+            finally:
+                template_module.get_agents_source_dir = original_func
+
+    def test_filecmp_permission_error_records_error(self, tmp_path: Path) -> None:
+        """Test that permission errors during filecmp.cmp in update_agents are recorded."""
+        from unittest.mock import patch
+
+        # Setup source with agent file
+        source_dir = tmp_path / "source_package" / "agents"
+        source_dir.mkdir(parents=True)
+        (source_dir / "test.md").write_text("# Test Content")
+
+        # Setup target with same-named file
+        target_dir = tmp_path / ".claude"
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True)
+        (agents_target / "test.md").write_text("# Old Content")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_agents_source_dir
+        template_module.get_agents_source_dir = lambda: source_dir
+
+        with patch("issue_workflow.services.template.filecmp.cmp") as mock_cmp:
+            mock_cmp.side_effect = OSError("Permission denied")
+
+            try:
+                result = service.update_agents(target_dir, dry_run=True)
+                assert result.has_errors
+                assert any("Permission denied" in str(err) for _, err in result.errors)
+            except OSError:
+                pytest.fail("OSError should be caught and recorded, not raised")
+            finally:
+                template_module.get_agents_source_dir = original_func
+
 
 class TestEdgeCases:
     """Tests for edge cases (T025)."""
