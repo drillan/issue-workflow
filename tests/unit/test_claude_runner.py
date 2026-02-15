@@ -129,6 +129,36 @@ class TestClaudeRunnerNonVerbose:
 
         assert result.raw_json == raw_output
 
+    @patch("issue_workflow.services.claude_runner.subprocess.run")
+    def test_run_empty_stdout_returns_error_result(self, mock_run: MagicMock) -> None:
+        """Empty stdout triggers ValidationError → returns ClaudeResult with is_error=True."""
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mock_run.return_value = mock_result
+
+        runner = ClaudeRunner()
+        result = runner.run("prompt")
+
+        assert result.is_error is True
+        assert result.exit_code == 1
+        assert result.raw_json == ""
+
+    @patch("issue_workflow.services.claude_runner.subprocess.run")
+    def test_run_malformed_json_returns_error_result(self, mock_run: MagicMock) -> None:
+        """Malformed JSON stdout triggers ValidationError → returns error ClaudeResult."""
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = "Error: something went wrong"
+        mock_run.return_value = mock_result
+
+        runner = ClaudeRunner()
+        result = runner.run("prompt")
+
+        assert result.is_error is True
+        assert result.exit_code == 1
+        assert result.raw_json == "Error: something went wrong"
+
 
 class TestClaudeRunnerVerbose:
     """Tests for ClaudeRunner.run in verbose mode."""
@@ -204,6 +234,100 @@ class TestClaudeRunnerVerbose:
 
         assert result.exit_code == -1
         assert result.is_error is True
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_malformed_result_line_returns_error_result(
+        self, mock_popen: MagicMock
+    ) -> None:
+        """Malformed result line triggers ValidationError → returns error ClaudeResult."""
+        # A valid JSON line tagged as "result" but with fields that break Pydantic validation
+        bad_result_line = json.dumps({"type": "result", "is_error": "not_a_bool"})
+
+        mock_process = MagicMock()
+        mock_process.stdout = iter([bad_result_line + "\n"])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 1
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        result = runner.run("prompt", verbose=True)
+
+        assert result.is_error is True
+        assert result.exit_code == 1
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_no_result_event_returns_basic_result(self, mock_popen: MagicMock) -> None:
+        """When no result event in stream, returns basic ClaudeResult from returncode."""
+        assistant_event = json.dumps({"type": "assistant", "content": [{"type": "text"}]})
+
+        mock_process = MagicMock()
+        mock_process.stdout = iter([assistant_event + "\n"])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 0
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        result = runner.run("prompt", verbose=True)
+
+        assert result.exit_code == 0
+        assert result.is_error is False
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_no_result_event_nonzero_exit(self, mock_popen: MagicMock) -> None:
+        """When no result event and nonzero exit, is_error reflects returncode."""
+        mock_process = MagicMock()
+        mock_process.stdout = iter([])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 1
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        result = runner.run("prompt", verbose=True)
+
+        assert result.exit_code == 1
+        assert result.is_error is True
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_skips_malformed_json_lines(self, mock_popen: MagicMock) -> None:
+        """Malformed JSON lines in stream are silently skipped."""
+        result_event = json.dumps({"type": "result", "subtype": "success"})
+
+        mock_process = MagicMock()
+        mock_process.stdout = iter(["not valid json\n", "also {bad\n", result_event + "\n"])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 0
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        result = runner.run("prompt", verbose=True)
+
+        assert result.subtype == "success"
+        assert result.exit_code == 0
+
+    @patch("issue_workflow.services.claude_runner.time.monotonic")
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_wait_uses_remaining_timeout(
+        self, mock_popen: MagicMock, mock_monotonic: MagicMock
+    ) -> None:
+        """proc.wait() uses remaining time, not full timeout."""
+        # Simulate 100 seconds elapsed during stdout reading
+        mock_monotonic.side_effect = [0.0, 100.0]
+
+        result_event = json.dumps({"type": "result", "subtype": "success"})
+        mock_process = MagicMock()
+        mock_process.stdout = iter([result_event + "\n"])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 0
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        runner.run("prompt", verbose=True, timeout_seconds=600)
+
+        # Should wait for remaining 500 seconds, not full 600
+        wait_kwargs = mock_process.wait.call_args
+        actual_timeout = wait_kwargs.kwargs.get("timeout") or wait_kwargs[1].get("timeout")
+        assert actual_timeout is not None
+        assert actual_timeout <= 500
 
 
 class TestClaudeRunnerConstants:

@@ -48,7 +48,7 @@ def check_dependencies(dependencies: list[DependencyInfo]) -> None:
         dependencies: List of dependency info to check.
 
     Raises:
-        typer.Exit: If any dependency is missing, with install hints.
+        typer.Exit: If any dependency is missing or its authentication check fails.
     """
     missing: list[DependencyInfo] = []
 

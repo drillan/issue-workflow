@@ -90,7 +90,7 @@ Save this number as `ISSUE_NUMBER` for use in Step 6.
 Check if a PR already exists for the current branch:
 
 ```bash
-EXISTING_PR_NUM=$(gh pr view --json number --jq '.number' 2>/dev/null || echo "")
+EXISTING_PR_NUM=$(gh pr list --head "$(git branch --show-current)" --state open --json number --jq '.[0].number // empty' 2>/dev/null || echo "")
 ```
 
 **If `EXISTING_PR_NUM` is not empty (PR exists):**
