@@ -100,9 +100,9 @@ All executions are logged to `.issue-workflow/logs/`:
 
 ```bash
 ls .issue-workflow/logs/2026-02-15/
-# start-issue-199-2026-02-15T10-30-00.jsonl
-# create-pr-2026-02-15T10-45-00.jsonl
-# review-pr-199-2026-02-15T11-00-00.jsonl
+# start-issue-199-2026-02-15T10-30-00.jsonl   # Issue #199
+# create-pr-2026-02-15T10-45-00.jsonl          # PR番号は作成前なので省略
+# review-pr-201-2026-02-15T11-00-00.jsonl      # PR #201 (Issue #199 から作成)
 ```
 
 ## Developer Guide (for contributors)

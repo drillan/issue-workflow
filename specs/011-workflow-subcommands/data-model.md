@@ -56,11 +56,11 @@ from pydantic import BaseModel
 class ExecutionLog(BaseModel):
     """Single execution log entry for JSONL output."""
 
-    timestamp: datetime     # ISO 8601 形式
-    command: str            # サブコマンド名 (e.g., "start-issue")
-    args: dict[str, object] # 引数辞書 (e.g., {"issue_number": 199})
-    exit_code: int          # claude -p の終了コード
-    result: object          # claude -p の生 JSON 出力（パース済みオブジェクト）
+    timestamp: datetime                  # ISO 8601 形式
+    command: str                         # サブコマンド名 (e.g., "start-issue")
+    args: dict[str, str | int | bool]    # 引数辞書 (e.g., {"issue_number": 199})
+    exit_code: int                       # claude -p の終了コード
+    result: dict[str, object]            # claude -p の生 JSON 出力（パース済み dict）
 ```
 
 **Validation Rules**:
@@ -68,7 +68,7 @@ class ExecutionLog(BaseModel):
 - `command`: サブコマンド名のみ（例: `"start-issue"`, `"create-pr"`）。`"issue-workflow"` プレフィックスは含まない
 - `args`: サブコマンドに渡された主要引数。verbose/timeout 等のグローバルオプションは含まない
 - `exit_code`: `ClaudeResult.exit_code` と同値
-- `result`: `ClaudeResult.raw_json` を `json.loads` でパースしたオブジェクト。パース失敗時はエラー情報を含むオブジェクト
+- `result`: `ClaudeResult.raw_json` を `json.loads` でパースした dict。`claude -p --output-format json` の出力は常にトップレベルが JSON オブジェクト（dict）。パース失敗時はエラー情報を含む dict（例: `{"error": "timeout", "timeout_seconds": 3600}`）
 
 **Relationships**:
 - `ExecutionLogger` が `ExecutionLog` をシリアライズして JSONL ファイルに書き込む
@@ -291,16 +291,21 @@ class WorkflowContext:
 **Step 間のデータフロー**:
 
 ```
-Step 0 (worktree): → ctx.worktree_path 設定
+Step 0 (worktree):    → ctx.worktree_path 設定
 Step 1 (start-issue): ctx.issue_number 使用 → ClaudeResult → ctx.step_results に追加
                       → exit_code チェック → 失敗時は即時終了
-Step 2 (create-pr): → ClaudeResult → ctx.step_results に追加
-                    → exit_code チェック → 成功時に detect_pr_number() → ctx.pr_number 設定
-Step 3 (review-pr): ctx.pr_number 使用 → ClaudeResult → ctx.step_results に追加
-                    → exit_code チェック
-Step 4 (merge-pr): ctx.pr_number 使用, cwd=ctx.cwd_for_merge
-                   → ClaudeResult → ctx.step_results に追加
+Step 2 (create-pr):   → ClaudeResult → ctx.step_results に追加
+                      → exit_code チェック → 成功時に detect_pr_number() → ctx.pr_number 設定
+Step 3a (hachimoku):  ctx.pr_number 使用 → 8moku 実行（ClaudeResult なし）
+Step 3b (respond):    ctx.pr_number 使用 → ClaudeResult → ctx.step_results に追加
+                      → exit_code チェック
+Step 3c (push):       → ClaudeResult → ctx.step_results に追加
+                      → exit_code チェック
+Step 4 (merge-pr):    ctx.pr_number 使用, cwd=ctx.cwd_for_merge
+                      → ClaudeResult → ctx.step_results に追加
 ```
+
+**Note**: `respond-comments`（人間レビューコメント対応）は `run` フローに含めない。自動フローでは PR 作成直後のため人間のレビューコメントは存在しない。
 
 ---
 
@@ -324,15 +329,15 @@ HACHIMOKU_INSTALL_HINT: str = "uv tool install hachimoku"
 
 ## Subcommand → Dependency Mapping
 
-| サブコマンド | 必要な依存 |
-|---|---|
-| `start-issue` | `claude` |
-| `start-issue --worktree` | `claude`, `gh` (Issue取得にghが必要) |
-| `create-pr` | `claude` |
-| `review-pr` | `claude`, `gh`, `8moku` |
-| `review-pr --review-only` | `gh`, `8moku` |
-| `review-pr --respond-only` | `claude`, `gh` |
-| `push-changes` | `claude` |
-| `respond-comments` | `claude`, `gh` |
-| `merge-pr` | `claude`, `gh` |
-| `run` | `claude`, `gh`, `8moku` |
+| サブコマンド | 必要な依存 | 備考 |
+|---|---|---|
+| `start-issue` | `claude` | |
+| `start-issue --worktree` | `claude`, `gh` | Issue取得にghが必要 |
+| `create-pr` | `claude` | |
+| `review-pr` | `claude`, `gh`, `8moku` | PR番号明示時は `gh` 不要 |
+| `review-pr --review-only` | `8moku` (+`gh` PR番号省略時) | PR番号明示時は `8moku` のみ |
+| `review-pr --respond-only` | `claude` (+`gh` PR番号省略時) | PR番号明示時は `claude` のみ |
+| `push-changes` | `claude` | |
+| `respond-comments` | `claude` (+`gh` PR番号省略時) | PR番号明示時は `claude` のみ |
+| `merge-pr` | `claude` (+`gh` PR番号省略時) | PR番号明示時は `claude` のみ |
+| `run` | `claude`, `gh`, `8moku` | 全依存が必要（PR番号は自動検出） |

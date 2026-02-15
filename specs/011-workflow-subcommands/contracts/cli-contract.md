@@ -260,9 +260,10 @@ issue-workflow run [OPTIONS] ISSUE_NUMBER
 | 2 | create-pr | - | `step_results`, `pr_number` (detect_pr_number) | カレント | `ctx.worktree_path` |
 | 3a | review-pr (hachimoku) | `pr_number` | - | カレント | `ctx.worktree_path` |
 | 3b | review-pr (respond) | `pr_number` | `step_results` | カレント | `ctx.worktree_path` |
-| 3c | respond-comments | `pr_number` | `step_results` | カレント | `ctx.worktree_path` |
-| 3d | push-changes | - | `step_results` | カレント | `ctx.worktree_path` |
+| 3c | push-changes | - | `step_results` | カレント | `ctx.worktree_path` |
 | 4 | merge-pr | `pr_number` | `step_results` | カレント | `ctx.cwd_for_merge` (= None) |
+
+**Note**: `respond-comments`（人間レビューコメント対応）は自動 `run` フローに含めない。PR 作成直後の自動フローでは人間のレビューコメントは存在しないため。`respond-comments` はスタンドアロンコマンドとしてのみ使用する。
 
 ### Step 間のフロー制御
 
