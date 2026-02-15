@@ -89,7 +89,14 @@ tests/
 │   ├── test_pr_detector.py        # [NEW] PR検出テスト
 │   ├── test_execution_log.py      # [NEW] ExecutionLog モデルテスト
 │   ├── test_claude_result.py      # [NEW] ClaudeResult モデルテスト
-│   └── test_workflow_context.py   # [NEW] WorkflowContext テスト
+│   ├── test_workflow_context.py   # [NEW] WorkflowContext テスト
+│   ├── test_start_issue_command.py  # [NEW] start-issue コマンドテスト
+│   ├── test_create_pr_command.py    # [NEW] create-pr コマンドテスト
+│   ├── test_review_pr_command.py    # [NEW] review-pr コマンドテスト
+│   ├── test_push_changes_command.py # [NEW] push-changes コマンドテスト
+│   ├── test_respond_comments_command.py # [NEW] respond-comments コマンドテスト
+│   ├── test_merge_pr_command.py     # [NEW] merge-pr コマンドテスト
+│   └── test_run_command.py          # [NEW] run コマンドテスト
 └── integration/
     ├── test_start_issue_command.py # [NEW]
     ├── test_create_pr_command.py   # [NEW]
@@ -108,7 +115,7 @@ tests/
 
 | Article | Status | Notes |
 |---------|--------|-------|
-| Art.1 TDD | ✅ PASS | テスト計画確定: unit 6ファイル + integration 7ファイル。1機能=1テストファイル |
+| Art.1 TDD | ✅ PASS | テスト計画確定: unit 14ファイル + integration 7ファイル。1機能=1テストファイル |
 | Art.2 Documentation | ✅ PASS | research.md, data-model.md, contracts/, quickstart.md 生成完了 |
 | Art.3 CLI Design | ✅ PASS | CLI contract でサブコマンド仕様を定義。`--help` にセキュリティ注意書きを含む |
 | Art.4 Simplicity | ✅ PASS | 単一プロジェクト構造を維持。新規サービス4つは最小限の責務分離 |
