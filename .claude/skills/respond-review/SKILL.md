@@ -44,7 +44,7 @@ cat .hachimoku/reviews/pr-{NUMBER}.jsonl
 **Case 3: 引数なし（PR番号を自動検出）**
 
 ```bash
-gh pr list --head $(git branch --show-current) --json number --jq '.[0].number'
+gh pr list --head "$(git branch --show-current)" --state open --json number --jq '.[0].number'
 ```
 
 検出されたPR番号で `.hachimoku/reviews/pr-{NUMBER}.jsonl` を読み取る。

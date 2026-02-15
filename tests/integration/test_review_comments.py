@@ -104,3 +104,18 @@ class TestGetPrForBranch:
             result = get_pr_for_branch("feat/unknown")
             assert result.success is False
             assert "No PR found" in (result.error or "")
+
+    def test_get_pr_for_branch_filters_open_state(self) -> None:
+        """Test that gh pr list is called with --state open to exclude merged/closed PRs."""
+        with patch("subprocess.run") as mock_run:
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_result.stdout = "[]"
+            mock_run.return_value = mock_result
+
+            get_pr_for_branch("feat/123-feature")
+
+            call_args = mock_run.call_args[0][0]
+            assert "--state" in call_args
+            state_idx = call_args.index("--state")
+            assert call_args[state_idx + 1] == "open"
