@@ -17,7 +17,7 @@
 - Q: `--verbose` オプションの動作は？ → A: `claude -p --output-format stream-json --verbose` の出力をフォーマットして表示。Python の json モジュールで処理するため jq は不要
 - Q: `create-pr` と `push-changes` は同一スキルを呼ぶが区別は？ → A: 両方とも `/commit-push-pr` スキルを呼ぶ。`push-changes` は PR 作成スキップの指示をプロンプトに含める
 - Q: `review-pr` の `--review-only` / `--respond-only` オプションは？ → A: CLI サブコマンドのオプションとして実装する
-- Q: `full-workflow` (`run`) サブコマンドの段階的実行は？ → A: 5段階を順次実行。各ステップの失敗で即時終了
+- Q: `full-workflow` (`run`) サブコマンドの段階的実行は？ → A: 4段階を順次実行（Step 1: start-issue → Step 2: create-pr → Step 3: review+respond+push → Step 4: merge-pr）。`--worktree` 指定時はStep 0（worktree準備）を先頭に追加。各ステップの失敗で即時終了
 - Q: claudecode-model（pydantic-ai + Claude Agent SDK）を使用するか？ → A: 不要。サブコマンドは `claude -p` の結果を raw JSON としてログに記録するだけであり、構造化出力やカスタムツール実行は不要。`subprocess.run` + `json.loads` で十分
 - Q: スクリプトをプロジェクトに配布する方式は？ → A: 配布しない。サブコマンド化により `uv tool install issue-workflow` だけで全機能が利用可能になる
 - Q: ログの配置先は？ → A: `.issue-workflow/logs/` に配置。プロジェクト直下の `scripts/` との衝突を避けるためドットディレクトリを使用
@@ -139,9 +139,9 @@
 
 **Acceptance Scenarios**:
 
-1. **Given** GitHub Issue #199 が存在する状態, **When** `issue-workflow run 199` を実行する, **Then** start-issue → create-pr → review+respond → merge-pr が順次実行される
-2. **Given** `--worktree` オプションが指定された状態, **When** `issue-workflow run 199 --worktree` を実行する, **Then** worktree準備（メインリポジトリ） → start-issue（worktree） → create-pr（worktree） → review+respond（worktree） → merge-pr（メインリポジトリ） が順次実行される
-3. **Given** Step 3 (create-pr) で失敗した状態, **When** エラーが発生する, **Then** 失敗したステップと原因が表示され、後続ステップは実行されずに終了する
+1. **Given** GitHub Issue #199 が存在する状態, **When** `issue-workflow run 199` を実行する, **Then** Step 1: start-issue → Step 2: create-pr → Step 3: review+respond+push → Step 4: merge-pr が順次実行される
+2. **Given** `--worktree` オプションが指定された状態, **When** `issue-workflow run 199 --worktree` を実行する, **Then** Step 0: worktree準備（メインリポジトリ） → Step 1: start-issue（worktree） → Step 2: create-pr（worktree） → Step 3: review+respond+push（worktree） → Step 4: merge-pr（メインリポジトリ） が順次実行される
+3. **Given** Step 2 (create-pr) で失敗した状態, **When** エラーが発生する, **Then** 失敗したステップと原因が表示され、後続ステップは実行されずに終了する
 4. **Given** `--verbose` オプションが指定された状態, **When** `issue-workflow run -v 199` を実行する, **Then** 各ステップでstream-json形式の途中経過が表示される
 5. **Given** 各ステップの実行完了後, **When** ログディレクトリを確認する, **Then** 各ステップのJSONLログが個別に記録されている
 
@@ -183,7 +183,7 @@
 #### Claude実行サービス要件
 
 - **FR-001**: システムは `claude -p <prompt> --output-format json` をサブプロセスとして実行する機能を提供しなければならない
-- **FR-002**: 自動化実行時は `--dangerously-skip-permissions` フラグを含めなければならない
+- **FR-002**: 自動化実行時は `--dangerously-skip-permissions` フラグを含めなければならない。このフラグはClaude Codeの権限チェックをバイパスするため、`--help` 出力にセキュリティに関する注意事項を記載しなければならない
 - **FR-003**: verbose モード時は `--output-format stream-json --verbose` を使用し、途中経過をフォーマットして標準出力に表示しなければならない
 - **FR-004**: `claude` コマンドの存在を確認し、見つからない場合はインストールURLを含むエラーを送出しなければならない
 - **FR-005**: `claude -p` の終了コードとJSON出力を返さなければならない
@@ -197,7 +197,7 @@
 - **FR-009**: `issue-workflow push-changes` サブコマンドを追加し、commit-push-prスキルをPR作成スキップ指示付きで実行しなければならない
 - **FR-010**: `issue-workflow respond-comments [pr-number]` サブコマンドを追加し、review-pr-commentsスキルを実行しなければならない。PR番号は省略可能で、省略時は自動検出する
 - **FR-011**: `issue-workflow merge-pr [pr-number]` サブコマンドを追加し、merge-prスキルを実行しなければならない。PR番号は省略可能で、省略時は自動検出する
-- **FR-012**: `issue-workflow run <issue-number>` サブコマンドを追加し、全ステップ（start-issue → create-pr → review+respond → merge-pr）を順次実行しなければならない。`--worktree` オプション指定時はworktree準備を先頭ステップに追加する
+- **FR-012**: `issue-workflow run <issue-number>` サブコマンドを追加し、全ステップ（Step 1: start-issue → Step 2: create-pr → Step 3: review+respond+push → Step 4: merge-pr）を順次実行しなければならない。Step 3 は hachimoku レビュー、レビュー対応、変更プッシュを含む。`--worktree` オプション指定時は Step 0（worktree準備）を先頭に追加する
 - **FR-013**: すべてのサブコマンドは `--verbose` / `-v` オプションで途中経過表示をサポートしなければならない
 - **FR-013a**: すべてのサブコマンドは `--timeout` オプションで `claude -p` のタイムアウト値（秒）を指定できなければならない。デフォルトは3600秒（1時間）とする
 - **FR-014**: すべてのサブコマンドは `--help` / `-h` オプションで使用方法を表示しなければならない
@@ -317,4 +317,4 @@
 | `push-changes` | `/commit-push-pr` | PR存在確認（スキップ指示付き）（worktree内で実行） |
 | `respond-comments [PR]` | `/review-pr-comments <PR>` | PR番号検出（引数優先、省略時は自動検出）（worktree内で実行） |
 | `merge-pr [PR]` | `/merge-pr <PR>` | PR番号検出（引数優先、省略時は自動検出）（メインリポジトリで実行） |
-| `run <n>` | 上記すべてを順次 | 各ステップの前処理 |
+| `run <n>` | 上記すべてを順次 | Step 0(任意): worktree準備 → Step 1: start-issue → Step 2: create-pr → Step 3: review+respond+push → Step 4: merge-pr |
