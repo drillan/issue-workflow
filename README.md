@@ -17,6 +17,7 @@ GitHub Issue-driven development workflow toolkit for Claude Code. Automates and 
 - [uv](https://docs.astral.sh/uv/) (package manager)
 - [gh CLI](https://cli.github.com/) (GitHub CLI)
 - [Claude Code](https://www.anthropic.com/claude-code) CLI
+- [hachimoku](https://github.com/drillan/hachimoku) (for `review-pr` / `run` subcommands)
 
 ## Installation
 
@@ -62,6 +63,8 @@ issue-workflow update --dry-run
 
 ## CLI Commands
 
+### Setup Commands
+
 | Command | Description |
 |---------|-------------|
 | `issue-workflow init` | Initialize Issue Workflow in project |
@@ -71,6 +74,59 @@ issue-workflow update --dry-run
 | `issue-workflow update --dry-run` | Show what would be updated without making changes |
 | `issue-workflow --version` | Show version |
 | `issue-workflow --help` | Show help |
+
+### Workflow Subcommands
+
+Automate the development workflow via `claude -p` subprocess execution. Each subcommand logs its results to `.issue-workflow/logs/` in JSONL format.
+
+| # | Command | Description |
+|---|---------|-------------|
+| 1 | `issue-workflow start-issue <number>` | Start working on an issue (executes `/start-issue` skill) |
+| 2 | `issue-workflow create-pr` | Commit, push, and create PR (executes `/commit-push-pr` skill) |
+| 3 | `issue-workflow review-pr [number]` | Run hachimoku review + respond to findings |
+| 4 | `issue-workflow push-changes` | Push review fixes (commit + push, skip PR creation) |
+| 5 | `issue-workflow respond-comments [number]` | Respond to human PR review comments |
+| 6 | `issue-workflow merge-pr [number]` | Wait for CI checks, then merge PR |
+| 7 | `issue-workflow run <number>` | Run full workflow (steps 1-6 sequentially) |
+
+**Common options** (all workflow subcommands):
+
+| Option | Description |
+|--------|-------------|
+| `--verbose` / `-v` | Show tool calls in real-time (stream-json) |
+| `--timeout <seconds>` | Timeout for claude -p execution (default: 3600) |
+| `--help` / `-h` | Show usage |
+
+**Additional options**:
+
+| Command | Option | Description |
+|---------|--------|-------------|
+| `start-issue` | `--worktree` | Create worktree and run skill there |
+| `review-pr` | `--review-only` | Run hachimoku review only (skip respond) |
+| `review-pr` | `--respond-only` | Run respond-review only (skip hachimoku) |
+| `run` | `--worktree` | Create worktree and run full workflow there |
+
+#### Full Automated Workflow
+
+```bash
+# Run all steps automatically for Issue #199
+issue-workflow run 199
+
+# With worktree isolation
+issue-workflow run 199 --worktree
+```
+
+#### Individual Commands
+
+```bash
+# Step by step
+issue-workflow start-issue 199
+issue-workflow create-pr
+issue-workflow review-pr
+issue-workflow push-changes
+issue-workflow respond-comments    # For human review comments
+issue-workflow merge-pr
+```
 
 ## Slash Commands
 
