@@ -47,6 +47,7 @@ def _register_commands() -> None:
     from issue_workflow.cli.commands.push_changes import push_changes
     from issue_workflow.cli.commands.respond_comments import respond_comments
     from issue_workflow.cli.commands.review_pr import review_pr
+    from issue_workflow.cli.commands.run import run
     from issue_workflow.cli.commands.start_issue import start_issue
 
     app.add_typer(init_cmd.app, name="init")
@@ -57,6 +58,7 @@ def _register_commands() -> None:
     app.command("push-changes")(push_changes)
     app.command("respond-comments")(respond_comments)
     app.command("merge-pr")(merge_pr)
+    app.command("run")(run)
 
 
 _register_commands()

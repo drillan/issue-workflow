@@ -17,6 +17,7 @@ GitHub Issue駆動開発ワークフローツールキット for Claude Code。I
 - [uv](https://docs.astral.sh/uv/) (パッケージマネージャー)
 - [gh CLI](https://cli.github.com/) (GitHub CLI)
 - [Claude Code](https://www.anthropic.com/claude-code) CLI
+- [hachimoku](https://github.com/drillan/hachimoku) (`review-pr` / `run` サブコマンド用)
 
 ## インストール
 
@@ -62,6 +63,8 @@ issue-workflow update --dry-run
 
 ## CLIコマンド
 
+### セットアップコマンド
+
 | コマンド | 説明 |
 |---------|------|
 | `issue-workflow init` | プロジェクトにIssue Workflowを初期化 |
@@ -71,6 +74,59 @@ issue-workflow update --dry-run
 | `issue-workflow update --dry-run` | 変更内容をプレビュー（実際の変更なし） |
 | `issue-workflow --version` | バージョンを表示 |
 | `issue-workflow --help` | ヘルプを表示 |
+
+### ワークフローサブコマンド
+
+`claude -p` サブプロセス実行による開発ワークフローの自動化。各サブコマンドの実行結果は `.issue-workflow/logs/` にJSONL形式で記録されます。
+
+| # | コマンド | 説明 |
+|---|---------|------|
+| 1 | `issue-workflow start-issue <番号>` | Issue作業を開始（`/start-issue` スキルを実行） |
+| 2 | `issue-workflow create-pr` | コミット、プッシュ、PR作成（`/commit-push-pr` スキルを実行） |
+| 3 | `issue-workflow review-pr [番号]` | hachimokuレビュー＋レビュー結果に対応 |
+| 4 | `issue-workflow push-changes` | レビュー対応後の変更をプッシュ（PR作成スキップ） |
+| 5 | `issue-workflow respond-comments [番号]` | 人間のPRレビューコメントに対応 |
+| 6 | `issue-workflow merge-pr [番号]` | CIチェック完了を待機後、PRをマージ |
+| 7 | `issue-workflow run <番号>` | 全ワークフローを順次実行（ステップ1〜6） |
+
+**共通オプション**（全ワークフローサブコマンド）:
+
+| オプション | 説明 |
+|-----------|------|
+| `--verbose` / `-v` | ツール呼び出しをリアルタイム表示（stream-json） |
+| `--timeout <秒>` | claude -p のタイムアウト（デフォルト: 3600） |
+| `--help` / `-h` | 使用方法を表示 |
+
+**追加オプション**:
+
+| コマンド | オプション | 説明 |
+|---------|-----------|------|
+| `start-issue` | `--worktree` | ワークツリーを作成してスキルを実行 |
+| `review-pr` | `--review-only` | hachimokuレビューのみ実行（respond スキップ） |
+| `review-pr` | `--respond-only` | respond-reviewのみ実行（hachimoku スキップ） |
+| `run` | `--worktree` | ワークツリーを作成して全ワークフローを実行 |
+
+#### 全自動ワークフロー
+
+```bash
+# Issue #199 の全ステップを自動実行
+issue-workflow run 199
+
+# ワークツリー分離で実行
+issue-workflow run 199 --worktree
+```
+
+#### 個別コマンド
+
+```bash
+# ステップごとに実行
+issue-workflow start-issue 199
+issue-workflow create-pr
+issue-workflow review-pr
+issue-workflow push-changes
+issue-workflow respond-comments    # 人間レビューコメントへの対応
+issue-workflow merge-pr
+```
 
 ## スラッシュコマンド
 

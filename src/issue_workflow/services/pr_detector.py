@@ -1,5 +1,7 @@
 """Service for detecting PR number from argument or current branch."""
 
+from pathlib import Path
+
 import typer
 
 from issue_workflow.cli import ui
@@ -7,11 +9,17 @@ from issue_workflow.lib.git import GitOperations
 from issue_workflow.services.github import get_pr_for_branch
 
 
-def detect_pr_number(pr_number: int | None = None) -> int:
+def detect_pr_number(
+    pr_number: int | None = None,
+    *,
+    cwd: Path | None = None,
+) -> int:
     """Detect PR number from argument or current branch.
 
     Args:
         pr_number: Explicitly specified PR number (takes priority).
+        cwd: Working directory for branch detection (e.g., worktree path).
+            Defaults to current working directory.
 
     Returns:
         Detected PR number.
@@ -22,7 +30,7 @@ def detect_pr_number(pr_number: int | None = None) -> int:
     if pr_number is not None:
         return pr_number
 
-    git = GitOperations()
+    git = GitOperations(repo_path=cwd)
     branch_name = git.get_current_branch()
     result = get_pr_for_branch(branch_name)
 
