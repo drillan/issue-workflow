@@ -83,10 +83,9 @@ if [ ! -d <worktree-path>/.hachimoku ]; then
 fi
 ```
 
-Then ensure `reviews/` directory exists (git doesn't track empty directories) and remove any stale JSONL files:
+Then remove any stale JSONL files if `reviews/` exists:
 
 ```bash
-mkdir -p <worktree-path>/.hachimoku/reviews
 find <worktree-path>/.hachimoku/reviews -name "*.jsonl" -delete 2>/dev/null || true
 ```
 

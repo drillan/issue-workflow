@@ -17,11 +17,10 @@ def copy_hachimoku_to_worktree(repo_path: Path, worktree_path: Path) -> bool:
     """Copy .hachimoku/ directory from main repo to worktree.
 
     Copies configuration and agent definitions but excludes .jsonl files
-    in the reviews/ directory. The reviews/ directory is created empty so
-    new reviews can be saved in the worktree.
+    in the reviews/ directory.
 
     If .hachimoku/ already exists in the worktree (e.g. git-tracked files),
-    it is replaced with the project root's copy.
+    it is merged with the project root's copy.
 
     Args:
         repo_path: Main repository root path.
@@ -36,7 +35,6 @@ def copy_hachimoku_to_worktree(repo_path: Path, worktree_path: Path) -> bool:
 
     destination = worktree_path / ".hachimoku"
     shutil.copytree(source, destination, ignore=_ignore_review_jsonl, dirs_exist_ok=True)
-    (destination / "reviews").mkdir(exist_ok=True)
     return True
 
 

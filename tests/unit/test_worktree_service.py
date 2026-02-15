@@ -346,7 +346,8 @@ class TestCopyHachimokuToWorktree:
         assert result is True
         assert (worktree / ".hachimoku" / "config.toml").exists()
         assert (worktree / ".hachimoku" / "agents" / "code-reviewer.toml").exists()
-        assert (worktree / ".hachimoku" / "reviews").is_dir()
+        # reviews/ は 8moku が初回実行時に自動作成する
+        assert not (worktree / ".hachimoku" / "reviews").exists()
 
     def test_excludes_jsonl_only_in_reviews(self, tmp_path: Path) -> None:
         """Test that .jsonl files outside reviews/ are preserved."""

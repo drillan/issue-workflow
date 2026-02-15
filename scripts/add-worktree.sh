@@ -93,9 +93,6 @@ _copy_hachimoku_to_worktree() {
         cp -r "$source_dir" "$worktree_path/.hachimoku"
     fi
 
-    # reviews/ を確保（git は空ディレクトリを追跡しないため）
-    mkdir -p "$worktree_path/.hachimoku/reviews"
-
     # 既存の review JSONL を削除（メインリポジトリのレビュー結果を引き継がない）
     find "$worktree_path/.hachimoku/reviews" -name "*.jsonl" -delete 2>/dev/null || true
 
