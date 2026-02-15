@@ -50,9 +50,11 @@ def check_gh_availability() -> tuple[bool, str]:
             check=False,
         )
         if result.returncode != 0:
-            return False, (
-                "GitHub CLI authentication required\n\nPlease authenticate with:\n  gh auth login"
-            )
+            detail = result.stderr.strip() if result.stderr else ""
+            hint = "Please authenticate with:\n  gh auth login"
+            if detail:
+                return False, f"GitHub CLI authentication failed\n\n{detail}\n\n{hint}"
+            return False, f"GitHub CLI authentication failed\n\n{hint}"
     except subprocess.SubprocessError:
         return False, "Error occurred while checking GitHub CLI authentication"
 
