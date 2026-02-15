@@ -44,13 +44,13 @@ After initialization, use Claude Code slash commands to manage your workflow:
 
 ## Updating
 
-When a new version is released, update the toolkit and sync commands/skills:
+When a new version is released, update the toolkit and sync skills/agents:
 
 ```bash
 # 1. Update the toolkit
 uv tool install --reinstall git+https://github.com/drillan/issue-workflow.git
 
-# 2. Update commands and skills in your project
+# 2. Update skills and agents in your project
 issue-workflow update
 ```
 
@@ -67,7 +67,7 @@ issue-workflow update --dry-run
 | `issue-workflow init` | Initialize Issue Workflow in project |
 | `issue-workflow init --language <lang>` | Initialize with language preset |
 | `issue-workflow init --non-interactive` | Initialize without interactive prompts (CI/CD) |
-| `issue-workflow update` | Update commands and skills to latest version |
+| `issue-workflow update` | Update skills and agents to latest version |
 | `issue-workflow update --dry-run` | Show what would be updated without making changes |
 | `issue-workflow --version` | Show version |
 | `issue-workflow --help` | Show help |

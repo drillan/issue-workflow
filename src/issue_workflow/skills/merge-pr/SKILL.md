@@ -1,3 +1,8 @@
+---
+name: merge-pr
+description: Wait for PR CI checks to complete, then execute merge.
+---
+
 # /merge-pr
 
 Wait for PR CI checks to complete, then execute merge.
@@ -93,7 +98,7 @@ gh pr merge <number> --rebase --delete-branch
 ### Success
 
 ```
-✅ PR #100 merged successfully
+PR #100 merged successfully
 
 Merge method: squash
 Base branch: <default-branch>
@@ -105,7 +110,7 @@ Worktree: deleted (if applicable)
 ### Failure
 
 ```
-❌ Failed to merge PR #100
+Failed to merge PR #100
 
 Cause: [specific cause]
 Resolution: [suggestion]
@@ -115,9 +120,9 @@ Resolution: [suggestion]
 
 | Error | Action |
 |-------|--------|
-| PR not found | `⚠️ PR #N not found` |
-| PR already merged | `ℹ️ PR #N is already merged` |
-| PR closed | `⚠️ PR #N is closed` |
+| PR not found | `PR #N not found` |
+| PR already merged | `PR #N is already merged` |
+| PR closed | `PR #N is closed` |
 | Has conflicts | Provide conflict resolution guidance |
 | CI failed | Show failed checks and ask for confirmation |
 | Merge blocked | Show block reason (branch protection, etc.) |

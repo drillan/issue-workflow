@@ -1,3 +1,8 @@
+---
+name: start-issue
+description: Load a GitHub Issue, create a branch, and develop an implementation plan.
+---
+
 # /start-issue
 
 Load a GitHub Issue, create a branch, and develop an implementation plan.

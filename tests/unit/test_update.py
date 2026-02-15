@@ -28,19 +28,19 @@ class TestFileChangeInfo:
     """Tests for FileChangeInfo dataclass."""
 
     def test_added_requires_source_path(self) -> None:
-        """Test that ADDED change type requires source_path (Important #2)."""
+        """Test that ADDED change type requires source_path."""
         with pytest.raises(ValueError, match="source_path"):
             FileChangeInfo(
-                path=Path(".claude/commands/test.md"),
+                path=Path(".claude/skills/start-issue/"),
                 change_type=FileChangeType.ADDED,
                 source_path=None,
             )
 
     def test_updated_requires_source_path(self) -> None:
-        """Test that UPDATED change type requires source_path (Important #2)."""
+        """Test that UPDATED change type requires source_path."""
         with pytest.raises(ValueError, match="source_path"):
             FileChangeInfo(
-                path=Path(".claude/commands/test.md"),
+                path=Path(".claude/skills/start-issue/"),
                 change_type=FileChangeType.UPDATED,
                 source_path=None,
             )
@@ -48,25 +48,25 @@ class TestFileChangeInfo:
     def test_added_with_source_path_succeeds(self) -> None:
         """Test that ADDED with source_path is valid."""
         info = FileChangeInfo(
-            path=Path(".claude/commands/test.md"),
+            path=Path(".claude/skills/start-issue/"),
             change_type=FileChangeType.ADDED,
-            source_path=Path("/source/commands/test.md"),
+            source_path=Path("/source/skills/start-issue/"),
         )
-        assert info.source_path == Path("/source/commands/test.md")
+        assert info.source_path == Path("/source/skills/start-issue/")
 
     def test_creation_with_source_path(self) -> None:
         """Test creating FileChangeInfo with source path."""
         info = FileChangeInfo(
-            path=Path(".claude/commands/test.md"),
+            path=Path(".claude/skills/start-issue/"),
             change_type=FileChangeType.UPDATED,
-            source_path=Path("/source/commands/test.md"),
+            source_path=Path("/source/skills/start-issue/"),
         )
-        assert info.source_path == Path("/source/commands/test.md")
+        assert info.source_path == Path("/source/skills/start-issue/")
 
     def test_is_frozen(self) -> None:
         """Test FileChangeInfo is immutable."""
         info = FileChangeInfo(
-            path=Path(".claude/commands/test.md"),
+            path=Path(".claude/skills/start-issue/"),
             change_type=FileChangeType.UNCHANGED,
         )
         with pytest.raises(AttributeError):
@@ -79,7 +79,6 @@ class TestUpdateResult:
     def test_default_values(self) -> None:
         """Test UpdateResult default values."""
         result = UpdateResult()
-        assert result.commands_changes == []
         assert result.skills_changes == []
         assert result.agents_changes == []
         assert result.errors == []
@@ -93,7 +92,7 @@ class TestUpdateResult:
     def test_added_count_with_changes(self) -> None:
         """Test added_count with added files."""
         result = UpdateResult(
-            commands_changes=[
+            skills_changes=[
                 FileChangeInfo(
                     path=Path("a.md"),
                     change_type=FileChangeType.ADDED,
@@ -104,8 +103,6 @@ class TestUpdateResult:
                     change_type=FileChangeType.UPDATED,
                     source_path=Path("s/b.md"),
                 ),
-            ],
-            skills_changes=[
                 FileChangeInfo(
                     path=Path("skill/"),
                     change_type=FileChangeType.ADDED,
@@ -118,7 +115,7 @@ class TestUpdateResult:
     def test_updated_count(self) -> None:
         """Test updated_count property."""
         result = UpdateResult(
-            commands_changes=[
+            skills_changes=[
                 FileChangeInfo(
                     path=Path("a.md"),
                     change_type=FileChangeType.UPDATED,
@@ -131,7 +128,7 @@ class TestUpdateResult:
     def test_has_changes_true(self) -> None:
         """Test has_changes returns True when there are changes."""
         result = UpdateResult(
-            commands_changes=[
+            skills_changes=[
                 FileChangeInfo(
                     path=Path("a.md"),
                     change_type=FileChangeType.ADDED,
@@ -174,11 +171,11 @@ class TestUpdateResult:
     def test_added_count_includes_agents_changes(self) -> None:
         """Test added_count includes agents_changes (T072)."""
         result = UpdateResult(
-            commands_changes=[
+            skills_changes=[
                 FileChangeInfo(
-                    path=Path("a.md"),
+                    path=Path("skill/"),
                     change_type=FileChangeType.ADDED,
-                    source_path=Path("s/a.md"),
+                    source_path=Path("s/skill/"),
                 ),
             ],
             agents_changes=[
@@ -240,37 +237,7 @@ class TestUpdateResult:
 
 
 class TestUnmanagedFilesIgnored:
-    """Tests for ignoring unmanaged files (#15).
-
-    Issue: update command was displaying "not in toolkit, manual deletion required"
-    for files that exist in target but not in source. These are user files or
-    files from other tools and should be silently ignored.
-    """
-
-    def test_commands_ignores_unmanaged_files(self, tmp_path: Path) -> None:
-        """Test that unmanaged command files are ignored."""
-        # Setup empty source (no commands from toolkit)
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-
-        # Setup target with user's custom command
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-        (commands_target / "my-custom-command.md").write_text("# My Custom Command")
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        try:
-            result = service.update_commands(target_dir, dry_run=True)
-            # Should NOT detect unmanaged files - no changes should be detected
-            assert result.has_changes is False
-        finally:
-            template_module.get_commands_source_dir = original_func
+    """Tests for ignoring unmanaged files (#15)."""
 
     def test_skills_ignores_unmanaged_directories(self, tmp_path: Path) -> None:
         """Test that unmanaged skill directories are ignored."""
@@ -296,174 +263,6 @@ class TestUnmanagedFilesIgnored:
             assert result.has_changes is False
         finally:
             template_module.get_skills_source_dir = original_func
-
-    def test_mixed_managed_and_unmanaged_files(self, tmp_path: Path) -> None:
-        """Test that unmanaged files are ignored while managed files are detected."""
-        # Setup source with one command
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-        (source_dir / "start-issue.md").write_text("# Start Issue")
-
-        # Setup target with toolkit command (updated) and user's custom command
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-        (commands_target / "start-issue.md").write_text("# Old Start Issue")
-        (commands_target / "speckit.analyze.md").write_text("# Speckit Command")
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        try:
-            result = service.update_commands(target_dir, dry_run=True)
-            # Should detect start-issue.md as updated
-            assert result.updated_count == 1
-            # Only one change (the update), unmanaged files are ignored
-            assert len(result.commands_changes) == 1
-            assert result.commands_changes[0].change_type == FileChangeType.UPDATED
-        finally:
-            template_module.get_commands_source_dir = original_func
-
-
-class TestUpdateCommands:
-    """Tests for TemplateService.update_commands method (T010)."""
-
-    def test_detects_added_files(self, tmp_path: Path) -> None:
-        """Test detecting newly added command files."""
-        # Setup source with new file
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-        (source_dir / "new-command.md").write_text("# New Command")
-
-        # Setup target without the file
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-
-        # Create service with mocked source dir
-        service = TemplateService()
-        # Mock the source directory
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        try:
-            result = service.update_commands(target_dir, dry_run=True)
-            assert result.added_count == 1
-            assert result.commands_changes[0].change_type == FileChangeType.ADDED
-        finally:
-            template_module.get_commands_source_dir = original_func
-
-    def test_detects_updated_files(self, tmp_path: Path) -> None:
-        """Test detecting updated command files."""
-        # Setup source with modified file
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-        (source_dir / "existing.md").write_text("# Updated Content")
-
-        # Setup target with old version
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-        (commands_target / "existing.md").write_text("# Old Content")
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        try:
-            result = service.update_commands(target_dir, dry_run=True)
-            assert result.updated_count == 1
-            assert result.commands_changes[0].change_type == FileChangeType.UPDATED
-        finally:
-            template_module.get_commands_source_dir = original_func
-
-    def test_ignores_unmanaged_files(self, tmp_path: Path) -> None:
-        """Test that files in target but not in source are ignored (#15).
-
-        Previously this test was 'test_detects_deleted_files' which expected
-        deleted files to be detected. As of #15, unmanaged files are ignored.
-        """
-        # Setup empty source
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-
-        # Setup target with extra file (unmanaged)
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-        (commands_target / "extra.md").write_text("# Extra")
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        try:
-            result = service.update_commands(target_dir, dry_run=True)
-            # Unmanaged files are ignored - no changes detected
-            assert len(result.commands_changes) == 0
-        finally:
-            template_module.get_commands_source_dir = original_func
-
-    def test_applies_changes_when_not_dry_run(self, tmp_path: Path) -> None:
-        """Test files are actually updated when dry_run=False."""
-        # Setup source with new file
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-        (source_dir / "new-command.md").write_text("# New Command Content")
-
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        try:
-            result = service.update_commands(target_dir, dry_run=False)
-            assert result.added_count == 1
-            # Verify file was actually copied
-            assert (commands_target / "new-command.md").exists()
-            assert (commands_target / "new-command.md").read_text() == "# New Command Content"
-        finally:
-            template_module.get_commands_source_dir = original_func
-
-    def test_no_changes_when_identical(self, tmp_path: Path) -> None:
-        """Test no changes detected when files are identical."""
-        # Setup source and target with identical file
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-        (source_dir / "same.md").write_text("# Same Content")
-
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-        (commands_target / "same.md").write_text("# Same Content")
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        try:
-            result = service.update_commands(target_dir, dry_run=True)
-            assert result.added_count == 0
-            assert result.updated_count == 0
-            assert result.has_changes is False
-        finally:
-            template_module.get_commands_source_dir = original_func
 
 
 class TestUpdateSkills:
@@ -523,11 +322,7 @@ class TestUpdateSkills:
             template_module.get_skills_source_dir = original_func
 
     def test_ignores_unmanaged_directories(self, tmp_path: Path) -> None:
-        """Test that directories in target but not in source are ignored (#15).
-
-        Previously this test was 'test_detects_deleted_directories' which expected
-        deleted files to be detected. As of #15, unmanaged directories are ignored.
-        """
+        """Test that directories in target but not in source are ignored (#15)."""
         # Setup empty source
         source_dir = tmp_path / "source_package" / "skills"
         source_dir.mkdir(parents=True)
@@ -577,64 +372,6 @@ class TestUpdateSkills:
             assert (skills_target / "new-skill" / "skill.md").read_text() == "# New Skill Content"
         finally:
             template_module.get_skills_source_dir = original_func
-
-
-class TestDryRunCommands:
-    """Tests for dry-run flag in update_commands (T019)."""
-
-    def test_dry_run_does_not_create_files(self, tmp_path: Path) -> None:
-        """Test dry-run does not create files."""
-        # Setup source with new file
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-        (source_dir / "new-command.md").write_text("# New Command")
-
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        try:
-            result = service.update_commands(target_dir, dry_run=True)
-            # Changes are detected
-            assert result.added_count == 1
-            assert result.dry_run is True
-            # But file is NOT created
-            assert not (commands_target / "new-command.md").exists()
-        finally:
-            template_module.get_commands_source_dir = original_func
-
-    def test_dry_run_does_not_update_files(self, tmp_path: Path) -> None:
-        """Test dry-run does not update existing files."""
-        # Setup source with modified file
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-        (source_dir / "existing.md").write_text("# Updated Content")
-
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-        (commands_target / "existing.md").write_text("# Original Content")
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        try:
-            result = service.update_commands(target_dir, dry_run=True)
-            # Changes are detected
-            assert result.updated_count == 1
-            # But file is NOT updated
-            assert (commands_target / "existing.md").read_text() == "# Original Content"
-        finally:
-            template_module.get_commands_source_dir = original_func
 
 
 class TestDryRunSkills:
@@ -698,78 +435,7 @@ class TestDryRunSkills:
 
 
 class TestFileCmpErrorHandling:
-    """Tests for filecmp.cmp() OSError handling (Critical #2)."""
-
-    def test_filecmp_permission_error_records_error(self, tmp_path: Path) -> None:
-        """Test that permission errors during file comparison are recorded."""
-        from unittest.mock import patch
-
-        # Setup source with file
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-        (source_dir / "test.md").write_text("# Test Content")
-
-        # Setup target with file
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-        target_file = commands_target / "test.md"
-        target_file.write_text("# Old Content")
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        # Mock filecmp.cmp to raise OSError
-        with patch("issue_workflow.services.template.filecmp.cmp") as mock_cmp:
-            mock_cmp.side_effect = OSError("Permission denied")
-
-            try:
-                result = service.update_commands(target_dir, dry_run=True)
-                # Should have recorded the error, not crashed
-                assert result.has_errors
-                assert any("Permission denied" in str(err) for _, err in result.errors)
-            except OSError:
-                # If we get an OSError here, the handling is missing
-                pytest.fail("OSError should be caught and recorded, not raised")
-            finally:
-                template_module.get_commands_source_dir = original_func
-
-    def test_copy_permission_error_records_error(self, tmp_path: Path) -> None:
-        """Test that permission errors during file copy are recorded in errors."""
-        from unittest.mock import patch
-
-        # Setup source with new file
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-        (source_dir / "new.md").write_text("# New Content")
-
-        # Setup target
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        # Mock shutil.copy2 to raise OSError
-        with patch("issue_workflow.services.template.shutil.copy2") as mock_copy:
-            mock_copy.side_effect = OSError("Permission denied")
-
-            try:
-                result = service.update_commands(target_dir, dry_run=False)
-                # Should have recorded the error, not crashed
-                assert result.has_errors
-                assert any("Permission denied" in str(err) for _, err in result.errors)
-            except OSError:
-                pytest.fail("OSError should be caught and recorded, not raised")
-            finally:
-                template_module.get_commands_source_dir = original_func
+    """Tests for error handling during file operations."""
 
     def test_skills_copy_permission_error_records_error(self, tmp_path: Path) -> None:
         """Test that permission errors during skills directory copy are recorded."""
@@ -809,7 +475,7 @@ class TestFileCmpErrorHandling:
     def test_skills_update_rmtree_copytree_failure_shows_data_loss_warning(
         self, tmp_path: Path
     ) -> None:
-        """Test that copytree failure after rmtree warns about data loss (Important #1)."""
+        """Test that copytree failure after rmtree warns about data loss."""
         from unittest.mock import patch
 
         # Setup source with updated skill
@@ -849,7 +515,7 @@ class TestFileCmpErrorHandling:
 
 
 class TestDircmpRecursive:
-    """Tests for recursive directory change detection (Important #3)."""
+    """Tests for recursive directory change detection."""
 
     def test_detects_nested_subdirectory_changes(self, tmp_path: Path) -> None:
         """Test that changes in nested subdirectories are detected."""
@@ -1083,25 +749,73 @@ class TestUpdateAgents:
         finally:
             template_module.get_agents_source_dir = original_func
 
+    def test_copy_permission_error_records_error(self, tmp_path: Path) -> None:
+        """Test that permission errors during shutil.copy2 in update_agents are recorded."""
+        from unittest.mock import patch
 
-class TestEdgeCases:
-    """Tests for edge cases (T025)."""
+        # Setup source with new agent file
+        source_dir = tmp_path / "source_package" / "agents"
+        source_dir.mkdir(parents=True)
+        (source_dir / "new-agent.md").write_text("# New Agent")
 
-    def test_source_directory_not_found_commands(self, tmp_path: Path) -> None:
-        """Test error when commands source directory does not exist."""
-        from issue_workflow.services.template import SourceDirectoryNotFoundError
+        target_dir = tmp_path / ".claude"
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True)
 
         service = TemplateService()
         import issue_workflow.services.template as template_module
 
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: tmp_path / "nonexistent"
+        original_func = template_module.get_agents_source_dir
+        template_module.get_agents_source_dir = lambda: source_dir
 
-        try:
-            with pytest.raises(SourceDirectoryNotFoundError):
-                service.update_commands(tmp_path / ".claude")
-        finally:
-            template_module.get_commands_source_dir = original_func
+        with patch("issue_workflow.services.template.shutil.copy2") as mock_copy:
+            mock_copy.side_effect = OSError("Permission denied")
+
+            try:
+                result = service.update_agents(target_dir, dry_run=False)
+                assert result.has_errors
+                assert any("Permission denied" in str(err) for _, err in result.errors)
+            except OSError:
+                pytest.fail("OSError should be caught and recorded, not raised")
+            finally:
+                template_module.get_agents_source_dir = original_func
+
+    def test_filecmp_permission_error_records_error(self, tmp_path: Path) -> None:
+        """Test that permission errors during filecmp.cmp in update_agents are recorded."""
+        from unittest.mock import patch
+
+        # Setup source with agent file
+        source_dir = tmp_path / "source_package" / "agents"
+        source_dir.mkdir(parents=True)
+        (source_dir / "test.md").write_text("# Test Content")
+
+        # Setup target with same-named file
+        target_dir = tmp_path / ".claude"
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True)
+        (agents_target / "test.md").write_text("# Old Content")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_agents_source_dir
+        template_module.get_agents_source_dir = lambda: source_dir
+
+        with patch("issue_workflow.services.template.filecmp.cmp") as mock_cmp:
+            mock_cmp.side_effect = OSError("Permission denied")
+
+            try:
+                result = service.update_agents(target_dir, dry_run=True)
+                assert result.has_errors
+                assert any("Permission denied" in str(err) for _, err in result.errors)
+            except OSError:
+                pytest.fail("OSError should be caught and recorded, not raised")
+            finally:
+                template_module.get_agents_source_dir = original_func
+
+
+class TestEdgeCases:
+    """Tests for edge cases (T025)."""
 
     def test_source_directory_not_found_skills(self, tmp_path: Path) -> None:
         """Test error when skills source directory does not exist."""
@@ -1118,57 +832,3 @@ class TestEdgeCases:
                 service.update_skills(tmp_path / ".claude")
         finally:
             template_module.get_skills_source_dir = original_func
-
-    def test_empty_source_directory(self, tmp_path: Path) -> None:
-        """Test handling of empty source directory."""
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        try:
-            result = service.update_commands(target_dir, dry_run=True)
-            assert result.added_count == 0
-            assert result.updated_count == 0
-            assert result.has_changes is False
-        finally:
-            template_module.get_commands_source_dir = original_func
-
-    def test_multiple_changes_combined(self, tmp_path: Path) -> None:
-        """Test result correctly combines multiple change types.
-
-        Note: As of #15, unmanaged files are ignored.
-        """
-        source_dir = tmp_path / "source_package" / "commands"
-        source_dir.mkdir(parents=True)
-        (source_dir / "new.md").write_text("# New")
-        (source_dir / "updated.md").write_text("# Updated Content")
-
-        target_dir = tmp_path / ".claude"
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True)
-        (commands_target / "updated.md").write_text("# Old Content")
-        (commands_target / "unmanaged.md").write_text("# Unmanaged")
-
-        service = TemplateService()
-        import issue_workflow.services.template as template_module
-
-        original_func = template_module.get_commands_source_dir
-        template_module.get_commands_source_dir = lambda: source_dir
-
-        try:
-            result = service.update_commands(target_dir, dry_run=True)
-            assert result.added_count == 1
-            assert result.updated_count == 1
-            # Unmanaged files are ignored (#15)
-            assert result.has_changes is True
-        finally:
-            template_module.get_commands_source_dir = original_func

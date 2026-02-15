@@ -1,6 +1,7 @@
 # Data Model: Update Command
 
 **Date**: 2026-01-15
+**Updated**: 2026-02-15
 **Feature**: Update Command
 **Spec**: [spec.md](./spec.md)
 
@@ -23,7 +24,7 @@ class FileChangeType(Enum):
 
 ### 2. FileChangeInfo
 
-個別ファイルの変更情報。
+個別ファイル/ディレクトリの変更情報。
 
 ```python
 from dataclasses import dataclass
@@ -32,7 +33,7 @@ from pathlib import Path
 @dataclass(frozen=True)
 class FileChangeInfo:
     """ファイル変更情報"""
-    path: Path           # 相対パス（.claude/commands/start-issue.md）
+    path: Path           # 相対パス（.claude/skills/start-issue/SKILL.md）
     change_type: FileChangeType
     source_path: Path | None = None  # 更新元パス（削除の場合はNone）
 ```
@@ -47,8 +48,8 @@ from dataclasses import dataclass, field
 @dataclass
 class UpdateResult:
     """更新操作の結果"""
-    commands_changes: list[FileChangeInfo] = field(default_factory=list)
     skills_changes: list[FileChangeInfo] = field(default_factory=list)
+    agents_changes: list[FileChangeInfo] = field(default_factory=list)
     errors: list[tuple[Path, str]] = field(default_factory=list)  # (path, error_message)
     dry_run: bool = False
 
@@ -56,7 +57,7 @@ class UpdateResult:
     def added_count(self) -> int:
         """追加されたファイル/ディレクトリ数"""
         return sum(
-            1 for c in self.commands_changes + self.skills_changes
+            1 for c in self.skills_changes + self.agents_changes
             if c.change_type == FileChangeType.ADDED
         )
 
@@ -64,7 +65,7 @@ class UpdateResult:
     def updated_count(self) -> int:
         """更新されたファイル/ディレクトリ数"""
         return sum(
-            1 for c in self.commands_changes + self.skills_changes
+            1 for c in self.skills_changes + self.agents_changes
             if c.change_type == FileChangeType.UPDATED
         )
 
@@ -90,12 +91,12 @@ class UpdateResult:
 
 ```
 UpdateResult
-├── commands_changes: list[FileChangeInfo]
+├── skills_changes: list[FileChangeInfo]
 │   └── FileChangeInfo
 │       ├── path: Path
 │       ├── change_type: FileChangeType
 │       └── source_path: Path | None
-├── skills_changes: list[FileChangeInfo]
+├── agents_changes: list[FileChangeInfo]
 │   └── FileChangeInfo
 │       └── ...
 ├── errors: list[tuple[Path, str]]
