@@ -1,39 +1,20 @@
 """Unit tests for review-pr subcommand."""
 
-import json
 from collections.abc import Iterator
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from issue_workflow.models.claude_result import ClaudeResult
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS
 from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
     GH_DEPENDENCY,
     HACHIMOKU_DEPENDENCY,
 )
+from tests.conftest import make_claude_result
 
 # Module path prefix for patching
 _MOD = "issue_workflow.cli.commands.review_pr"
-
-
-def _make_claude_result(
-    exit_code: int = 0,
-    is_error: bool = False,
-    raw_json: str = "",
-) -> ClaudeResult:
-    """Create a ClaudeResult for testing."""
-    if not raw_json:
-        raw_json = json.dumps({"type": "result", "subtype": "success"})
-    return ClaudeResult(
-        type="result",
-        subtype="success",
-        is_error=is_error,
-        exit_code=exit_code,
-        raw_json=raw_json,
-    )
 
 
 @pytest.fixture()
@@ -48,19 +29,16 @@ def mock_runner() -> Iterator[MagicMock]:
     """Mock ClaudeRunner with a successful result."""
     with patch(f"{_MOD}.ClaudeRunner") as cls:
         instance = MagicMock()
-        instance.run.return_value = _make_claude_result()
+        instance.run.return_value = make_claude_result()
         cls.return_value = instance
         yield instance
 
 
 @pytest.fixture()
-def mock_logger() -> Iterator[MagicMock]:
-    """Mock ExecutionLogger."""
-    with patch(f"{_MOD}.ExecutionLogger") as cls:
-        instance = MagicMock()
-        instance.log.return_value = Path("/tmp/test.jsonl")
-        cls.return_value = instance
-        yield instance
+def mock_log_execution() -> Iterator[MagicMock]:
+    """Mock log_execution to do nothing."""
+    with patch(f"{_MOD}.log_execution") as m:
+        yield m
 
 
 @pytest.fixture()
@@ -74,7 +52,7 @@ def mock_pr_detector() -> Iterator[MagicMock]:
 def mock_subprocess() -> Iterator[MagicMock]:
     """Mock subprocess.run for 8moku execution."""
     with patch(f"{_MOD}.subprocess.run") as m:
-        m.return_value = MagicMock(returncode=0)
+        m.return_value = MagicMock(returncode=0, stdout="", stderr="")
         yield m
 
 
@@ -85,7 +63,7 @@ class TestReviewPrBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -106,7 +84,7 @@ class TestReviewPrBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -125,11 +103,34 @@ class TestReviewPrBasic:
         cmd = mock_subprocess.call_args[0][0]
         assert cmd == ["8moku", "300"]
 
+    def test_8moku_called_with_capture_output(
+        self,
+        mock_deps: MagicMock,
+        mock_runner: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """subprocess.run is called with capture_output=True, text=True."""
+        from issue_workflow.cli.commands.review_pr import _run_review_pr
+
+        _run_review_pr(
+            pr_number=300,
+            review_only=False,
+            respond_only=False,
+            verbose=False,
+            timeout=3600,
+        )
+
+        call_kwargs = mock_subprocess.call_args
+        assert call_kwargs.kwargs.get("capture_output") is True
+        assert call_kwargs.kwargs.get("text") is True
+
     def test_calls_claude_runner_with_respond_review_prompt(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -148,15 +149,15 @@ class TestReviewPrBasic:
         call_args = mock_runner.run.call_args
         assert call_args[0][0] == "/respond-review 300"
 
-    def test_calls_execution_logger(
+    def test_calls_log_execution(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
-        """ExecutionLogger.log is called in default mode."""
+        """log_execution is called in default mode."""
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
         _run_review_pr(
@@ -167,13 +168,13 @@ class TestReviewPrBasic:
             timeout=3600,
         )
 
-        mock_logger.log.assert_called_once()
+        mock_log_execution.assert_called_once()
 
     def test_returns_zero_exit_code_on_success(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -194,12 +195,12 @@ class TestReviewPrBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
         """Returns nonzero exit_code when ClaudeResult has nonzero exit_code."""
-        mock_runner.run.return_value = _make_claude_result(exit_code=1, is_error=True)
+        mock_runner.run.return_value = make_claude_result(exit_code=1, is_error=True)
 
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
@@ -217,7 +218,7 @@ class TestReviewPrBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -240,7 +241,7 @@ class TestReviewPrBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -267,7 +268,7 @@ class TestReviewPrReviewOnly:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -288,7 +289,7 @@ class TestReviewPrReviewOnly:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -309,11 +310,11 @@ class TestReviewPrReviewOnly:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
-        """--review-only does not call ExecutionLogger.log."""
+        """--review-only does not call log_execution."""
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
         _run_review_pr(
@@ -324,18 +325,18 @@ class TestReviewPrReviewOnly:
             timeout=3600,
         )
 
-        mock_logger.log.assert_not_called()
+        mock_log_execution.assert_not_called()
 
     def test_review_only_returns_8moku_exit_code(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
         """--review-only returns 8moku's exit code."""
-        mock_subprocess.return_value = MagicMock(returncode=0)
+        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
@@ -357,7 +358,7 @@ class TestReviewPrRespondOnly:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -378,7 +379,7 @@ class TestReviewPrRespondOnly:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -399,11 +400,11 @@ class TestReviewPrRespondOnly:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
-        """--respond-only calls ExecutionLogger.log."""
+        """--respond-only calls log_execution."""
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
         _run_review_pr(
@@ -414,7 +415,7 @@ class TestReviewPrRespondOnly:
             timeout=3600,
         )
 
-        mock_logger.log.assert_called_once()
+        mock_log_execution.assert_called_once()
 
 
 class TestReviewPrMutualExclusion:
@@ -424,7 +425,7 @@ class TestReviewPrMutualExclusion:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -448,7 +449,7 @@ class TestReviewPrMutualExclusion:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -474,7 +475,7 @@ class TestReviewPrMutualExclusion:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -502,7 +503,7 @@ class TestReviewPrDependencies:
     def test_default_mode_pr_number_none_requires_all(
         self,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -526,7 +527,7 @@ class TestReviewPrDependencies:
     def test_default_mode_pr_explicit_skips_gh(
         self,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -550,7 +551,7 @@ class TestReviewPrDependencies:
     def test_review_only_requires_8moku_only(
         self,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -574,7 +575,7 @@ class TestReviewPrDependencies:
     def test_review_only_no_pr_requires_8moku_and_gh(
         self,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -598,7 +599,7 @@ class TestReviewPrDependencies:
     def test_respond_only_requires_claude_only(
         self,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -622,7 +623,7 @@ class TestReviewPrDependencies:
     def test_respond_only_no_pr_requires_claude_and_gh(
         self,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -651,7 +652,7 @@ class TestReviewPrVerbose:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -673,7 +674,7 @@ class TestReviewPrVerbose:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -696,7 +697,7 @@ class TestReviewPrVerbose:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -722,7 +723,7 @@ class TestReviewPrTimeout:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -744,7 +745,7 @@ class TestReviewPrTimeout:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
@@ -763,18 +764,18 @@ class TestReviewPrTimeout:
         assert call_kwargs.kwargs.get("timeout_seconds") == 3600
 
 
-class TestReviewPrLogEntry:
-    """Log entry content tests."""
+class TestReviewPrLogArgs:
+    """Tests for log_execution call arguments."""
 
-    def test_log_entry_command_name(
+    def test_log_command_name(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
-        """ExecutionLog.command is 'review-pr'."""
+        """log_execution is called with command_name='review-pr'."""
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
         _run_review_pr(
@@ -785,18 +786,17 @@ class TestReviewPrLogEntry:
             timeout=3600,
         )
 
-        entry = mock_logger.log.call_args[0][0]
-        assert entry.command == "review-pr"
+        assert mock_log_execution.call_args[0][0] == "review-pr"
 
-    def test_log_entry_args_contain_pr_number(
+    def test_log_args_contain_pr_number(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
-        """ExecutionLog.args contains pr_number."""
+        """log_execution args dict contains pr_number."""
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
         _run_review_pr(
@@ -807,18 +807,17 @@ class TestReviewPrLogEntry:
             timeout=3600,
         )
 
-        entry = mock_logger.log.call_args[0][0]
-        assert entry.args["pr_number"] == 300
+        assert mock_log_execution.call_args[0][1] == {"pr_number": 300}
 
-    def test_log_entry_exit_code(
+    def test_log_timeout_passed(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
-        """ExecutionLog.exit_code matches ClaudeResult.exit_code."""
+        """log_execution receives timeout value."""
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
         _run_review_pr(
@@ -826,11 +825,10 @@ class TestReviewPrLogEntry:
             review_only=False,
             respond_only=False,
             verbose=False,
-            timeout=3600,
+            timeout=600,
         )
 
-        entry = mock_logger.log.call_args[0][0]
-        assert entry.exit_code == 0
+        assert mock_log_execution.call_args[0][3] == 600
 
 
 class TestReviewPrErrorHandling:
@@ -840,12 +838,12 @@ class TestReviewPrErrorHandling:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
         """8moku failure skips respond-review and returns nonzero exit code."""
-        mock_subprocess.return_value = MagicMock(returncode=1)
+        mock_subprocess.return_value = MagicMock(returncode=1, stdout="", stderr="")
 
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
@@ -860,16 +858,16 @@ class TestReviewPrErrorHandling:
         assert exit_code == 1
         mock_runner.run.assert_not_called()
 
-    def test_logger_io_error_continues_with_correct_exit_code(
+    def test_8moku_os_error_returns_1(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
-        """OSError in ExecutionLogger.log() prints warning but returns correct exit code."""
-        mock_logger.log.side_effect = OSError("Permission denied")
+        """OSError from subprocess.run returns exit_code=1."""
+        mock_subprocess.side_effect = OSError("No such file or directory")
 
         with patch(f"{_MOD}.ui") as mock_ui:
             from issue_workflow.cli.commands.review_pr import _run_review_pr
@@ -882,6 +880,31 @@ class TestReviewPrErrorHandling:
                 timeout=3600,
             )
 
-            assert exit_code == 0
-            warning_calls = [str(c) for c in mock_ui.console.print.call_args_list]
-            assert any("log" in c.lower() for c in warning_calls)
+            assert exit_code == 1
+            error_calls = [str(c) for c in mock_ui.print_error.call_args_list]
+            assert any("8moku" in c for c in error_calls)
+
+    def test_8moku_stdout_printed(
+        self,
+        mock_deps: MagicMock,
+        mock_runner: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """8moku stdout is printed to console."""
+        mock_subprocess.return_value = MagicMock(returncode=0, stdout="review output\n", stderr="")
+
+        with patch(f"{_MOD}.ui") as mock_ui:
+            from issue_workflow.cli.commands.review_pr import _run_review_pr
+
+            _run_review_pr(
+                pr_number=300,
+                review_only=True,
+                respond_only=False,
+                verbose=False,
+                timeout=3600,
+            )
+
+            all_calls = [str(c) for c in mock_ui.console.print.call_args_list]
+            assert any("review output" in c for c in all_calls)

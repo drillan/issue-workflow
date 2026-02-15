@@ -1,22 +1,19 @@
 """Start-issue subcommand for issue-workflow CLI."""
 
-from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from issue_workflow.cli import ui
-from issue_workflow.cli.commands._common import build_log_result, on_tool_use
+from issue_workflow.cli.commands._common import EXIT_SUCCESS, log_execution, on_tool_use
 from issue_workflow.lib.git import GitError, GitOperations
-from issue_workflow.models.execution_log import ExecutionLog
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
 from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
     GH_DEPENDENCY,
     check_dependencies,
 )
-from issue_workflow.services.execution_logger import LOG_BASE_DIR_NAME, ExecutionLogger
 from issue_workflow.services.worktree import (
     copy_hachimoku_to_worktree,
     find_worktree_for_branch,
@@ -25,8 +22,6 @@ from issue_workflow.services.worktree import (
 COMMAND_NAME: str = "start-issue"
 
 WORKTREE_BRANCH_PREFIX: str = "feat/"
-
-EXIT_SUCCESS: int = 0
 
 
 def _prepare_worktree(issue_number: int) -> Path | None:
@@ -107,19 +102,12 @@ def _run_start_issue(
     )
 
     # Log execution
-    log_result = build_log_result(result.raw_json, result.exit_code, timeout)
-    entry = ExecutionLog(
-        timestamp=datetime.now().astimezone(),
-        command=COMMAND_NAME,
-        args={"issue_number": issue_number, "worktree": worktree},
-        exit_code=result.exit_code,
-        result=log_result,
+    log_execution(
+        COMMAND_NAME,
+        {"issue_number": issue_number, "worktree": worktree},
+        result,
+        timeout,
     )
-    try:
-        logger = ExecutionLogger(base_dir=Path.cwd() / LOG_BASE_DIR_NAME)
-        logger.log(entry)
-    except OSError:
-        ui.console.print("\\[start-issue] Warning: Failed to write log file.")
 
     # Done message
     ui.console.print(f"\\[start-issue] Done. (exit_code={result.exit_code})")

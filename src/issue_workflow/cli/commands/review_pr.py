@@ -1,15 +1,12 @@
 """Review-pr subcommand for issue-workflow CLI."""
 
 import subprocess
-from datetime import datetime
-from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from issue_workflow.cli import ui
-from issue_workflow.cli.commands._common import build_log_result, on_tool_use
-from issue_workflow.models.execution_log import ExecutionLog
+from issue_workflow.cli.commands._common import EXIT_SUCCESS, log_execution, on_tool_use
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
 from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
@@ -17,12 +14,9 @@ from issue_workflow.services.dependency_checker import (
     HACHIMOKU_DEPENDENCY,
     check_dependencies,
 )
-from issue_workflow.services.execution_logger import LOG_BASE_DIR_NAME, ExecutionLogger
 from issue_workflow.services.pr_detector import detect_pr_number
 
 COMMAND_NAME: str = "review-pr"
-
-EXIT_SUCCESS: int = 0
 
 
 def _run_review_pr(
@@ -71,10 +65,23 @@ def _run_review_pr(
 
     # Phase 1: hachimoku review (unless --respond-only)
     if not respond_only:
-        hachimoku_result = subprocess.run(
-            ["8moku", str(resolved_pr)],
-            check=False,
-        )
+        try:
+            hachimoku_result = subprocess.run(
+                ["8moku", str(resolved_pr)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except OSError as e:
+            ui.print_error(f"Failed to execute 8moku: {e}")
+            ui.console.print("\\[review-pr] Done. (exit_code=1)")
+            return 1
+
+        if hachimoku_result.stdout:
+            ui.console.print(hachimoku_result.stdout.rstrip())
+        if hachimoku_result.stderr:
+            ui.console.print(hachimoku_result.stderr.rstrip())
+
         if hachimoku_result.returncode != EXIT_SUCCESS:
             ui.console.print(f"\\[review-pr] Done. (exit_code={hachimoku_result.returncode})")
             return hachimoku_result.returncode
@@ -90,20 +97,7 @@ def _run_review_pr(
             on_tool_use=on_tool_use if verbose else None,
         )
 
-        # Log execution
-        log_result = build_log_result(result.raw_json, result.exit_code, timeout)
-        entry = ExecutionLog(
-            timestamp=datetime.now().astimezone(),
-            command=COMMAND_NAME,
-            args={"pr_number": resolved_pr},
-            exit_code=result.exit_code,
-            result=log_result,
-        )
-        try:
-            logger = ExecutionLogger(base_dir=Path.cwd() / LOG_BASE_DIR_NAME)
-            logger.log(entry)
-        except OSError:
-            ui.console.print("\\[review-pr] Warning: Failed to write log file.")
+        log_execution(COMMAND_NAME, {"pr_number": resolved_pr}, result, timeout)
 
         ui.console.print(f"\\[review-pr] Done. (exit_code={result.exit_code})")
         return result.exit_code

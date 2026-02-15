@@ -1,12 +1,11 @@
 """Integration tests for review-pr subcommand."""
 
-import json
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
 from issue_workflow.cli.main import app
-from issue_workflow.models.claude_result import ClaudeResult
+from tests.conftest import make_claude_result
 
 runner = CliRunner()
 
@@ -14,25 +13,10 @@ runner = CliRunner()
 _MOD = "issue_workflow.cli.commands.review_pr"
 
 
-def _make_claude_result(
-    exit_code: int = 0,
-    is_error: bool = False,
-) -> ClaudeResult:
-    """Create a ClaudeResult for testing."""
-    raw_json = json.dumps({"type": "result", "subtype": "success"})
-    return ClaudeResult(
-        type="result",
-        subtype="success",
-        is_error=is_error,
-        exit_code=exit_code,
-        raw_json=raw_json,
-    )
-
-
 class TestReviewPrCliExecution:
     """CliRunner E2E tests for review-pr."""
 
-    @patch(f"{_MOD}.ExecutionLogger")
+    @patch(f"{_MOD}.log_execution")
     @patch(f"{_MOD}.ClaudeRunner")
     @patch(f"{_MOD}.subprocess.run")
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
@@ -43,17 +27,17 @@ class TestReviewPrCliExecution:
         mock_detect: MagicMock,
         mock_subprocess: MagicMock,
         mock_runner_cls: MagicMock,
-        mock_logger_cls: MagicMock,
+        mock_log: MagicMock,
     ) -> None:
         """issue-workflow review-pr 300 succeeds."""
-        mock_subprocess.return_value = MagicMock(returncode=0)
-        mock_runner_cls.return_value.run.return_value = _make_claude_result()
+        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr", "300"])
 
         assert result.exit_code == 0
 
-    @patch(f"{_MOD}.ExecutionLogger")
+    @patch(f"{_MOD}.log_execution")
     @patch(f"{_MOD}.ClaudeRunner")
     @patch(f"{_MOD}.subprocess.run")
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
@@ -64,18 +48,18 @@ class TestReviewPrCliExecution:
         mock_detect: MagicMock,
         mock_subprocess: MagicMock,
         mock_runner_cls: MagicMock,
-        mock_logger_cls: MagicMock,
+        mock_log: MagicMock,
     ) -> None:
         """issue-workflow review-pr (no PR number) uses detect_pr_number."""
-        mock_subprocess.return_value = MagicMock(returncode=0)
-        mock_runner_cls.return_value.run.return_value = _make_claude_result()
+        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr"])
 
         assert result.exit_code == 0
         mock_detect.assert_called_once()
 
-    @patch(f"{_MOD}.ExecutionLogger")
+    @patch(f"{_MOD}.log_execution")
     @patch(f"{_MOD}.subprocess.run")
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
@@ -84,16 +68,16 @@ class TestReviewPrCliExecution:
         mock_deps: MagicMock,
         mock_detect: MagicMock,
         mock_subprocess: MagicMock,
-        mock_logger_cls: MagicMock,
+        mock_log: MagicMock,
     ) -> None:
         """issue-workflow review-pr --review-only 300 succeeds."""
-        mock_subprocess.return_value = MagicMock(returncode=0)
+        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
         result = runner.invoke(app, ["review-pr", "300", "--review-only"])
 
         assert result.exit_code == 0
 
-    @patch(f"{_MOD}.ExecutionLogger")
+    @patch(f"{_MOD}.log_execution")
     @patch(f"{_MOD}.ClaudeRunner")
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
     @patch(f"{_MOD}.check_dependencies")
@@ -102,10 +86,10 @@ class TestReviewPrCliExecution:
         mock_deps: MagicMock,
         mock_detect: MagicMock,
         mock_runner_cls: MagicMock,
-        mock_logger_cls: MagicMock,
+        mock_log: MagicMock,
     ) -> None:
         """issue-workflow review-pr --respond-only 300 succeeds."""
-        mock_runner_cls.return_value.run.return_value = _make_claude_result()
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr", "300", "--respond-only"])
 
@@ -131,7 +115,7 @@ class TestReviewPrCliExecution:
         assert result.exit_code == 0
         assert "review-pr" in result.output
 
-    @patch(f"{_MOD}.ExecutionLogger")
+    @patch(f"{_MOD}.log_execution")
     @patch(f"{_MOD}.ClaudeRunner")
     @patch(f"{_MOD}.subprocess.run")
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
@@ -142,17 +126,17 @@ class TestReviewPrCliExecution:
         mock_detect: MagicMock,
         mock_subprocess: MagicMock,
         mock_runner_cls: MagicMock,
-        mock_logger_cls: MagicMock,
+        mock_log: MagicMock,
     ) -> None:
         """-v option is accepted."""
-        mock_subprocess.return_value = MagicMock(returncode=0)
-        mock_runner_cls.return_value.run.return_value = _make_claude_result()
+        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr", "300", "-v"])
 
         assert result.exit_code == 0
 
-    @patch(f"{_MOD}.ExecutionLogger")
+    @patch(f"{_MOD}.log_execution")
     @patch(f"{_MOD}.ClaudeRunner")
     @patch(f"{_MOD}.subprocess.run")
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
@@ -163,17 +147,17 @@ class TestReviewPrCliExecution:
         mock_detect: MagicMock,
         mock_subprocess: MagicMock,
         mock_runner_cls: MagicMock,
-        mock_logger_cls: MagicMock,
+        mock_log: MagicMock,
     ) -> None:
         """--timeout option is accepted."""
-        mock_subprocess.return_value = MagicMock(returncode=0)
-        mock_runner_cls.return_value.run.return_value = _make_claude_result()
+        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr", "300", "--timeout", "600"])
 
         assert result.exit_code == 0
 
-    @patch(f"{_MOD}.ExecutionLogger")
+    @patch(f"{_MOD}.log_execution")
     @patch(f"{_MOD}.ClaudeRunner")
     @patch(f"{_MOD}.subprocess.run")
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
@@ -184,17 +168,17 @@ class TestReviewPrCliExecution:
         mock_detect: MagicMock,
         mock_subprocess: MagicMock,
         mock_runner_cls: MagicMock,
-        mock_logger_cls: MagicMock,
+        mock_log: MagicMock,
     ) -> None:
         """Output contains [review-pr] Starting... message."""
-        mock_subprocess.return_value = MagicMock(returncode=0)
-        mock_runner_cls.return_value.run.return_value = _make_claude_result()
+        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr", "300"])
 
         assert "[review-pr] Starting" in result.output
 
-    @patch(f"{_MOD}.ExecutionLogger")
+    @patch(f"{_MOD}.log_execution")
     @patch(f"{_MOD}.ClaudeRunner")
     @patch(f"{_MOD}.subprocess.run")
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
@@ -205,17 +189,17 @@ class TestReviewPrCliExecution:
         mock_detect: MagicMock,
         mock_subprocess: MagicMock,
         mock_runner_cls: MagicMock,
-        mock_logger_cls: MagicMock,
+        mock_log: MagicMock,
     ) -> None:
         """Output contains [review-pr] Done. message."""
-        mock_subprocess.return_value = MagicMock(returncode=0)
-        mock_runner_cls.return_value.run.return_value = _make_claude_result()
+        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr", "300"])
 
         assert "[review-pr] Done." in result.output
 
-    @patch(f"{_MOD}.ExecutionLogger")
+    @patch(f"{_MOD}.log_execution")
     @patch(f"{_MOD}.ClaudeRunner")
     @patch(f"{_MOD}.subprocess.run")
     @patch(f"{_MOD}.detect_pr_number", return_value=300)
@@ -226,11 +210,11 @@ class TestReviewPrCliExecution:
         mock_detect: MagicMock,
         mock_subprocess: MagicMock,
         mock_runner_cls: MagicMock,
-        mock_logger_cls: MagicMock,
+        mock_log: MagicMock,
     ) -> None:
         """Non-zero exit code from ClaudeResult is propagated."""
-        mock_subprocess.return_value = MagicMock(returncode=0)
-        mock_runner_cls.return_value.run.return_value = _make_claude_result(
+        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_runner_cls.return_value.run.return_value = make_claude_result(
             exit_code=1, is_error=True
         )
 

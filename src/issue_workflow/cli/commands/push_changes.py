@@ -1,26 +1,20 @@
 """Push-changes subcommand for issue-workflow CLI."""
 
-from datetime import datetime
-from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from issue_workflow.cli import ui
-from issue_workflow.cli.commands._common import build_log_result, on_tool_use
-from issue_workflow.models.execution_log import ExecutionLog
+from issue_workflow.cli.commands._common import EXIT_SUCCESS, log_execution, on_tool_use
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
 from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
     GH_DEPENDENCY,
     check_dependencies,
 )
-from issue_workflow.services.execution_logger import LOG_BASE_DIR_NAME, ExecutionLogger
 from issue_workflow.services.pr_detector import detect_pr_number
 
 COMMAND_NAME: str = "push-changes"
-
-EXIT_SUCCESS: int = 0
 
 PUSH_CHANGES_PROMPT: str = """/commit-push-pr
 
@@ -44,7 +38,14 @@ def _run_push_changes(
     check_dependencies([CLAUDE_DEPENDENCY, GH_DEPENDENCY])
 
     # PR number auto-detection (FR-015a) for log filename
-    pr_number = detect_pr_number()
+    try:
+        pr_number = detect_pr_number()
+    except SystemExit:
+        ui.print_error(
+            "No PR found for current branch.\n\n"
+            "Please create a PR first using 'issue-workflow create-pr'."
+        )
+        raise typer.Exit(code=1) from None
 
     # Console output
     mode_suffix = " (verbose mode)" if verbose else ""
@@ -61,19 +62,7 @@ def _run_push_changes(
     )
 
     # Log execution
-    log_result = build_log_result(result.raw_json, result.exit_code, timeout)
-    entry = ExecutionLog(
-        timestamp=datetime.now().astimezone(),
-        command=COMMAND_NAME,
-        args={"pr_number": pr_number},
-        exit_code=result.exit_code,
-        result=log_result,
-    )
-    try:
-        logger = ExecutionLogger(base_dir=Path.cwd() / LOG_BASE_DIR_NAME)
-        logger.log(entry)
-    except OSError:
-        ui.console.print("\\[push-changes] Warning: Failed to write log file.")
+    log_execution(COMMAND_NAME, {"pr_number": pr_number}, result, timeout)
 
     # Done message
     ui.console.print(f"\\[push-changes] Done. (exit_code={result.exit_code})")

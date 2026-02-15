@@ -1,39 +1,20 @@
 """Unit tests for push-changes subcommand."""
 
-import json
 from collections.abc import Iterator
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from issue_workflow.models.claude_result import ClaudeResult
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS
 from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
     GH_DEPENDENCY,
     HACHIMOKU_DEPENDENCY,
 )
+from tests.conftest import make_claude_result
 
 # Module path prefix for patching
 _MOD = "issue_workflow.cli.commands.push_changes"
-
-
-def _make_claude_result(
-    exit_code: int = 0,
-    is_error: bool = False,
-    raw_json: str = "",
-) -> ClaudeResult:
-    """Create a ClaudeResult for testing."""
-    if not raw_json:
-        raw_json = json.dumps({"type": "result", "subtype": "success"})
-    return ClaudeResult(
-        type="result",
-        subtype="success",
-        is_error=is_error,
-        exit_code=exit_code,
-        raw_json=raw_json,
-    )
 
 
 @pytest.fixture()
@@ -48,19 +29,16 @@ def mock_runner() -> Iterator[MagicMock]:
     """Mock ClaudeRunner with a successful result."""
     with patch(f"{_MOD}.ClaudeRunner") as cls:
         instance = MagicMock()
-        instance.run.return_value = _make_claude_result()
+        instance.run.return_value = make_claude_result()
         cls.return_value = instance
         yield instance
 
 
 @pytest.fixture()
-def mock_logger() -> Iterator[MagicMock]:
-    """Mock ExecutionLogger."""
-    with patch(f"{_MOD}.ExecutionLogger") as cls:
-        instance = MagicMock()
-        instance.log.return_value = Path("/tmp/test.jsonl")
-        cls.return_value = instance
-        yield instance
+def mock_log_execution() -> Iterator[MagicMock]:
+    """Mock log_execution to do nothing."""
+    with patch(f"{_MOD}.log_execution") as m:
+        yield m
 
 
 @pytest.fixture()
@@ -77,7 +55,7 @@ class TestPushChangesBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Dependency check includes CLAUDE_DEPENDENCY and GH_DEPENDENCY."""
@@ -94,7 +72,7 @@ class TestPushChangesBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Dependency check does not include HACHIMOKU_DEPENDENCY."""
@@ -109,7 +87,7 @@ class TestPushChangesBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """detect_pr_number is called for auto-detection (FR-015a)."""
@@ -123,7 +101,7 @@ class TestPushChangesBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """ClaudeRunner.run is called with prompt containing /commit-push-pr."""
@@ -140,7 +118,7 @@ class TestPushChangesBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Prompt contains instruction to skip PR creation."""
@@ -153,25 +131,25 @@ class TestPushChangesBasic:
         assert "PR" in prompt
         assert "スキップ" in prompt or "skip" in prompt.lower()
 
-    def test_calls_execution_logger(
+    def test_calls_log_execution(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """ExecutionLogger.log is called."""
+        """log_execution is called."""
         from issue_workflow.cli.commands.push_changes import _run_push_changes
 
         _run_push_changes(verbose=False, timeout=3600)
 
-        mock_logger.log.assert_called_once()
+        mock_log_execution.assert_called_once()
 
     def test_returns_zero_exit_code_on_success(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Returns exit_code=0 when ClaudeResult.exit_code=0."""
@@ -185,11 +163,11 @@ class TestPushChangesBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Returns exit_code=1 when ClaudeResult.exit_code=1."""
-        mock_runner.run.return_value = _make_claude_result(exit_code=1, is_error=True)
+        mock_runner.run.return_value = make_claude_result(exit_code=1, is_error=True)
 
         from issue_workflow.cli.commands.push_changes import _run_push_changes
 
@@ -201,7 +179,7 @@ class TestPushChangesBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """cwd is None (current directory)."""
@@ -216,7 +194,7 @@ class TestPushChangesBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Output contains '[push-changes] Starting...'."""
@@ -232,7 +210,7 @@ class TestPushChangesBasic:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Output contains '[push-changes] Done. (exit_code=0)'."""
@@ -252,7 +230,7 @@ class TestPushChangesVerbose:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """verbose=True is forwarded to ClaudeRunner.run."""
@@ -267,7 +245,7 @@ class TestPushChangesVerbose:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Verbose mode shows '(verbose mode)' in starting message."""
@@ -283,7 +261,7 @@ class TestPushChangesVerbose:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Verbose mode passes on_tool_use callback to ClaudeRunner.run."""
@@ -302,7 +280,7 @@ class TestPushChangesTimeout:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Custom --timeout value is forwarded to ClaudeRunner.run."""
@@ -317,7 +295,7 @@ class TestPushChangesTimeout:
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
         """Default timeout is DEFAULT_TIMEOUT_SECONDS (3600)."""
@@ -329,73 +307,73 @@ class TestPushChangesTimeout:
         assert call_kwargs.kwargs.get("timeout_seconds") == 3600
 
 
-class TestPushChangesLogEntry:
-    """Log entry content tests."""
+class TestPushChangesLogArgs:
+    """Tests for log_execution call arguments."""
 
-    def test_log_entry_command_name(
+    def test_log_command_name(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """ExecutionLog.command is 'push-changes'."""
+        """log_execution is called with command_name='push-changes'."""
         from issue_workflow.cli.commands.push_changes import _run_push_changes
 
         _run_push_changes(verbose=False, timeout=3600)
 
-        entry = mock_logger.log.call_args[0][0]
-        assert entry.command == "push-changes"
+        assert mock_log_execution.call_args[0][0] == "push-changes"
 
-    def test_log_entry_args_contain_pr_number(
+    def test_log_args_contain_pr_number(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """ExecutionLog.args contains pr_number for log filename."""
+        """log_execution args dict contains pr_number for log filename."""
         from issue_workflow.cli.commands.push_changes import _run_push_changes
 
         _run_push_changes(verbose=False, timeout=3600)
 
-        entry = mock_logger.log.call_args[0][0]
-        assert entry.args["pr_number"] == 300
+        assert mock_log_execution.call_args[0][1] == {"pr_number": 300}
 
-    def test_log_entry_exit_code(
+    def test_log_timeout_passed(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
+        mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """ExecutionLog.exit_code matches ClaudeResult.exit_code."""
+        """log_execution receives timeout value."""
         from issue_workflow.cli.commands.push_changes import _run_push_changes
 
-        _run_push_changes(verbose=False, timeout=3600)
+        _run_push_changes(verbose=False, timeout=600)
 
-        entry = mock_logger.log.call_args[0][0]
-        assert entry.exit_code == 0
+        assert mock_log_execution.call_args[0][3] == 600
 
 
 class TestPushChangesErrorHandling:
     """Error handling tests."""
 
-    def test_logger_io_error_continues_with_correct_exit_code(
+    def test_pr_detection_failure_shows_error_and_exits(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
-        mock_logger: MagicMock,
-        mock_pr_detector: MagicMock,
+        mock_log_execution: MagicMock,
     ) -> None:
-        """OSError in ExecutionLogger.log() prints warning but returns correct exit code."""
-        mock_logger.log.side_effect = OSError("Permission denied")
+        """SystemExit from detect_pr_number raises typer.Exit with helpful message."""
+        import typer
 
-        with patch(f"{_MOD}.ui") as mock_ui:
+        with (
+            patch(f"{_MOD}.detect_pr_number", side_effect=SystemExit(1)),
+            patch(f"{_MOD}.ui") as mock_ui,
+        ):
             from issue_workflow.cli.commands.push_changes import _run_push_changes
 
-            exit_code = _run_push_changes(verbose=False, timeout=3600)
+            with pytest.raises(typer.Exit) as exc_info:
+                _run_push_changes(verbose=False, timeout=3600)
 
-            assert exit_code == 0
-            warning_calls = [str(c) for c in mock_ui.console.print.call_args_list]
-            assert any("log" in c.lower() for c in warning_calls)
+            assert exc_info.value.exit_code == 1
+            error_calls = [str(c) for c in mock_ui.print_error.call_args_list]
+            assert any("create-pr" in c.lower() for c in error_calls)
