@@ -13,7 +13,7 @@ Load a GitHub Issue, create a branch, and develop an implementation plan.
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
 | `issue-number` | integer | Yes | GitHub Issue number |
-| `--force` | flag | No | Start implementation without confirmation |
+| `--force` | flag | No | Skip plan mode and all interactive confirmations (including TDD user approval) |
 | `--current-branch` | flag | No | Skip branch creation, use the current branch |
 
 ## Instructions

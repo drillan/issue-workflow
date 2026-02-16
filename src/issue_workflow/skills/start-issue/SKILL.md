@@ -18,7 +18,7 @@ Load a GitHub Issue, create a branch, and develop an implementation plan.
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
 | `issue-number` | integer | Yes | GitHub Issue number |
-| `--force` | flag | No | Start implementation without confirmation |
+| `--force` | flag | No | Skip plan mode and all interactive confirmations (including TDD user approval) |
 | `--current-branch` | flag | No | Skip branch creation, use the current branch |
 
 ## Instructions
@@ -78,7 +78,9 @@ If branch exists, checkout instead of create.
 
 ### Step 4: Plan Implementation
 
-Unless `--force` is specified, enter plan mode and create an implementation plan.
+Unless `--force` is specified, enter plan mode before proceeding. With `--force`, execute all phases directly without entering plan mode and without interactive confirmations.
+
+Regardless of `--force`, execute the following phases to create an implementation plan.
 
 First, read the workflow configuration:
 
@@ -139,6 +141,23 @@ Based on the documented specification, design test cases using **tdd-workflow sk
 1. Identify test scenarios from documentation
 2. Define expected inputs and outputs
 3. Consider edge cases documented in Phase 3
+
+**If `--force` is specified:**
+
+Skip all TDD user confirmation steps and execute the Red-Green-Refactor cycle autonomously without user approval:
+
+- Do **not** ask "Do you want me to follow TDD workflow?" — assume yes
+- Do **not** wait for user approval of test cases — proceed directly to Red confirmation
+- Write tests → confirm failure (Red) → implement (Green) → refactor — all automatically
+- Still report test results at each phase, but do not pause for confirmation
+
+**If `--force` is not specified (default):**
+
+Follow the standard TDD workflow with user confirmation:
+
+- Ask the user if they want to follow TDD workflow
+- Present test cases and get user approval before proceeding
+- Wait for user confirmation at each TDD phase transition
 
 #### Phase 5: Create Implementation Plan
 
