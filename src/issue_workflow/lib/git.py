@@ -140,25 +140,18 @@ class GitOperations:
         Raises:
             GitError: If default branch cannot be determined.
         """
-        result = self._run(
-            ["symbolic-ref", "refs/remotes/origin/HEAD"], check=False
-        )
+        result = self._run(["symbolic-ref", "refs/remotes/origin/HEAD"], check=False)
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip().removeprefix("refs/remotes/origin/")
 
-        set_head_result = self._run(
-            ["remote", "set-head", "origin", "--auto"], check=False
-        )
+        set_head_result = self._run(["remote", "set-head", "origin", "--auto"], check=False)
         if set_head_result.returncode == 0:
-            retry = self._run(
-                ["symbolic-ref", "refs/remotes/origin/HEAD"], check=False
-            )
+            retry = self._run(["symbolic-ref", "refs/remotes/origin/HEAD"], check=False)
             if retry.returncode == 0 and retry.stdout.strip():
                 return retry.stdout.strip().removeprefix("refs/remotes/origin/")
 
         raise GitError(
-            "Cannot detect default branch. "
-            "Ensure the remote 'origin' is configured and reachable."
+            "Cannot detect default branch. Ensure the remote 'origin' is configured and reachable."
         )
 
     def get_remote_url(self) -> str | None:
