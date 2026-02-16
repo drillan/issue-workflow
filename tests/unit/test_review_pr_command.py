@@ -834,7 +834,7 @@ class TestReviewPrLogArgs:
 class TestReviewPrErrorHandling:
     """Error handling tests."""
 
-    def test_8moku_failure_stops_execution(
+    def test_8moku_findings_continues_to_respond_review(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
@@ -842,8 +842,8 @@ class TestReviewPrErrorHandling:
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
-        """8moku failure skips respond-review and returns nonzero exit code."""
-        mock_subprocess.return_value = MagicMock(returncode=1, stdout="", stderr="")
+        """8moku non-zero exit code (findings) still runs respond-review."""
+        mock_subprocess.return_value = MagicMock(returncode=2, stdout="Found 2 issues", stderr="")
 
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
@@ -855,7 +855,56 @@ class TestReviewPrErrorHandling:
             timeout=3600,
         )
 
+        mock_runner.run.assert_called_once()
+        assert exit_code == 0
+
+    def test_8moku_findings_returns_respond_review_exit_code(
+        self,
+        mock_deps: MagicMock,
+        mock_runner: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """When 8moku has findings and respond-review fails, returns respond-review exit code."""
+        mock_subprocess.return_value = MagicMock(returncode=2, stdout="Found 2 issues", stderr="")
+        mock_runner.run.return_value = make_claude_result(exit_code=1, is_error=True)
+
+        from issue_workflow.cli.commands.review_pr import _run_review_pr
+
+        exit_code = _run_review_pr(
+            pr_number=300,
+            review_only=False,
+            respond_only=False,
+            verbose=False,
+            timeout=3600,
+        )
+
+        mock_runner.run.assert_called_once()
         assert exit_code == 1
+
+    def test_review_only_returns_8moku_findings_exit_code(
+        self,
+        mock_deps: MagicMock,
+        mock_runner: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """--review-only returns 8moku's findings exit code (non-zero)."""
+        mock_subprocess.return_value = MagicMock(returncode=3, stdout="Found 3 issues", stderr="")
+
+        from issue_workflow.cli.commands.review_pr import _run_review_pr
+
+        exit_code = _run_review_pr(
+            pr_number=300,
+            review_only=True,
+            respond_only=False,
+            verbose=False,
+            timeout=3600,
+        )
+
+        assert exit_code == 3
         mock_runner.run.assert_not_called()
 
     def test_8moku_os_error_returns_1(

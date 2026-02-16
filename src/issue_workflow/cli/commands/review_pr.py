@@ -64,6 +64,7 @@ def _run_review_pr(
     ui.console.print(f"\\[review-pr] Starting...{mode_suffix}")
 
     # Phase 1: hachimoku review (unless --respond-only)
+    hachimoku_exit_code = EXIT_SUCCESS
     if not respond_only:
         try:
             hachimoku_result = subprocess.run(
@@ -77,14 +78,12 @@ def _run_review_pr(
             ui.console.print("\\[review-pr] Done. (exit_code=1)")
             return 1
 
+        hachimoku_exit_code = hachimoku_result.returncode
+
         if hachimoku_result.stdout:
             ui.console.print(hachimoku_result.stdout.rstrip())
         if hachimoku_result.stderr:
             ui.console.print(hachimoku_result.stderr.rstrip())
-
-        if hachimoku_result.returncode != EXIT_SUCCESS:
-            ui.console.print(f"\\[review-pr] Done. (exit_code={hachimoku_result.returncode})")
-            return hachimoku_result.returncode
 
     # Phase 2: respond-review via claude (unless --review-only)
     if not review_only:
@@ -102,9 +101,9 @@ def _run_review_pr(
         ui.console.print(f"\\[review-pr] Done. (exit_code={result.exit_code})")
         return result.exit_code
 
-    # review-only path: 8moku succeeded
-    ui.console.print(f"\\[review-pr] Done. (exit_code={EXIT_SUCCESS})")
-    return EXIT_SUCCESS
+    # review-only path: return 8moku's exit code
+    ui.console.print(f"\\[review-pr] Done. (exit_code={hachimoku_exit_code})")
+    return hachimoku_exit_code
 
 
 def review_pr(
