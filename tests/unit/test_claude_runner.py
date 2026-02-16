@@ -217,7 +217,7 @@ class TestClaudeRunnerVerbose:
         runner = ClaudeRunner()
         runner.run("prompt", verbose=True, on_tool_use=callback)
 
-        callback.assert_called()
+        callback.assert_called_once_with("Bash", str({"command": "ls"}))
 
     @patch("issue_workflow.services.claude_runner.subprocess.Popen")
     def test_verbose_timeout(self, mock_popen: MagicMock) -> None:
@@ -306,6 +306,25 @@ class TestClaudeRunnerVerbose:
         result = runner.run("prompt", verbose=True)
 
         assert result.subtype == "success"
+        assert result.exit_code == 0
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_non_dict_message_skips_callback(self, mock_popen: MagicMock) -> None:
+        """When message is non-dict, on_tool_use callback is not called."""
+        malformed_event = json.dumps({"type": "assistant", "message": "unexpected_string"})
+        result_event = json.dumps({"type": "result", "subtype": "success"})
+
+        mock_process = MagicMock()
+        mock_process.stdout = iter([malformed_event + "\n", result_event + "\n"])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 0
+        mock_popen.return_value = mock_process
+
+        callback = MagicMock()
+        runner = ClaudeRunner()
+        result = runner.run("prompt", verbose=True, on_tool_use=callback)
+
+        callback.assert_not_called()
         assert result.exit_code == 0
 
     @patch("issue_workflow.services.claude_runner.time.monotonic")
