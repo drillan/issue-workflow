@@ -153,8 +153,6 @@ def _run_workflow(
     try:
         hachimoku_result = subprocess.run(
             ["8moku", str(pr_number)],
-            capture_output=True,
-            text=True,
             check=False,
             timeout=timeout,
         )
@@ -166,11 +164,6 @@ def _run_workflow(
         ui.print_error(f"Failed to execute 8moku: {e}")
         _print_failure("review (hachimoku)")
         return 1
-
-    if hachimoku_result.stdout:
-        ui.console.print(hachimoku_result.stdout.rstrip())
-    if hachimoku_result.stderr:
-        ui.console.print(hachimoku_result.stderr.rstrip())
 
     ui.console.print(
         f"\\[{COMMAND_NAME}] Step 3/4: review (hachimoku) Done. "

@@ -52,7 +52,7 @@ def mock_pr_detector() -> Iterator[MagicMock]:
 def mock_subprocess() -> Iterator[MagicMock]:
     """Mock subprocess.run for 8moku execution (returncode=0)."""
     with patch(f"{_MOD}.subprocess.run") as m:
-        m.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        m.return_value = MagicMock(returncode=0)
         yield m
 
 
@@ -146,6 +146,23 @@ class TestRunBasic:
         mock_subprocess.assert_called_once()
         call_args = mock_subprocess.call_args[0][0]
         assert call_args == ["8moku", "300"]
+
+    def test_step3a_does_not_capture_output(
+        self,
+        all_mocks: None,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """8moku subprocess.run must NOT use capture_output so output streams in real-time."""
+        from issue_workflow.cli.commands.run import _run_workflow
+
+        _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=3600)
+
+        mock_subprocess.assert_called_once()
+        call_kwargs = mock_subprocess.call_args.kwargs
+        assert "capture_output" not in call_kwargs
+        assert "text" not in call_kwargs
+        assert "stdout" not in call_kwargs
+        assert "stderr" not in call_kwargs
 
     def test_step3b_calls_respond_review_prompt(
         self,
@@ -329,7 +346,7 @@ class TestRunStepFailure:
     ) -> None:
         """8moku non-zero exit code (findings) continues to respond-review."""
         with patch(f"{_MOD}.subprocess.run") as mock_sub:
-            mock_sub.return_value = MagicMock(returncode=2, stdout="Found 2 issues", stderr="")
+            mock_sub.return_value = MagicMock(returncode=2)
 
             from issue_workflow.cli.commands.run import _run_workflow
 
