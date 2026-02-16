@@ -172,15 +172,10 @@ def _run_workflow(
     if hachimoku_result.stderr:
         ui.console.print(hachimoku_result.stderr.rstrip())
 
-    if hachimoku_result.returncode != EXIT_SUCCESS:
-        ui.console.print(
-            f"\\[{COMMAND_NAME}] Step 3/4: review (hachimoku) Done. "
-            f"(exit_code={hachimoku_result.returncode})"
-        )
-        _print_failure("review (hachimoku)")
-        return hachimoku_result.returncode
-
-    ui.console.print(f"\\[{COMMAND_NAME}] Step 3/4: review (hachimoku) Done. (exit_code=0)")
+    ui.console.print(
+        f"\\[{COMMAND_NAME}] Step 3/4: review (hachimoku) Done. "
+        f"(exit_code={hachimoku_result.returncode})"
+    )
 
     # Step 3b: respond-review
     if not _run_step(

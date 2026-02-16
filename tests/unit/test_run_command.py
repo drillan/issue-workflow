@@ -320,24 +320,24 @@ class TestRunStepFailure:
             # 2 Claude calls before 8moku timeout
             assert mock_runner.run.call_count == 2
 
-    def test_step3a_failure_stops_before_respond(
+    def test_step3a_findings_continues_to_respond(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
         mock_log_execution: MagicMock,
         mock_pr_detector: MagicMock,
     ) -> None:
-        """8moku failure prevents respond-review and subsequent steps."""
+        """8moku non-zero exit code (findings) continues to respond-review."""
         with patch(f"{_MOD}.subprocess.run") as mock_sub:
-            mock_sub.return_value = MagicMock(returncode=1, stdout="", stderr="err")
+            mock_sub.return_value = MagicMock(returncode=2, stdout="Found 2 issues", stderr="")
 
             from issue_workflow.cli.commands.run import _run_workflow
 
             exit_code = _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=3600)
 
-            assert exit_code == 1
-            # 2 Claude calls (start-issue, create-pr) before 8moku failure
-            assert mock_runner.run.call_count == 2
+            assert exit_code == 0
+            # 5 Claude calls: start-issue, create-pr, respond-review, push-changes, merge-pr
+            assert mock_runner.run.call_count == 5
 
     def test_step3b_failure_stops_before_push(
         self,
