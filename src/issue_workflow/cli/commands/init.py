@@ -9,6 +9,7 @@ from issue_workflow.cli import ui
 from issue_workflow.models.config import DDDSettings, DocumentationSettings
 from issue_workflow.models.preset import LanguagePreset
 from issue_workflow.services.github import check_gh_availability
+from issue_workflow.services.gitignore import ensure_gitignore_entry
 from issue_workflow.services.hachimoku import (
     HachimokuInitError,
     HachimokuInstallError,
@@ -186,6 +187,12 @@ def _run_init(language: str | None, non_interactive: bool, force: bool) -> None:
     except (HachimokuInstallError, HachimokuInitError) as e:
         ui.print_error(f"Failed to setup hachimoku: {e}")
         raise typer.Exit(EXIT_GENERAL_ERROR) from e
+
+    # Add /.issue-workflow/ to .gitignore
+    if ensure_gitignore_entry(project_dir):
+        ui.print_success("Added /.issue-workflow/ to .gitignore")
+    else:
+        ui.print_info("/.issue-workflow/ already in .gitignore")
 
     ui.print_success("Issue Workflow initialized successfully!")
     ui.print_info("Run 'claude' to start using the workflow commands")
