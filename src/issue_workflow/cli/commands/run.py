@@ -117,7 +117,7 @@ def _run_workflow(
         ctx,
         "Step 1/4: start-issue",
         "start-issue",
-        f"/start-issue {issue_number}",
+        f"/start-issue {issue_number} --force",
         {"issue_number": issue_number, "worktree": worktree},
         cwd=ctx.cwd_for_skill,
         verbose=verbose,

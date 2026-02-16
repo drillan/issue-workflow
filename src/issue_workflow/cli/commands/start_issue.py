@@ -94,7 +94,7 @@ def _run_start_issue(
     # Execute claude -p
     runner = ClaudeRunner()
     result = runner.run(
-        f"/start-issue {issue_number}",
+        f"/start-issue {issue_number} --force",
         cwd=cwd,
         timeout_seconds=timeout,
         verbose=verbose,
