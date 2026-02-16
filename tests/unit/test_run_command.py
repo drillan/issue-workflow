@@ -106,7 +106,7 @@ class TestRunBasic:
         _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=3600)
 
         first_call = mock_runner.run.call_args_list[0]
-        assert first_call[0][0] == "/start-issue 199"
+        assert first_call[0][0] == "/start-issue 199 --force"
 
     def test_step2_calls_create_pr_prompt(
         self,

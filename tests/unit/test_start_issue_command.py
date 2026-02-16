@@ -64,7 +64,7 @@ class TestStartIssueBasic:
 
         mock_runner.run.assert_called_once()
         call_kwargs = mock_runner.run.call_args
-        assert call_kwargs[0][0] == "/start-issue 199"
+        assert call_kwargs[0][0] == "/start-issue 199 --force"
 
     def test_calls_log_execution(
         self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
