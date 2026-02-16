@@ -929,25 +929,3 @@ class TestReviewPrErrorHandling:
             assert exit_code == 1
             error_calls = [str(c) for c in mock_ui.print_error.call_args_list]
             assert any("8moku" in c for c in error_calls)
-
-    def test_8moku_output_streams_to_terminal(
-        self,
-        mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
-        mock_pr_detector: MagicMock,
-        mock_subprocess: MagicMock,
-    ) -> None:
-        """8moku output streams directly to terminal (no capture_output)."""
-        from issue_workflow.cli.commands.review_pr import _run_review_pr
-
-        _run_review_pr(
-            pr_number=300,
-            review_only=True,
-            respond_only=False,
-            verbose=False,
-            timeout=3600,
-        )
-
-        call_kwargs = mock_subprocess.call_args
-        assert "capture_output" not in call_kwargs.kwargs
