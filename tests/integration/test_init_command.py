@@ -1,9 +1,6 @@
 """Integration tests for init command."""
 
 import json
-import os
-import subprocess
-from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import patch
 
@@ -15,33 +12,6 @@ runner = CliRunner()
 
 class TestInitCommand:
     """Tests for issue-workflow init command."""
-
-    @pytest.fixture
-    def temp_project(self, tmp_path: Path) -> Generator[Path]:
-        """Create a temporary project directory."""
-        project_dir = tmp_path / "test-project"
-        project_dir.mkdir()
-
-        # Initialize as git repo
-        subprocess.run(["git", "init"], cwd=project_dir, capture_output=True, check=True)
-        subprocess.run(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=project_dir,
-            capture_output=True,
-            check=True,
-        )
-        subprocess.run(
-            ["git", "config", "user.name", "Test User"],
-            cwd=project_dir,
-            capture_output=True,
-            check=True,
-        )
-
-        # Change to project directory
-        original_dir = Path.cwd()
-        os.chdir(project_dir)
-        yield project_dir
-        os.chdir(original_dir)
 
     def test_init_with_python_preset(self, temp_project: Path) -> None:
         """Test init command with Python preset."""
@@ -179,31 +149,6 @@ class TestInitCommand:
 class TestInitHachimokuSetup:
     """Tests for hachimoku setup during init (T084)."""
 
-    @pytest.fixture
-    def temp_project(self, tmp_path: Path) -> Generator[Path]:
-        """Create a temporary project directory."""
-        project_dir = tmp_path / "test-project"
-        project_dir.mkdir()
-
-        subprocess.run(["git", "init"], cwd=project_dir, capture_output=True, check=True)
-        subprocess.run(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=project_dir,
-            capture_output=True,
-            check=True,
-        )
-        subprocess.run(
-            ["git", "config", "user.name", "Test User"],
-            cwd=project_dir,
-            capture_output=True,
-            check=True,
-        )
-
-        original_dir = Path.cwd()
-        os.chdir(project_dir)
-        yield project_dir
-        os.chdir(original_dir)
-
     def test_init_calls_setup_hachimoku(self, temp_project: Path) -> None:
         """Test that init command calls setup_hachimoku (T084)."""
         from issue_workflow.cli.main import app
@@ -263,3 +208,37 @@ class TestInitHachimokuSetup:
                 pytest.skip("gh CLI not available or not authenticated")
 
             assert result.exit_code != 0
+
+
+class TestInitGitignoreSetup:
+    """Tests for .gitignore setup during init (#92)."""
+
+    def test_init_adds_issue_workflow_to_gitignore(self, temp_project: Path) -> None:
+        """Test that init adds /.issue-workflow/ to .gitignore (#92)."""
+        from issue_workflow.cli.main import app
+
+        with patch("issue_workflow.cli.commands.init.setup_hachimoku") as mock_setup:
+            mock_setup.return_value = (False, False)
+
+            result = runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
+
+            if result.exit_code != 0 and "gh" in result.output.lower():
+                pytest.skip("gh CLI not available or not authenticated")
+
+            gitignore = temp_project / ".gitignore"
+            assert gitignore.exists()
+            assert "/.issue-workflow/" in gitignore.read_text()
+
+    def test_init_shows_gitignore_added_message(self, temp_project: Path) -> None:
+        """Test that init shows message when .gitignore entry is added (#92)."""
+        from issue_workflow.cli.main import app
+
+        with patch("issue_workflow.cli.commands.init.setup_hachimoku") as mock_setup:
+            mock_setup.return_value = (False, False)
+
+            result = runner.invoke(app, ["init", "--language", "python", "--non-interactive"])
+
+            if result.exit_code != 0 and "gh" in result.output.lower():
+                pytest.skip("gh CLI not available or not authenticated")
+
+            assert "/.issue-workflow/" in result.output
