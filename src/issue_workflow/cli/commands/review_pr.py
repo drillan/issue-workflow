@@ -36,7 +36,11 @@ def _run_review_pr(
         timeout: Timeout in seconds.
 
     Returns:
-        Exit code (0 for success, non-zero for failure).
+        Exit code. In default mode, returns the respond-review exit code
+        (hachimoku findings do not affect the exit code). In --review-only
+        mode, returns hachimoku exit code (0 = no findings, non-zero =
+        findings count). In --respond-only mode, returns the respond-review
+        exit code.
 
     Raises:
         typer.Exit: If --review-only and --respond-only are both specified.
