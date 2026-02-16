@@ -32,9 +32,8 @@ def ensure_gitignore_entry(project_dir: Path) -> bool:
             content += "\n"
 
         content += f"\n{GITIGNORE_SECTION_COMMENT}\n{GITIGNORE_ENTRY}\n"
-        gitignore_path.write_text(content)
     else:
         content = f"{GITIGNORE_SECTION_COMMENT}\n{GITIGNORE_ENTRY}\n"
-        gitignore_path.write_text(content)
 
+    gitignore_path.write_text(content)
     return True

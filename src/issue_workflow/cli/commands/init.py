@@ -189,10 +189,17 @@ def _run_init(language: str | None, non_interactive: bool, force: bool) -> None:
         raise typer.Exit(EXIT_GENERAL_ERROR) from e
 
     # Add /.issue-workflow/ to .gitignore
-    if ensure_gitignore_entry(project_dir):
-        ui.print_success("Added /.issue-workflow/ to .gitignore")
-    else:
-        ui.print_info("/.issue-workflow/ already in .gitignore")
+    try:
+        if ensure_gitignore_entry(project_dir):
+            ui.print_success("Added /.issue-workflow/ to .gitignore")
+        else:
+            ui.print_info("/.issue-workflow/ already in .gitignore")
+    except OSError as e:
+        ui.print_error(
+            f"Failed to update .gitignore: {e}\n"
+            "Please add '/.issue-workflow/' to .gitignore manually."
+        )
+        raise typer.Exit(EXIT_GENERAL_ERROR) from e
 
     ui.print_success("Issue Workflow initialized successfully!")
     ui.print_info("Run 'claude' to start using the workflow commands")

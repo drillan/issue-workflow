@@ -5,7 +5,7 @@ from pathlib import Path
 from issue_workflow.services.gitignore import ensure_gitignore_entry
 
 GITIGNORE_ENTRY = "/.issue-workflow/"
-GITIGNORE_COMMENT = "# issue-workflow"
+GITIGNORE_SECTION_COMMENT = "# issue-workflow"
 
 
 class TestEnsureGitignoreEntry:
@@ -31,7 +31,7 @@ class TestEnsureGitignoreEntry:
         ensure_gitignore_entry(tmp_path)
 
         content = (tmp_path / ".gitignore").read_text()
-        assert GITIGNORE_COMMENT in content
+        assert GITIGNORE_SECTION_COMMENT in content
 
     def test_appends_to_existing_gitignore(self, tmp_path: Path) -> None:
         """Test entry is appended to existing .gitignore."""
@@ -71,7 +71,7 @@ class TestEnsureGitignoreEntry:
     def test_skips_when_entry_with_comment_already_exists(self, tmp_path: Path) -> None:
         """Test skips when full block (comment + entry) already present."""
         gitignore = tmp_path / ".gitignore"
-        gitignore.write_text(f"node_modules/\n{GITIGNORE_COMMENT}\n{GITIGNORE_ENTRY}\n")
+        gitignore.write_text(f"node_modules/\n{GITIGNORE_SECTION_COMMENT}\n{GITIGNORE_ENTRY}\n")
 
         result = ensure_gitignore_entry(tmp_path)
 
