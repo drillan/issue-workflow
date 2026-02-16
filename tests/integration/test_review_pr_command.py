@@ -30,7 +30,7 @@ class TestReviewPrCliExecution:
         mock_log: MagicMock,
     ) -> None:
         """issue-workflow review-pr 300 succeeds."""
-        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_subprocess.return_value = MagicMock(returncode=0)
         mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr", "300"])
@@ -51,7 +51,7 @@ class TestReviewPrCliExecution:
         mock_log: MagicMock,
     ) -> None:
         """issue-workflow review-pr (no PR number) uses detect_pr_number."""
-        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_subprocess.return_value = MagicMock(returncode=0)
         mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr"])
@@ -71,7 +71,7 @@ class TestReviewPrCliExecution:
         mock_log: MagicMock,
     ) -> None:
         """issue-workflow review-pr --review-only 300 succeeds."""
-        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_subprocess.return_value = MagicMock(returncode=0)
 
         result = runner.invoke(app, ["review-pr", "300", "--review-only"])
 
@@ -129,7 +129,7 @@ class TestReviewPrCliExecution:
         mock_log: MagicMock,
     ) -> None:
         """-v option is accepted."""
-        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_subprocess.return_value = MagicMock(returncode=0)
         mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr", "300", "-v"])
@@ -150,7 +150,7 @@ class TestReviewPrCliExecution:
         mock_log: MagicMock,
     ) -> None:
         """--timeout option is accepted."""
-        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_subprocess.return_value = MagicMock(returncode=0)
         mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr", "300", "--timeout", "600"])
@@ -171,7 +171,7 @@ class TestReviewPrCliExecution:
         mock_log: MagicMock,
     ) -> None:
         """Output contains [review-pr] Starting... message."""
-        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_subprocess.return_value = MagicMock(returncode=0)
         mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr", "300"])
@@ -192,7 +192,7 @@ class TestReviewPrCliExecution:
         mock_log: MagicMock,
     ) -> None:
         """Output contains [review-pr] Done. message."""
-        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_subprocess.return_value = MagicMock(returncode=0)
         mock_runner_cls.return_value.run.return_value = make_claude_result()
 
         result = runner.invoke(app, ["review-pr", "300"])
@@ -213,7 +213,7 @@ class TestReviewPrCliExecution:
         mock_log: MagicMock,
     ) -> None:
         """Non-zero exit code from ClaudeResult is propagated."""
-        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        mock_subprocess.return_value = MagicMock(returncode=0)
         mock_runner_cls.return_value.run.return_value = make_claude_result(
             exit_code=1, is_error=True
         )

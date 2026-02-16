@@ -73,8 +73,6 @@ def _run_review_pr(
         try:
             hachimoku_result = subprocess.run(
                 ["8moku", str(resolved_pr)],
-                capture_output=True,
-                text=True,
                 check=False,
             )
         except OSError as e:
@@ -83,11 +81,6 @@ def _run_review_pr(
             return 1
 
         hachimoku_exit_code = hachimoku_result.returncode
-
-        if hachimoku_result.stdout:
-            ui.console.print(hachimoku_result.stdout.rstrip())
-        if hachimoku_result.stderr:
-            ui.console.print(hachimoku_result.stderr.rstrip())
 
     # Phase 2: respond-review via claude (unless --review-only)
     if not review_only:

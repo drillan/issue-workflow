@@ -52,7 +52,7 @@ def mock_pr_detector() -> Iterator[MagicMock]:
 def mock_subprocess() -> Iterator[MagicMock]:
     """Mock subprocess.run for 8moku execution."""
     with patch(f"{_MOD}.subprocess.run") as m:
-        m.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        m.return_value = MagicMock(returncode=0)
         yield m
 
 
@@ -103,7 +103,7 @@ class TestReviewPrBasic:
         cmd = mock_subprocess.call_args[0][0]
         assert cmd == ["8moku", "300"]
 
-    def test_8moku_called_with_capture_output(
+    def test_8moku_called_without_capture_output(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
@@ -111,7 +111,7 @@ class TestReviewPrBasic:
         mock_pr_detector: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
-        """subprocess.run is called with capture_output=True, text=True."""
+        """subprocess.run is called without capture_output for real-time streaming."""
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
         _run_review_pr(
@@ -123,8 +123,7 @@ class TestReviewPrBasic:
         )
 
         call_kwargs = mock_subprocess.call_args
-        assert call_kwargs.kwargs.get("capture_output") is True
-        assert call_kwargs.kwargs.get("text") is True
+        assert "capture_output" not in call_kwargs.kwargs
 
     def test_calls_claude_runner_with_respond_review_prompt(
         self,
@@ -336,8 +335,6 @@ class TestReviewPrReviewOnly:
         mock_subprocess: MagicMock,
     ) -> None:
         """--review-only returns 8moku's exit code."""
-        mock_subprocess.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
         exit_code = _run_review_pr(
@@ -843,7 +840,7 @@ class TestReviewPrErrorHandling:
         mock_subprocess: MagicMock,
     ) -> None:
         """8moku non-zero exit code (findings) still runs respond-review."""
-        mock_subprocess.return_value = MagicMock(returncode=2, stdout="Found 2 issues", stderr="")
+        mock_subprocess.return_value = MagicMock(returncode=2)
 
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
@@ -867,7 +864,7 @@ class TestReviewPrErrorHandling:
         mock_subprocess: MagicMock,
     ) -> None:
         """When 8moku has findings and respond-review fails, returns respond-review exit code."""
-        mock_subprocess.return_value = MagicMock(returncode=2, stdout="Found 2 issues", stderr="")
+        mock_subprocess.return_value = MagicMock(returncode=2)
         mock_runner.run.return_value = make_claude_result(exit_code=1, is_error=True)
 
         from issue_workflow.cli.commands.review_pr import _run_review_pr
@@ -892,7 +889,7 @@ class TestReviewPrErrorHandling:
         mock_subprocess: MagicMock,
     ) -> None:
         """--review-only returns 8moku's findings exit code (non-zero)."""
-        mock_subprocess.return_value = MagicMock(returncode=3, stdout="Found 3 issues", stderr="")
+        mock_subprocess.return_value = MagicMock(returncode=3)
 
         from issue_workflow.cli.commands.review_pr import _run_review_pr
 
@@ -932,28 +929,3 @@ class TestReviewPrErrorHandling:
             assert exit_code == 1
             error_calls = [str(c) for c in mock_ui.print_error.call_args_list]
             assert any("8moku" in c for c in error_calls)
-
-    def test_8moku_stdout_printed(
-        self,
-        mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
-        mock_pr_detector: MagicMock,
-        mock_subprocess: MagicMock,
-    ) -> None:
-        """8moku stdout is printed to console."""
-        mock_subprocess.return_value = MagicMock(returncode=0, stdout="review output\n", stderr="")
-
-        with patch(f"{_MOD}.ui") as mock_ui:
-            from issue_workflow.cli.commands.review_pr import _run_review_pr
-
-            _run_review_pr(
-                pr_number=300,
-                review_only=True,
-                respond_only=False,
-                verbose=False,
-                timeout=3600,
-            )
-
-            all_calls = [str(c) for c in mock_ui.console.print.call_args_list]
-            assert any("review output" in c for c in all_calls)
