@@ -65,7 +65,7 @@ def _create_git_wrapper_that_fails_on_branch(
         f'    echo "fatal: unable to read tree" >&2\n'
         f"    exit 128\n"
         f"fi\n"
-        f'exec {real_git} "$@"\n'
+        f'exec "{real_git}" "$@"\n'
     )
     git_wrapper.chmod(stat.S_IRWXU)
 
@@ -140,8 +140,8 @@ class TestNormalOperation:
             f"stderr={result.stderr!r}"
         )
         output = json.loads(result.stdout.strip())
-        assert "BRANCH_NAME" in output
-        assert "FEATURE_NUM" in output
+        assert output["BRANCH_NAME"] == "001-test-feat"
+        assert output["FEATURE_NUM"] == "001"
 
     def test_existing_numbered_branches_detected(self, temp_git_repo: Path) -> None:
         """Existing 00N-* branches increment the number correctly."""
