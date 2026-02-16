@@ -200,7 +200,9 @@ class TestClaudeRunnerVerbose:
         tool_use_event = json.dumps(
             {
                 "type": "assistant",
-                "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "ls"}}],
+                "message": {
+                    "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "ls"}}],
+                },
             }
         )
         result_event = json.dumps({"type": "result", "subtype": "success"})
@@ -258,7 +260,9 @@ class TestClaudeRunnerVerbose:
     @patch("issue_workflow.services.claude_runner.subprocess.Popen")
     def test_verbose_no_result_event_returns_basic_result(self, mock_popen: MagicMock) -> None:
         """When no result event in stream, returns basic ClaudeResult from returncode."""
-        assistant_event = json.dumps({"type": "assistant", "content": [{"type": "text"}]})
+        assistant_event = json.dumps(
+            {"type": "assistant", "message": {"content": [{"type": "text"}]}}
+        )
 
         mock_process = MagicMock()
         mock_process.stdout = iter([assistant_event + "\n"])
