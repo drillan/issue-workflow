@@ -1,5 +1,6 @@
 """Integration tests for PR comment fetching."""
 
+import subprocess
 from unittest.mock import MagicMock, patch
 
 from issue_workflow.services.github import get_pr_comments, get_pr_for_branch
@@ -135,3 +136,26 @@ class TestGetPrForBranch:
             assert result.success is False
             assert result.error is not None
             assert "HTTP 502" in result.error
+
+    def test_get_pr_for_branch_invalid_json_response(self) -> None:
+        """Test error handling when gh returns invalid JSON."""
+        with patch("subprocess.run") as mock_run:
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_result.stdout = "not valid json{{"
+            mock_run.return_value = mock_result
+
+            result = get_pr_for_branch("feat/123-feature")
+            assert result.success is False
+            assert result.error is not None
+            assert "Invalid JSON response" in result.error
+
+    def test_get_pr_for_branch_subprocess_exception(self) -> None:
+        """Test error handling when subprocess.run raises SubprocessError."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.SubprocessError("command not found")
+
+            result = get_pr_for_branch("feat/123-feature")
+            assert result.success is False
+            assert result.error is not None
+            assert "command not found" in result.error
