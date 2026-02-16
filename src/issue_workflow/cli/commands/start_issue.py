@@ -65,6 +65,9 @@ def _run_start_issue(
 ) -> int:
     """Execute the start-issue command logic.
 
+    Always invokes the skill with --force to skip plan mode and
+    interactive confirmations (including TDD user approval).
+
     Args:
         issue_number: GitHub Issue number.
         worktree: Whether to use worktree.
@@ -135,7 +138,8 @@ def start_issue(
 ) -> None:
     """Start working on a GitHub Issue.
 
-    Executes the /start-issue skill via claude -p.
+    Executes the /start-issue skill via claude -p with --force, which skips
+    plan mode and all interactive confirmations (including TDD user approval).
 
     \u26a0\ufe0f  Security: This command uses --dangerously-skip-permissions to bypass
     Claude Code's permission checks for automated execution. Only run in

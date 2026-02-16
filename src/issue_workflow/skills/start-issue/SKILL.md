@@ -78,7 +78,9 @@ If branch exists, checkout instead of create.
 
 ### Step 4: Plan Implementation
 
-Unless `--force` is specified, enter plan mode and create an implementation plan.
+Unless `--force` is specified, enter plan mode before proceeding. With `--force`, execute all phases directly without entering plan mode and without interactive confirmations.
+
+Regardless of `--force`, execute the following phases to create an implementation plan.
 
 First, read the workflow configuration:
 
