@@ -141,7 +141,8 @@ class ClaudeRunner:
                 event_type = event.get("type", "")
 
                 if event_type == "assistant" and on_tool_use is not None:
-                    content_list = event.get("content", [])
+                    message = event.get("message", {})
+                    content_list = message.get("content", []) if isinstance(message, dict) else []
                     if isinstance(content_list, list):
                         for content_item in content_list:
                             if (

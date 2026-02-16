@@ -200,7 +200,9 @@ class TestClaudeRunnerVerbose:
         tool_use_event = json.dumps(
             {
                 "type": "assistant",
-                "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "ls"}}],
+                "message": {
+                    "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "ls"}}],
+                },
             }
         )
         result_event = json.dumps({"type": "result", "subtype": "success"})
@@ -215,7 +217,7 @@ class TestClaudeRunnerVerbose:
         runner = ClaudeRunner()
         runner.run("prompt", verbose=True, on_tool_use=callback)
 
-        callback.assert_called()
+        callback.assert_called_once_with("Bash", str({"command": "ls"}))
 
     @patch("issue_workflow.services.claude_runner.subprocess.Popen")
     def test_verbose_timeout(self, mock_popen: MagicMock) -> None:
@@ -258,7 +260,9 @@ class TestClaudeRunnerVerbose:
     @patch("issue_workflow.services.claude_runner.subprocess.Popen")
     def test_verbose_no_result_event_returns_basic_result(self, mock_popen: MagicMock) -> None:
         """When no result event in stream, returns basic ClaudeResult from returncode."""
-        assistant_event = json.dumps({"type": "assistant", "content": [{"type": "text"}]})
+        assistant_event = json.dumps(
+            {"type": "assistant", "message": {"content": [{"type": "text"}]}}
+        )
 
         mock_process = MagicMock()
         mock_process.stdout = iter([assistant_event + "\n"])
@@ -302,6 +306,25 @@ class TestClaudeRunnerVerbose:
         result = runner.run("prompt", verbose=True)
 
         assert result.subtype == "success"
+        assert result.exit_code == 0
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_non_dict_message_skips_callback(self, mock_popen: MagicMock) -> None:
+        """When message is non-dict, on_tool_use callback is not called."""
+        malformed_event = json.dumps({"type": "assistant", "message": "unexpected_string"})
+        result_event = json.dumps({"type": "result", "subtype": "success"})
+
+        mock_process = MagicMock()
+        mock_process.stdout = iter([malformed_event + "\n", result_event + "\n"])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 0
+        mock_popen.return_value = mock_process
+
+        callback = MagicMock()
+        runner = ClaudeRunner()
+        result = runner.run("prompt", verbose=True, on_tool_use=callback)
+
+        callback.assert_not_called()
         assert result.exit_code == 0
 
     @patch("issue_workflow.services.claude_runner.time.monotonic")
