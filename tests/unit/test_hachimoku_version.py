@@ -21,11 +21,13 @@ class TestGetInstalledVersion:
 
     def test_returns_version_when_installed(self) -> None:
         """Test returns version string when 8moku is installed."""
-        with patch("issue_workflow.services.hachimoku_version.subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
-            mock_run.return_value.stdout = "hachimoku 0.0.2\n"
-            result = get_installed_version()
-            assert result == "0.0.2"
+        with patch("issue_workflow.services.hachimoku_version.shutil.which") as mock_which:
+            mock_which.return_value = "/usr/bin/8moku"
+            with patch("issue_workflow.services.hachimoku_version.subprocess.run") as mock_run:
+                mock_run.return_value.returncode = 0
+                mock_run.return_value.stdout = "hachimoku 0.0.2\n"
+                result = get_installed_version()
+                assert result == "0.0.2"
 
     def test_returns_none_when_not_installed(self) -> None:
         """Test returns None when 8moku is not installed."""
@@ -38,9 +40,7 @@ class TestGetInstalledVersion:
         """Test returns None when 8moku --version returns non-zero exit code."""
         with patch("issue_workflow.services.hachimoku_version.shutil.which") as mock_which:
             mock_which.return_value = "/usr/bin/8moku"
-            with patch(
-                "issue_workflow.services.hachimoku_version.subprocess.run"
-            ) as mock_run:
+            with patch("issue_workflow.services.hachimoku_version.subprocess.run") as mock_run:
                 mock_run.return_value.returncode = 1
                 mock_run.return_value.stdout = ""
                 result = get_installed_version()
@@ -50,9 +50,7 @@ class TestGetInstalledVersion:
         """Test returns None when version output cannot be parsed."""
         with patch("issue_workflow.services.hachimoku_version.shutil.which") as mock_which:
             mock_which.return_value = "/usr/bin/8moku"
-            with patch(
-                "issue_workflow.services.hachimoku_version.subprocess.run"
-            ) as mock_run:
+            with patch("issue_workflow.services.hachimoku_version.subprocess.run") as mock_run:
                 mock_run.return_value.returncode = 0
                 mock_run.return_value.stdout = "unexpected output format"
                 result = get_installed_version()
@@ -62,9 +60,7 @@ class TestGetInstalledVersion:
         """Test returns None when subprocess raises an exception."""
         with patch("issue_workflow.services.hachimoku_version.shutil.which") as mock_which:
             mock_which.return_value = "/usr/bin/8moku"
-            with patch(
-                "issue_workflow.services.hachimoku_version.subprocess.run"
-            ) as mock_run:
+            with patch("issue_workflow.services.hachimoku_version.subprocess.run") as mock_run:
                 mock_run.side_effect = OSError("Command not found")
                 result = get_installed_version()
                 assert result is None
@@ -73,9 +69,7 @@ class TestGetInstalledVersion:
         """Test that 8moku --version is called correctly."""
         with patch("issue_workflow.services.hachimoku_version.shutil.which") as mock_which:
             mock_which.return_value = "/usr/bin/8moku"
-            with patch(
-                "issue_workflow.services.hachimoku_version.subprocess.run"
-            ) as mock_run:
+            with patch("issue_workflow.services.hachimoku_version.subprocess.run") as mock_run:
                 mock_run.return_value.returncode = 0
                 mock_run.return_value.stdout = "hachimoku 0.0.3\n"
                 get_installed_version()
@@ -83,6 +77,8 @@ class TestGetInstalledVersion:
                     ["8moku", "--version"],
                     capture_output=True,
                     text=True,
+                    check=False,
+                    timeout=HTTP_TIMEOUT_SECONDS,
                 )
 
 

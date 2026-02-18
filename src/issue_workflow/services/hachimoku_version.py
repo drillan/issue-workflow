@@ -47,8 +47,10 @@ def get_installed_version() -> str | None:
             ["8moku", "--version"],
             capture_output=True,
             text=True,
+            check=False,
+            timeout=HTTP_TIMEOUT_SECONDS,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return None
 
     if completed.returncode != 0:
@@ -82,9 +84,14 @@ def get_remote_version() -> str | None:
         return None
 
     try:
-        return data["project"]["version"]  # type: ignore[no-any-return]
+        version = data["project"]["version"]
     except (KeyError, TypeError):
         return None
+
+    if not isinstance(version, str):
+        return None
+
+    return version
 
 
 def check_hachimoku_version() -> HachimokuVersionResult | None:
