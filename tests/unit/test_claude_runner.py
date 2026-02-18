@@ -5,7 +5,10 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
+from issue_workflow.services.claude_runner import (
+    DEFAULT_TIMEOUT_SECONDS,
+    ClaudeRunner,
+)
 
 
 class TestClaudeRunnerNonVerbose:
@@ -58,6 +61,22 @@ class TestClaudeRunnerNonVerbose:
         assert "--dangerously-skip-permissions" in cmd
         assert "--output-format" in cmd
         assert "json" in cmd
+
+    @patch("issue_workflow.services.claude_runner.subprocess.run")
+    def test_run_includes_disallowed_tools_askuserquestion(self, mock_run: MagicMock) -> None:
+        """Test --disallowed-tools AskUserQuestion is included in non-verbose command."""
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = json.dumps({"type": "result"})
+        mock_run.return_value = mock_result
+
+        runner = ClaudeRunner()
+        runner.run("test prompt")
+
+        cmd = mock_run.call_args[0][0]
+        assert "--disallowed-tools" in cmd
+        disallowed_index = cmd.index("--disallowed-tools")
+        assert cmd[disallowed_index + 1] == "AskUserQuestion"
 
     @patch("issue_workflow.services.claude_runner.subprocess.run")
     def test_run_with_custom_cwd(self, mock_run: MagicMock) -> None:
@@ -193,6 +212,23 @@ class TestClaudeRunnerVerbose:
         assert "--output-format" in call_args
         assert "stream-json" in call_args
         assert "--verbose" in call_args
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_includes_disallowed_tools_askuserquestion(self, mock_popen: MagicMock) -> None:
+        """Test --disallowed-tools AskUserQuestion is included in verbose command."""
+        mock_process = MagicMock()
+        mock_process.stdout = iter([json.dumps({"type": "result", "subtype": "success"}) + "\n"])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 0
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        runner.run("prompt", verbose=True)
+
+        cmd = mock_popen.call_args[0][0]
+        assert "--disallowed-tools" in cmd
+        disallowed_index = cmd.index("--disallowed-tools")
+        assert cmd[disallowed_index + 1] == "AskUserQuestion"
 
     @patch("issue_workflow.services.claude_runner.subprocess.Popen")
     def test_verbose_on_tool_use_callback(self, mock_popen: MagicMock) -> None:
