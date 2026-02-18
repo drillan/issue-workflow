@@ -25,6 +25,14 @@ GitHub Issue駆動開発ワークフローツールキット for Claude Code。I
 uv tool install git+https://github.com/drillan/issue-workflow.git
 ```
 
+### 特定バージョンのインストール
+
+特定のバージョンをインストールする場合はタグを指定:
+
+```bash
+uv tool install git+https://github.com/drillan/issue-workflow@v0.1.1
+```
+
 ## クイックスタート
 
 ```bash
