@@ -185,28 +185,34 @@ lib_get_pr_number() {
         return 1
     fi
 
+    # ブランチ名を取得（gh pr list --head に必要）
+    local branch_name
+    branch_name=$(git branch --show-current)
+
+    if [[ -z "$branch_name" ]]; then
+        echo "⚠️ 現在のブランチを検出できません（detached HEAD状態の可能性があります）" >&2
+        return 1
+    fi
+
     # PR番号を取得（エラーを一時ファイルに保存）
     local error_file
     error_file=$(mktemp)
-    # シグナルを受けた場合もクリーンアップ
-    trap 'rm -f "$error_file" 2>/dev/null' RETURN
 
-    local pr_num
-    if pr_num=$(gh pr view --json number --jq '.number' 2>"$error_file"); then
-        echo "$pr_num"
+    local pr_output
+    if pr_output=$(gh pr list --head "$branch_name" --state open --json number --jq '.[0].number' 2>"$error_file"); then
+        # gh pr list はPR未検出時に空配列を返し、jqが "null" を出力する
+        if [[ -z "$pr_output" || "$pr_output" == "null" ]]; then
+            rm -f "$error_file"
+            echo ""
+            return 0
+        fi
+        rm -f "$error_file"
+        echo "$pr_output"
         return 0
     else
         local error_msg
         error_msg=$(cat "$error_file")
-
-        # PRが存在しない場合は空を返す（正常）
-        if [[ "$error_msg" == *"no pull requests found"* ]] || \
-           [[ "$error_msg" == *"Could not resolve"* ]]; then
-            echo ""
-            return 0
-        fi
-
-        # その他のエラー
+        rm -f "$error_file"
         echo "⚠️ PR情報の取得に失敗しました: $error_msg" >&2
         return 1
     fi
@@ -226,7 +232,7 @@ lib_detect_pr_or_exit() {
     if [[ -z "$pr_num" ]]; then
         echo "⚠️ 現在のブランチに紐づくPRが見つかりません" >&2
         echo "" >&2
-        echo "先に complete-issue.sh を実行してPRを作成してください。" >&2
+        echo "先に create-pr.sh を実行してPRを作成してください。" >&2
         exit 1
     fi
 
@@ -397,33 +403,3 @@ lib_get_worktree_path() {
     fi
 }
 
-# ========================================
-# 設定ファイル読み取り
-# ========================================
-
-# CI レビューモードが有効かどうかを確認
-# 戻り値: 0=有効, 1=無効またはエラー
-lib_is_ci_review_enabled() {
-    local config_file
-    config_file="$(lib_get_project_root)/.claude/workflow-config.json"
-
-    if [[ ! -f "$config_file" ]]; then
-        return 1  # 設定ファイルなし → デフォルト（ローカルレビュー）
-    fi
-
-    # jqの存在確認
-    if ! command -v jq &>/dev/null; then
-        echo "⚠️ jqコマンドが見つかりません。ci_review設定の読み取りにはjqが必要です。" >&2
-        return 1
-    fi
-
-    local ci_review
-    local jq_error
-    if ! ci_review=$(jq -r '.workflow.ci_review // false' "$config_file" 2>&1); then
-        jq_error="$ci_review"
-        echo "⚠️ 設定ファイルの読み取りに失敗しました: $jq_error" >&2
-        return 1
-    fi
-
-    [[ "$ci_review" == "true" ]]
-}

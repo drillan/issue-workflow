@@ -71,7 +71,33 @@ This creates:
 2. New worktree directory
 3. Checks out the branch in the worktree
 
-### Step 6: Report Success
+### Step 6: Copy .hachimoku/ Configuration
+
+If `.hachimoku/` directory exists in the repository root, copy it to the new worktree.
+
+If `.hachimoku/` is already present in the worktree (git-tracked), skip the copy. Otherwise copy from the repository root:
+
+```bash
+if [ ! -d <worktree-path>/.hachimoku ]; then
+  cp -r .hachimoku/ <worktree-path>/.hachimoku/
+fi
+```
+
+Then remove any stale JSONL files if `reviews/` exists:
+
+```bash
+find <worktree-path>/.hachimoku/reviews -name "*.jsonl" -delete 2>/dev/null || true
+```
+
+This preserves project-specific hachimoku agent customizations (agent configs, review settings).
+
+If `.hachimoku/` does not exist in the repository root, skip this step silently.
+
+**Note**: We copy (not `8moku init`) to preserve customized agent configurations.
+
+**Note**: When executed via `scripts/add-worktree.sh`, this step is handled by the script itself (Claude CLI `--allowedTools` does not include `cp`).
+
+### Step 7: Report Success
 
 ```
 ✅ Worktree created successfully

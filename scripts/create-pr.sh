@@ -1,7 +1,7 @@
 #!/bin/bash
-# complete-issue.sh - 実装完了後にcommit, push, PR作成を実行
+# create-pr.sh - 変更をコミット、プッシュしてPRを作成
 #
-# Usage: ./scripts/complete-issue.sh [-v|--verbose] [-h|--help]
+# Usage: ./scripts/create-pr.sh [-v|--verbose] [-h|--help]
 #
 # worktreeディレクトリ内で実行してください。
 
@@ -15,7 +15,7 @@ lib_parse_options "$@"
 
 # ヘルプ表示
 if lib_should_show_help; then
-    lib_show_usage "complete-issue.sh" "実装完了後にcommit, push, PR作成を実行"
+    lib_show_usage "create-pr.sh" "変更をコミット、プッシュしてPRを作成"
     exit 0
 fi
 
@@ -29,7 +29,7 @@ echo ""
 
 PROMPT="以下のスキルを実行してください:
 
-/commit-commands:commit-push-pr
+/commit-push-pr
 
 実装された変更をコミットし、リモートにプッシュして、プルリクエストを作成してください。"
 

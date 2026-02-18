@@ -17,11 +17,20 @@ GitHub Issue駆動開発ワークフローツールキット for Claude Code。I
 - [uv](https://docs.astral.sh/uv/) (パッケージマネージャー)
 - [gh CLI](https://cli.github.com/) (GitHub CLI)
 - [Claude Code](https://www.anthropic.com/claude-code) CLI
+- [hachimoku](https://github.com/drillan/hachimoku) (`review-pr` / `run` サブコマンド用)
 
 ## インストール
 
 ```bash
 uv tool install git+https://github.com/drillan/issue-workflow.git
+```
+
+### 特定バージョンのインストール
+
+特定のバージョンをインストールする場合はタグを指定:
+
+```bash
+uv tool install git+https://github.com/drillan/issue-workflow@v0.1.1
 ```
 
 ## クイックスタート
@@ -48,10 +57,21 @@ issue-workflow init --language python
 
 ```bash
 # 1. ツールキットを更新
-uv tool install git+https://github.com/drillan/issue-workflow.git
+uv tool install --reinstall git+https://github.com/drillan/issue-workflow.git
 
 # 2. プロジェクトのコマンドとスキルを更新
 issue-workflow update
+```
+
+> **Note**: `uv tool install` は既にインストール済みの場合、何も行いません。
+> `--reinstall` フラグにより、リモートリポジトリから最新のコードを取得して再インストールします。
+
+`update`コマンドは [hachimoku](https://github.com/drillan/hachimoku) の新しいバージョンが利用可能な場合にヒントを表示します：
+
+```
+ℹ hachimoku の新しいバージョンが利用可能です (現在: 0.0.2, 最新: 0.0.3)
+  アップグレード:   uv tool install --reinstall git+https://github.com/drillan/hachimoku.git
+  エージェント更新: 8moku init --force
 ```
 
 `--dry-run`で変更内容をプレビュー：
@@ -61,6 +81,8 @@ issue-workflow update --dry-run
 ```
 
 ## CLIコマンド
+
+### セットアップコマンド
 
 | コマンド | 説明 |
 |---------|------|
@@ -72,7 +94,60 @@ issue-workflow update --dry-run
 | `issue-workflow --version` | バージョンを表示 |
 | `issue-workflow --help` | ヘルプを表示 |
 
-## プラグインコマンド（スラッシュコマンド）
+### ワークフローサブコマンド
+
+`claude -p` サブプロセス実行による開発ワークフローの自動化。各サブコマンドの実行結果は `.issue-workflow/logs/` にJSONL形式で記録されます。
+
+| # | コマンド | 説明 |
+|---|---------|------|
+| 1 | `issue-workflow start-issue <番号>` | Issue作業を開始（`/start-issue` スキルを実行） |
+| 2 | `issue-workflow create-pr` | コミット、プッシュ、PR作成（`/commit-push-pr` スキルを実行） |
+| 3 | `issue-workflow review-pr [番号]` | hachimokuレビュー＋レビュー結果に対応 |
+| 4 | `issue-workflow push-changes` | レビュー対応後の変更をプッシュ（PR作成スキップ） |
+| 5 | `issue-workflow respond-comments [番号]` | 人間のPRレビューコメントに対応 |
+| 6 | `issue-workflow merge-pr [番号]` | CIチェック完了を待機後、PRをマージ |
+| 7 | `issue-workflow run <番号>` | 全ワークフローを順次実行（ステップ1〜6） |
+
+**共通オプション**（全ワークフローサブコマンド）:
+
+| オプション | 説明 |
+|-----------|------|
+| `--verbose` / `-v` | ツール呼び出しをリアルタイム表示（stream-json） |
+| `--timeout <秒>` | claude -p のタイムアウト（デフォルト: 3600） |
+| `--help` / `-h` | 使用方法を表示 |
+
+**追加オプション**:
+
+| コマンド | オプション | 説明 |
+|---------|-----------|------|
+| `start-issue` | `--worktree` | ワークツリーを作成してスキルを実行 |
+| `review-pr` | `--review-only` | hachimokuレビューのみ実行（respond スキップ） |
+| `review-pr` | `--respond-only` | respond-reviewのみ実行（hachimoku スキップ） |
+| `run` | `--worktree` | ワークツリーを作成して全ワークフローを実行 |
+
+#### 全自動ワークフロー
+
+```bash
+# Issue #199 の全ステップを自動実行
+issue-workflow run 199
+
+# ワークツリー分離で実行
+issue-workflow run 199 --worktree
+```
+
+#### 個別コマンド
+
+```bash
+# ステップごとに実行
+issue-workflow start-issue 199
+issue-workflow create-pr
+issue-workflow review-pr
+issue-workflow push-changes
+issue-workflow respond-comments    # 人間レビューコメントへの対応
+issue-workflow merge-pr
+```
+
+## スラッシュコマンド
 
 Claude Code内で使用するコマンド。推奨ワークフロー順に記載：
 
@@ -80,17 +155,10 @@ Claude Code内で使用するコマンド。推奨ワークフロー順に記載
 |---|---------|------|------|
 | 1 | `/add-worktree` | Issue用の新規ワークツリーを作成（オプション） | `<issue番号>` |
 | 2 | `/start-issue` | Issueを読み込み、ブランチを作成し、実装計画を策定 | `<issue番号>` |
-| - | `/commit-push-pr` | コミット、プッシュ、PR作成（公式Plugin） | - |
-| - | `/pr-review-toolkit:review-pr` | PRレビュー（公式Plugin） | `<PR番号>` |
-| 3 | `/review-pr-comments` | PRレビューコメントを確認・対応 | `[PR番号]`（省略可） |
-| 4 | `/merge-pr` | CIチェック完了を待機後、PRをマージ | `<PR番号>` |
-
-### 公式Pluginとの連携
-
-本ツールキットは公式Claude Codeプラグインと連携します：
-
-- **commit-commands** - `/commit-push-pr`を提供し、コミット・プッシュ・PR作成を効率化
-- **pr-review-toolkit** - `/pr-review-toolkit:review-pr`を提供し、包括的なPRレビューを実現。[GitHub Action](https://github.com/marketplace/actions/claude-pr-reviewer)としてCI化も可能。
+| 3 | `/commit-push-pr` | コミット、プッシュ、PR作成 | - |
+| 4 | `/respond-review` | hachimokuレビュー結果に対応 | `[PR番号]`（省略可） |
+| 5 | `/review-pr-comments` | PRレビューコメントを確認・対応 | `[PR番号]`（省略可） |
+| 6 | `/merge-pr` | CIチェック完了を待機後、PRをマージ | `<PR番号>` |
 
 ## 自動起動スキル
 
@@ -188,6 +256,37 @@ uv run pytest
 
 ```bash
 uv run ruff check --fix . && uv run ruff format . && uv run mypy .
+```
+
+### Docker開発環境
+
+クリーンで再現可能なテスト環境をDockerで構築できます。
+
+**前提条件:** Docker, Docker Compose, [gh CLI](https://cli.github.com/)（ホスト側）
+
+**イメージのビルド:**
+
+```bash
+make docker-build
+```
+
+**認証:**
+
+- **GitHub CLI** — ホスト側の `gh auth token` から `GH_TOKEN` が自動注入されます
+- **Claude Code** — 初回起動時に `claude` を実行しOAuthログインを完了してください。認証情報はDockerの名前付きボリューム（`claude-auth`）に永続化され、`--rm` でコンテナを削除しても維持されます
+
+**使い方:**
+
+```bash
+make docker-dev       # 対話的な開発シェル
+make docker-test      # pytest を実行
+make docker-quality   # ruff + mypy を実行
+```
+
+**Claude Code認証のリセット:**
+
+```bash
+docker volume rm issue-workflow_claude-auth
 ```
 
 ## トラブルシューティング

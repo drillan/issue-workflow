@@ -21,16 +21,7 @@ WORKFLOW_CONFIG_SCHEMA_URL = (
 
 
 class SourceDirectoryNotFoundError(Exception):
-    """Raised when source directory for commands or skills is not found."""
-
-
-def get_commands_source_dir() -> Path:
-    """Get the source directory for command files.
-
-    Returns:
-        Path to the commands directory bundled with the package.
-    """
-    return Path(__file__).parent.parent / "commands"
+    """Raised when source directory for skills or agents is not found."""
 
 
 def get_skills_source_dir() -> Path:
@@ -40,6 +31,15 @@ def get_skills_source_dir() -> Path:
         Path to the skills directory bundled with the package.
     """
     return Path(__file__).parent.parent / "skills"
+
+
+def get_agents_source_dir() -> Path:
+    """Get the source directory for agent files.
+
+    Returns:
+        Path to the agents directory bundled with the package.
+    """
+    return Path(__file__).parent.parent / "agents"
 
 
 def _get_file_changes(
@@ -214,36 +214,6 @@ class TemplateService:
 
         return target_path
 
-    def copy_commands(self, target_dir: Path) -> Path:
-        """Copy command files to target directory.
-
-        Copies the bundled command files to .claude/commands/.
-        Preserves existing command files.
-
-        Args:
-            target_dir: Directory to write commands to (.claude/)
-
-        Returns:
-            Path to the commands directory
-
-        Raises:
-            SourceDirectoryNotFoundError: If source commands directory does not exist.
-        """
-        source_dir = get_commands_source_dir()
-        if not source_dir.exists():
-            msg = f"Commands source directory not found: {source_dir}"
-            raise SourceDirectoryNotFoundError(msg)
-
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True, exist_ok=True)
-
-        for source_file in source_dir.glob("*.md"):
-            target_file = commands_target / source_file.name
-            if not target_file.exists():
-                shutil.copy2(source_file, target_file)
-
-        return commands_target
-
     def copy_skills(self, target_dir: Path) -> Path:
         """Copy skill directories to target directory.
 
@@ -275,46 +245,35 @@ class TemplateService:
 
         return skills_target
 
-    def update_commands(self, target_dir: Path, dry_run: bool = False) -> UpdateResult:
-        """Update command files with force overwrite.
+    def copy_agents(self, target_dir: Path) -> Path:
+        """Copy agent files to target directory.
+
+        Copies the bundled agent files to .claude/agents/.
+        Preserves existing agent files.
 
         Args:
-            target_dir: Directory containing commands (.claude/)
-            dry_run: If True, only calculate changes without applying
+            target_dir: Directory to write agents to (.claude/)
 
         Returns:
-            UpdateResult with details of changes
+            Path to the agents directory
 
         Raises:
-            SourceDirectoryNotFoundError: If source commands directory does not exist.
+            SourceDirectoryNotFoundError: If source agents directory does not exist.
         """
-        source_dir = get_commands_source_dir()
+        source_dir = get_agents_source_dir()
         if not source_dir.exists():
-            msg = f"Commands source directory not found: {source_dir}"
+            msg = f"Agents source directory not found: {source_dir}"
             raise SourceDirectoryNotFoundError(msg)
 
-        commands_target = target_dir / "commands"
-        commands_target.mkdir(parents=True, exist_ok=True)
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True, exist_ok=True)
 
-        changes, errors = _get_file_changes(source_dir, commands_target, "*.md")
+        for source_file in source_dir.glob("*.md"):
+            target_file = agents_target / source_file.name
+            if not target_file.exists():
+                shutil.copy2(source_file, target_file)
 
-        if not dry_run:
-            for change in changes:
-                if (
-                    change.change_type in (FileChangeType.ADDED, FileChangeType.UPDATED)
-                    and change.source_path is not None
-                ):
-                    try:
-                        shutil.copy2(change.source_path, change.path)
-                    except OSError as e:
-                        errors.append((change.path, str(e)))
-
-        return UpdateResult(
-            commands_changes=changes,
-            skills_changes=[],
-            errors=errors,
-            dry_run=dry_run,
-        )
+        return agents_target
 
     def update_skills(self, target_dir: Path, dry_run: bool = False) -> UpdateResult:
         """Update skill directories with force overwrite.
@@ -366,8 +325,47 @@ class TemplateService:
                         errors.append((change.path, error_msg))
 
         return UpdateResult(
-            commands_changes=[],
             skills_changes=changes,
+            errors=errors,
+            dry_run=dry_run,
+        )
+
+    def update_agents(self, target_dir: Path, dry_run: bool = False) -> UpdateResult:
+        """Update agent files with force overwrite.
+
+        Args:
+            target_dir: Directory containing agents (.claude/)
+            dry_run: If True, only calculate changes without applying
+
+        Returns:
+            UpdateResult with details of changes
+
+        Raises:
+            SourceDirectoryNotFoundError: If source agents directory does not exist.
+        """
+        source_dir = get_agents_source_dir()
+        if not source_dir.exists():
+            msg = f"Agents source directory not found: {source_dir}"
+            raise SourceDirectoryNotFoundError(msg)
+
+        agents_target = target_dir / "agents"
+        agents_target.mkdir(parents=True, exist_ok=True)
+
+        changes, errors = _get_file_changes(source_dir, agents_target, "*.md")
+
+        if not dry_run:
+            for change in changes:
+                if (
+                    change.change_type in (FileChangeType.ADDED, FileChangeType.UPDATED)
+                    and change.source_path is not None
+                ):
+                    try:
+                        shutil.copy2(change.source_path, change.path)
+                    except OSError as e:
+                        errors.append((change.path, str(e)))
+
+        return UpdateResult(
+            agents_changes=changes,
             errors=errors,
             dry_run=dry_run,
         )
@@ -391,6 +389,6 @@ class TemplateService:
         generated: list[Path] = []
         generated.append(self.generate_workflow_config(preset, target_dir, documentation))
         generated.append(self.generate_git_conventions(target_dir))
-        generated.append(self.copy_commands(target_dir))
         generated.append(self.copy_skills(target_dir))
+        generated.append(self.copy_agents(target_dir))
         return generated

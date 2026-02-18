@@ -27,7 +27,7 @@ If not provided:
 - Get current branch name
 - Find PR for this branch:
   ```bash
-  gh pr list --head <branch-name> --json number --limit 1
+  gh pr list --head <branch-name> --state open --json number --limit 1
   ```
 
 ### Step 2: Fetch Comments

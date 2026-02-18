@@ -6,6 +6,7 @@ from pathlib import Path
 from issue_workflow.services.worktree import (
     cleanup_branch_and_worktree,
     cleanup_worktree,
+    copy_hachimoku_to_worktree,
     find_worktree_for_branch,
 )
 
@@ -192,3 +193,178 @@ class TestCleanupBranchAndWorktree:
         assert result["worktree_removed"] is True
         # Branch deletion should fail (unmerged)
         assert result["branch_deleted"] is False
+
+
+class TestCopyHachimokuToWorktree:
+    """Tests for copy_hachimoku_to_worktree function."""
+
+    def test_copies_hachimoku_directory(self, tmp_path: Path) -> None:
+        """Test copying .hachimoku/ with config and agents to worktree."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        hachimoku = repo / ".hachimoku"
+        hachimoku.mkdir()
+        (hachimoku / "config.toml").write_text('model = "test"')
+        agents = hachimoku / "agents"
+        agents.mkdir()
+        (agents / "code-reviewer.toml").write_text('name = "reviewer"')
+        (hachimoku / "reviews").mkdir()
+
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+
+        result = copy_hachimoku_to_worktree(repo, worktree)
+
+        assert result is True
+        assert (worktree / ".hachimoku").is_dir()
+        assert (worktree / ".hachimoku" / "config.toml").read_text() == 'model = "test"'
+        assert (worktree / ".hachimoku" / "agents" / "code-reviewer.toml").exists()
+
+    def test_skips_when_hachimoku_not_exists(self, tmp_path: Path) -> None:
+        """Test returns False and does nothing when .hachimoku/ is absent."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+
+        result = copy_hachimoku_to_worktree(repo, worktree)
+
+        assert result is False
+        assert not (worktree / ".hachimoku").exists()
+
+    def test_excludes_review_jsonl_files(self, tmp_path: Path) -> None:
+        """Test that existing review JSONL files are not copied."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        hachimoku = repo / ".hachimoku"
+        hachimoku.mkdir()
+        (hachimoku / "config.toml").write_text("")
+        reviews = hachimoku / "reviews"
+        reviews.mkdir()
+        (reviews / "pr-51.jsonl").write_text('{"data": "old review"}')
+        (reviews / "diff.jsonl").write_text('{"data": "diff review"}')
+
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+
+        copy_hachimoku_to_worktree(repo, worktree)
+
+        assert not (worktree / ".hachimoku" / "reviews" / "pr-51.jsonl").exists()
+        assert not (worktree / ".hachimoku" / "reviews" / "diff.jsonl").exists()
+
+    def test_creates_empty_reviews_directory(self, tmp_path: Path) -> None:
+        """Test that reviews/ directory exists and is empty after copy."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        hachimoku = repo / ".hachimoku"
+        hachimoku.mkdir()
+        (hachimoku / "config.toml").write_text("")
+        reviews = hachimoku / "reviews"
+        reviews.mkdir()
+        (reviews / "pr-51.jsonl").write_text('{"data": "old"}')
+
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+
+        copy_hachimoku_to_worktree(repo, worktree)
+
+        reviews_dst = worktree / ".hachimoku" / "reviews"
+        assert reviews_dst.is_dir()
+        assert list(reviews_dst.iterdir()) == []
+
+    def test_copies_all_agent_configs(self, tmp_path: Path) -> None:
+        """Test that all agent TOML files in agents/ are copied."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        hachimoku = repo / ".hachimoku"
+        hachimoku.mkdir()
+        (hachimoku / "config.toml").write_text("")
+        agents = hachimoku / "agents"
+        agents.mkdir()
+        (agents / "aggregator.toml").write_text('name = "agg"')
+        (agents / "selector.toml").write_text('name = "sel"')
+        (agents / "code-reviewer.toml").write_text('name = "cr"')
+        (hachimoku / "reviews").mkdir()
+
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+
+        copy_hachimoku_to_worktree(repo, worktree)
+
+        agents_dst = worktree / ".hachimoku" / "agents"
+        copied_files = sorted(f.name for f in agents_dst.iterdir())
+        assert copied_files == ["aggregator.toml", "code-reviewer.toml", "selector.toml"]
+
+    def test_replaces_existing_hachimoku_in_worktree(self, tmp_path: Path) -> None:
+        """Test that git-tracked .hachimoku/ (without reviews/) is replaced correctly."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        hachimoku = repo / ".hachimoku"
+        hachimoku.mkdir()
+        (hachimoku / "config.toml").write_text('model = "updated"')
+        agents = hachimoku / "agents"
+        agents.mkdir()
+        (agents / "code-reviewer.toml").write_text('name = "cr"')
+        (hachimoku / "reviews").mkdir()
+
+        # Simulate git-tracked .hachimoku/ in worktree (no reviews/, stale config)
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+        wt_hachimoku = worktree / ".hachimoku"
+        wt_hachimoku.mkdir()
+        (wt_hachimoku / "config.toml").write_text('model = "stale"')
+        wt_agents = wt_hachimoku / "agents"
+        wt_agents.mkdir()
+        (wt_agents / "code-reviewer.toml").write_text('name = "old"')
+        # No reviews/ directory (git doesn't track empty dirs)
+
+        result = copy_hachimoku_to_worktree(repo, worktree)
+
+        assert result is True
+        assert (worktree / ".hachimoku" / "config.toml").read_text() == 'model = "updated"'
+        assert (
+            worktree / ".hachimoku" / "agents" / "code-reviewer.toml"
+        ).read_text() == 'name = "cr"'
+        assert (worktree / ".hachimoku" / "reviews").is_dir()
+
+    def test_copies_without_reviews_directory(self, tmp_path: Path) -> None:
+        """Test copy works when source has no reviews/ subdirectory."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        hachimoku = repo / ".hachimoku"
+        hachimoku.mkdir()
+        (hachimoku / "config.toml").write_text('model = "test"')
+        agents = hachimoku / "agents"
+        agents.mkdir()
+        (agents / "code-reviewer.toml").write_text('name = "cr"')
+
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+
+        result = copy_hachimoku_to_worktree(repo, worktree)
+
+        assert result is True
+        assert (worktree / ".hachimoku" / "config.toml").exists()
+        assert (worktree / ".hachimoku" / "agents" / "code-reviewer.toml").exists()
+        # reviews/ は 8moku が初回実行時に自動作成する
+        assert not (worktree / ".hachimoku" / "reviews").exists()
+
+    def test_excludes_jsonl_only_in_reviews(self, tmp_path: Path) -> None:
+        """Test that .jsonl files outside reviews/ are preserved."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        hachimoku = repo / ".hachimoku"
+        hachimoku.mkdir()
+        (hachimoku / "config.toml").write_text("")
+        (hachimoku / "state.jsonl").write_text('{"state": "data"}')
+        reviews = hachimoku / "reviews"
+        reviews.mkdir()
+        (reviews / "pr-1.jsonl").write_text('{"review": "data"}')
+
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+
+        copy_hachimoku_to_worktree(repo, worktree)
+
+        assert (worktree / ".hachimoku" / "state.jsonl").exists()
+        assert not (worktree / ".hachimoku" / "reviews" / "pr-1.jsonl").exists()

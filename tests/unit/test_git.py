@@ -2,6 +2,7 @@
 
 import subprocess
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -312,6 +313,108 @@ class TestWorktreeOperations:
 
         # Should not raise any error
         git.worktree_prune()
+
+
+class TestGetDefaultBranch:
+    """Tests for get_default_branch method (T066)."""
+
+    def test_returns_default_branch_from_symbolic_ref(self, temp_git_repo: Path) -> None:
+        """Test get_default_branch returns branch from symbolic-ref."""
+        git = GitOperations(temp_git_repo)
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+            returncode=0,
+            stdout="refs/remotes/origin/main\n",
+            stderr="",
+        )
+        with patch.object(git, "_run", return_value=mock_result) as mock_run:
+            branch = git.get_default_branch()
+            assert branch == "main"
+            mock_run.assert_called_once_with(
+                ["symbolic-ref", "refs/remotes/origin/HEAD"], check=False
+            )
+
+    def test_returns_master_when_default_is_master(self, temp_git_repo: Path) -> None:
+        """Test get_default_branch works with master branch."""
+        git = GitOperations(temp_git_repo)
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+            returncode=0,
+            stdout="refs/remotes/origin/master\n",
+            stderr="",
+        )
+        with patch.object(git, "_run", return_value=mock_result):
+            branch = git.get_default_branch()
+            assert branch == "master"
+
+    def test_returns_develop_for_gitflow(self, temp_git_repo: Path) -> None:
+        """Test get_default_branch works with develop branch (Gitflow)."""
+        git = GitOperations(temp_git_repo)
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+            returncode=0,
+            stdout="refs/remotes/origin/develop\n",
+            stderr="",
+        )
+        with patch.object(git, "_run", return_value=mock_result):
+            branch = git.get_default_branch()
+            assert branch == "develop"
+
+    def test_auto_sets_head_when_symbolic_ref_fails(self, temp_git_repo: Path) -> None:
+        """Test set-head --auto is tried when symbolic-ref fails."""
+        git = GitOperations(temp_git_repo)
+        failed_result = subprocess.CompletedProcess(
+            args=["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+            returncode=1,
+            stdout="",
+            stderr="fatal: ref refs/remotes/origin/HEAD is not a symbolic ref",
+        )
+        set_head_result = subprocess.CompletedProcess(
+            args=["git", "remote", "set-head", "origin", "--auto"],
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+        success_result = subprocess.CompletedProcess(
+            args=["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+            returncode=0,
+            stdout="refs/remotes/origin/main\n",
+            stderr="",
+        )
+        with patch.object(
+            git, "_run", side_effect=[failed_result, set_head_result, success_result]
+        ) as mock_run:
+            branch = git.get_default_branch()
+            assert branch == "main"
+            assert mock_run.call_count == 3
+            mock_run.assert_any_call(["remote", "set-head", "origin", "--auto"], check=False)
+
+    def test_raises_git_error_when_both_attempts_fail(self, temp_git_repo: Path) -> None:
+        """Test GitError is raised when both symbolic-ref and set-head fail."""
+        git = GitOperations(temp_git_repo)
+        failed_result = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="", stderr="fatal: error"
+        )
+        with (
+            patch.object(git, "_run", return_value=failed_result),
+            pytest.raises(GitError, match="default branch"),
+        ):
+            git.get_default_branch()
+
+    def test_raises_git_error_when_set_head_succeeds_but_symbolic_ref_still_fails(
+        self, temp_git_repo: Path
+    ) -> None:
+        """Test GitError when set-head succeeds but second symbolic-ref fails."""
+        git = GitOperations(temp_git_repo)
+        failed_result = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="", stderr="fatal: error"
+        )
+        set_head_ok = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+        with (
+            patch.object(git, "_run", side_effect=[failed_result, set_head_ok, failed_result]),
+            pytest.raises(GitError, match="default branch"),
+        ):
+            git.get_default_branch()
 
 
 class TestGetRemoteUrl:

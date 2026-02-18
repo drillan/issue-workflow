@@ -17,11 +17,20 @@ GitHub Issue-driven development workflow toolkit for Claude Code. Automates and 
 - [uv](https://docs.astral.sh/uv/) (package manager)
 - [gh CLI](https://cli.github.com/) (GitHub CLI)
 - [Claude Code](https://www.anthropic.com/claude-code) CLI
+- [hachimoku](https://github.com/drillan/hachimoku) (for `review-pr` / `run` subcommands)
 
 ## Installation
 
 ```bash
 uv tool install git+https://github.com/drillan/issue-workflow.git
+```
+
+### Installing a Specific Version
+
+To install a specific version, specify the tag:
+
+```bash
+uv tool install git+https://github.com/drillan/issue-workflow@v0.1.1
 ```
 
 ## Quick Start
@@ -44,14 +53,25 @@ After initialization, use Claude Code slash commands to manage your workflow:
 
 ## Updating
 
-When a new version is released, update the toolkit and sync commands/skills:
+When a new version is released, update the toolkit and sync skills/agents:
 
 ```bash
 # 1. Update the toolkit
-uv tool install git+https://github.com/drillan/issue-workflow.git
+uv tool install --reinstall git+https://github.com/drillan/issue-workflow.git
 
-# 2. Update commands and skills in your project
+# 2. Update skills and agents in your project
 issue-workflow update
+```
+
+> **Note**: `uv tool install` does nothing if the package is already installed.
+> The `--reinstall` flag fetches the latest code from the remote repository and reinstalls it.
+
+The `update` command also checks if a newer version of [hachimoku](https://github.com/drillan/hachimoku) is available and displays an upgrade hint:
+
+```
+ℹ hachimoku の新しいバージョンが利用可能です (現在: 0.0.2, 最新: 0.0.3)
+  アップグレード:   uv tool install --reinstall git+https://github.com/drillan/hachimoku.git
+  エージェント更新: 8moku init --force
 ```
 
 Use `--dry-run` to preview changes before applying:
@@ -62,17 +82,72 @@ issue-workflow update --dry-run
 
 ## CLI Commands
 
+### Setup Commands
+
 | Command | Description |
 |---------|-------------|
 | `issue-workflow init` | Initialize Issue Workflow in project |
 | `issue-workflow init --language <lang>` | Initialize with language preset |
 | `issue-workflow init --non-interactive` | Initialize without interactive prompts (CI/CD) |
-| `issue-workflow update` | Update commands and skills to latest version |
+| `issue-workflow update` | Update skills and agents to latest version |
 | `issue-workflow update --dry-run` | Show what would be updated without making changes |
 | `issue-workflow --version` | Show version |
 | `issue-workflow --help` | Show help |
 
-## Plugin Commands (Slash Commands)
+### Workflow Subcommands
+
+Automate the development workflow via `claude -p` subprocess execution. Each subcommand logs its results to `.issue-workflow/logs/` in JSONL format.
+
+| # | Command | Description |
+|---|---------|-------------|
+| 1 | `issue-workflow start-issue <number>` | Start working on an issue (executes `/start-issue` skill) |
+| 2 | `issue-workflow create-pr` | Commit, push, and create PR (executes `/commit-push-pr` skill) |
+| 3 | `issue-workflow review-pr [number]` | Run hachimoku review + respond to findings |
+| 4 | `issue-workflow push-changes` | Push review fixes (commit + push, skip PR creation) |
+| 5 | `issue-workflow respond-comments [number]` | Respond to human PR review comments |
+| 6 | `issue-workflow merge-pr [number]` | Wait for CI checks, then merge PR |
+| 7 | `issue-workflow run <number>` | Run full workflow (steps 1-6 sequentially) |
+
+**Common options** (all workflow subcommands):
+
+| Option | Description |
+|--------|-------------|
+| `--verbose` / `-v` | Show tool calls in real-time (stream-json) |
+| `--timeout <seconds>` | Timeout for claude -p execution (default: 3600) |
+| `--help` / `-h` | Show usage |
+
+**Additional options**:
+
+| Command | Option | Description |
+|---------|--------|-------------|
+| `start-issue` | `--worktree` | Create worktree and run skill there |
+| `review-pr` | `--review-only` | Run hachimoku review only (skip respond) |
+| `review-pr` | `--respond-only` | Run respond-review only (skip hachimoku) |
+| `run` | `--worktree` | Create worktree and run full workflow there |
+
+#### Full Automated Workflow
+
+```bash
+# Run all steps automatically for Issue #199
+issue-workflow run 199
+
+# With worktree isolation
+issue-workflow run 199 --worktree
+```
+
+#### Individual Commands
+
+```bash
+# Step by step
+issue-workflow start-issue 199
+issue-workflow create-pr
+issue-workflow review-pr
+issue-workflow push-changes
+issue-workflow respond-comments    # For human review comments
+issue-workflow merge-pr
+```
+
+## Slash Commands
 
 Use these commands within Claude Code. Listed in recommended workflow order:
 
@@ -80,17 +155,10 @@ Use these commands within Claude Code. Listed in recommended workflow order:
 |---|---------|-------------|-----------|
 | 1 | `/add-worktree` | Create a new worktree for an Issue (optional) | `<issue-number>` |
 | 2 | `/start-issue` | Load Issue, create branch, and develop implementation plan | `<issue-number>` |
-| - | `/commit-push-pr` | Commit, push, and create PR (Official Plugin) | - |
-| - | `/pr-review-toolkit:review-pr` | Review PR (Official Plugin) | `<pr-number>` |
-| 3 | `/review-pr-comments` | Review and respond to PR review comments | `[pr-number]` (optional) |
-| 4 | `/merge-pr` | Wait for CI checks, then merge PR | `<pr-number>` |
-
-### Official Plugin Integration
-
-This toolkit integrates with official Claude Code plugins:
-
-- **commit-commands** - Provides `/commit-push-pr` for streamlined commit, push, and PR creation
-- **pr-review-toolkit** - Provides `/pr-review-toolkit:review-pr` for comprehensive PR reviews. Can also be used as a [GitHub Action](https://github.com/marketplace/actions/claude-pr-reviewer) for CI integration.
+| 3 | `/commit-push-pr` | Commit, push, and create PR | - |
+| 4 | `/respond-review` | Respond to hachimoku review findings | `[pr-number]` (optional) |
+| 5 | `/review-pr-comments` | Review and respond to PR review comments | `[pr-number]` (optional) |
+| 6 | `/merge-pr` | Wait for CI checks, then merge PR | `<pr-number>` |
 
 ## Auto-Activated Skills
 
@@ -188,6 +256,37 @@ uv run pytest
 
 ```bash
 uv run ruff check --fix . && uv run ruff format . && uv run mypy .
+```
+
+### Docker Development Environment
+
+A Docker environment is available for clean, reproducible testing.
+
+**Prerequisites:** Docker, Docker Compose, [gh CLI](https://cli.github.com/) (on host)
+
+**Build the image:**
+
+```bash
+make docker-build
+```
+
+**Authentication:**
+
+- **GitHub CLI** — Automatically injected via `GH_TOKEN` from the host's `gh auth token`
+- **Claude Code** — Run `claude` on first launch and complete the OAuth login flow. Credentials are persisted in a named Docker volume (`claude-auth`) and survive `--rm` container removal
+
+**Usage:**
+
+```bash
+make docker-dev       # Interactive development shell
+make docker-test      # Run pytest
+make docker-quality   # Run ruff + mypy
+```
+
+**Reset Claude Code authentication:**
+
+```bash
+docker volume rm issue-workflow_claude-auth
 ```
 
 ## Troubleshooting

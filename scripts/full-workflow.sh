@@ -6,10 +6,10 @@
 # Example: ./scripts/full-workflow.sh -v 199
 #
 # 以下を順次実行します:
-# 1. worktree作成 + start-issue（計画立案・実装）
-# 2. complete-issue（commit + push + PR作成）
-# 3. review-pr（PRレビュー + コメント投稿）
-# 4. respond-comments（レビューコメントに対応）
+# 1. worktree準備（作成 or 既存検出）
+# 2. start-issue（計画立案・実装）
+# 3. create-pr（commit + push + PR作成）
+# 4. hachimokuレビュー + respond-review + respond-comments + push-changes
 # 5. merge-pr（CI待機 → マージ → 後処理）
 
 set -euo pipefail
@@ -110,27 +110,27 @@ echo ""
 echo "✅ start-issue 完了"
 echo ""
 
-# Step 3: complete-issue（commit + push + PR作成）
-echo "📤 Step 3/5: complete-issue（commit + push + PR作成）"
+# Step 3: create-pr（commit + push + PR作成）
+echo "📤 Step 3/5: create-pr（commit + push + PR作成）"
 echo "───────────────────────────────────────────────────────────────"
 
 PROMPT_COMPLETE="以下のスキルを実行してください:
 
-/commit-commands:commit-push-pr
+/commit-push-pr
 
 実装された変更をコミットし、リモートにプッシュして、プルリクエストを作成してください。"
 
 if ! lib_run_claude "$PROMPT_COMPLETE" "no_exec"; then
-    echo "⚠️ complete-issue の実行に失敗しました" >&2
+    echo "⚠️ create-pr の実行に失敗しました" >&2
     exit 1
 fi
 
 echo ""
-echo "✅ complete-issue 完了"
+echo "✅ create-pr 完了"
 echo ""
 
-# Step 4: レビュー + respond-comments
-echo "🔍 Step 4/5: レビュー + respond-comments"
+# Step 4: hachimokuレビュー + respond-review + respond-comments
+echo "🔍 Step 4/5: hachimokuレビュー + respond-review + respond-comments"
 echo "───────────────────────────────────────────────────────────────"
 
 PR_NUM=""
@@ -140,40 +140,32 @@ if ! PR_NUM=$(lib_get_pr_number); then
 fi
 
 if [[ -z "$PR_NUM" ]]; then
-    echo "⚠️ PRが見つかりません。review-prをスキップします。"
+    echo "⚠️ PRが見つかりません。レビューをスキップします。"
 else
     echo "📍 PRを検出: #$PR_NUM"
 
-    if lib_is_ci_review_enabled; then
-        # CIレビューモード: CI待機のみ
-        echo "⏳ CIチェック完了を待機中...（ci_review モード）"
-        CI_CHECK_FAILED=false
-        CHECK_OUTPUT=$(gh pr checks "$PR_NUM" --watch 2>&1) || {
-            if [[ "$CHECK_OUTPUT" == *"no checks reported"* ]]; then
-                echo "ℹ️ CIチェックは設定されていません"
-            else
-                echo "⚠️ CIチェックが失敗しました" >&2
-                echo "   詳細: gh pr checks $PR_NUM" >&2
-                CI_CHECK_FAILED=true
-            fi
-        }
-        if [[ "$CI_CHECK_FAILED" == "true" ]]; then
-            exit 1
-        fi
-        echo "✅ CIチェック完了"
-    else
-        # ローカルレビューモード（デフォルト）: review-pr を実行
-        PROMPT_REVIEW="/pr-review-toolkit:review-pr $PR_NUM PRにコメントしてください"
-        if ! lib_run_claude "$PROMPT_REVIEW" "no_exec"; then
-            echo "⚠️ review-pr の実行に失敗しました" >&2
-            exit 1
-        fi
-        echo "✅ review-pr 完了"
+    # Step 4a: hachimokuによるローカルレビュー
+    echo "🔍 hachimokuレビューを実行中..."
+    if ! 8moku "$PR_NUM"; then
+        echo "⚠️ hachimokuレビューの実行に失敗しました" >&2
+        exit 1
     fi
+    echo "✅ hachimokuレビュー完了"
 
     echo ""
 
-    # respond-comments（両モード共通）
+    # Step 4b: hachimokuレビュー結果への対応
+    echo "📝 hachimokuレビュー結果に対応中..."
+    PROMPT_RESPOND_REVIEW="/respond-review $PR_NUM"
+    if ! lib_run_claude "$PROMPT_RESPOND_REVIEW" "no_exec"; then
+        echo "⚠️ respond-review の実行に失敗しました" >&2
+        exit 1
+    fi
+    echo "✅ respond-review 完了"
+
+    echo ""
+
+    # Step 4c: 人間レビューコメントへの対応
     echo "💬 レビューコメントに対応中..."
     PROMPT_RESPOND="/review-pr-comments $PR_NUM"
     if ! lib_run_claude "$PROMPT_RESPOND" "no_exec"; then
@@ -181,6 +173,26 @@ else
         exit 1
     fi
     echo "✅ respond-comments 完了"
+
+    echo ""
+
+    # Step 4d: レビュー対応後の変更をpush（変更がある場合のみ）
+    if [[ -n "$(git status --porcelain)" ]]; then
+        echo "📤 レビュー対応後の変更をプッシュ中..."
+        PROMPT_PUSH="以下のスキルを実行してください:
+
+/commit-push-pr
+
+レビュー対応後の変更をコミットし、リモートにプッシュしてください。PRが既に存在する場合はPR作成をスキップしてください。"
+
+        if ! lib_run_claude "$PROMPT_PUSH" "no_exec"; then
+            echo "⚠️ push-changes の実行に失敗しました" >&2
+            exit 1
+        fi
+        echo "✅ push-changes 完了"
+    else
+        echo "ℹ️ レビュー対応後の変更はありません。push-changesをスキップします。"
+    fi
 fi
 
 echo ""

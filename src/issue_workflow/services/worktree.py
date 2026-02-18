@@ -1,8 +1,41 @@
 """Worktree service for detection and cleanup."""
 
+import shutil
 from pathlib import Path
 
 from issue_workflow.lib.git import GitError, GitOperations
+
+
+def _ignore_review_jsonl(directory: str, files: list[str]) -> set[str]:
+    """Ignore .jsonl files only in reviews/ directory."""
+    if Path(directory).name == "reviews":
+        return {f for f in files if f.endswith(".jsonl")}
+    return set()
+
+
+def copy_hachimoku_to_worktree(repo_path: Path, worktree_path: Path) -> bool:
+    """Copy .hachimoku/ directory from main repo to worktree.
+
+    Copies configuration and agent definitions but excludes .jsonl files
+    in the reviews/ directory.
+
+    If .hachimoku/ already exists in the worktree (e.g. git-tracked files),
+    it is merged with the project root's copy.
+
+    Args:
+        repo_path: Main repository root path.
+        worktree_path: Worktree root path.
+
+    Returns:
+        True if copied, False if .hachimoku/ does not exist in repo_path.
+    """
+    source = repo_path / ".hachimoku"
+    if not source.is_dir():
+        return False
+
+    destination = worktree_path / ".hachimoku"
+    shutil.copytree(source, destination, ignore=_ignore_review_jsonl, dirs_exist_ok=True)
+    return True
 
 
 def find_worktree_for_branch(repo_path: Path, branch_name: str) -> Path | None:

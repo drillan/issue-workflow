@@ -48,12 +48,31 @@ class TestGhAvailability:
             # Mock failed auth check
             mock_auth = MagicMock()
             mock_auth.returncode = 1
+            mock_auth.stderr = (
+                "You are not logged into any GitHub hosts. To log in, run: gh auth login"
+            )
 
             mock_run.side_effect = [mock_version, mock_auth]
 
             available, message = check_gh_availability()
             assert available is False
             assert "auth" in message.lower()
+
+    def test_gh_auth_failure_includes_stderr(self) -> None:
+        """Test that auth failure message includes actual stderr from gh auth status."""
+        with patch("subprocess.run") as mock_run:
+            mock_version = MagicMock()
+            mock_version.returncode = 0
+
+            mock_auth = MagicMock()
+            mock_auth.returncode = 1
+            mock_auth.stderr = "Failed to log in to github.com using token (GH_TOKEN)\nThe token in GH_TOKEN is invalid."
+
+            mock_run.side_effect = [mock_version, mock_auth]
+
+            available, message = check_gh_availability()
+            assert available is False
+            assert "GH_TOKEN is invalid" in message
 
 
 class TestGetIssue:

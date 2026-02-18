@@ -11,15 +11,18 @@
   "workflow": {
     "tdd_required": true,
     "quality_gate_required": true,
-    "auto_report": true,
-    "ci_review": true
+    "auto_report": true
   },
   "documentation": {
-    "paths": ["README.md", "docs/", "specs/"],
+    "paths": [
+      "README.md",
+      "docs/"
+    ],
     "changelog": "CHANGELOG.md",
     "ddd": {
       "enabled": true,
       "retcon_writing": true
     }
-  }
+  },
+  "$schema": "https://raw.githubusercontent.com/drillan/issue-workflow/main/schemas/workflow-config.schema.json"
 }

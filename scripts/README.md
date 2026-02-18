@@ -11,7 +11,7 @@ issue対応ワークフローを自動化するスクリプト集です。
          ↓
     [計画立案・実装]
          ↓
-./scripts/complete-issue.sh      # worktreeで実行
+./scripts/create-pr.sh      # worktreeで実行
          ↓
     [commit + push + PR作成]
          ↓
@@ -22,6 +22,10 @@ issue対応ワークフローを自動化するスクリプト集です。
 ./scripts/respond-comments.sh    # worktreeで実行
          ↓
     [レビューコメントに対応]
+         ↓
+./scripts/push-changes.sh           # worktreeで実行
+         ↓
+    [commit + push（PR既存時はPR作成スキップ）]
          ↓
 ./scripts/merge-pr.sh            # worktreeで実行
          ↓
@@ -47,20 +51,20 @@ worktreeを作成し、issueの計画立案・実装を開始します。
 2. worktreeディレクトリに移動
 3. `/start-issue` コマンドを実行（--force でプランモードスキップ）
 
-### complete-issue.sh
+### create-pr.sh
 
-実装完了後、変更をコミットしてPRを作成します。
+変更をコミット、プッシュしてPRを作成します。
 
 ```bash
 # worktreeディレクトリで実行
-./scripts/complete-issue.sh
+./scripts/create-pr.sh
 
 # 途中経過を表示
-./scripts/complete-issue.sh -v
+./scripts/create-pr.sh -v
 ```
 
 **実行内容:**
-- `/commit-commands:commit-push-pr` スキルを実行
+- `/commit-push-pr` コマンドを実行
 - 変更をコミット、プッシュ、PR作成
 
 ### review-pr.sh
@@ -71,14 +75,47 @@ PRをレビューしてコメントを投稿します。
 # worktreeディレクトリで実行
 ./scripts/review-pr.sh
 
+# レビューのみ実行（対応はしない）
+./scripts/review-pr.sh --review-only
+
+# 対応のみ実行（既存のレビュー結果を使用）
+./scripts/review-pr.sh --respond-only
+
 # 途中経過を表示
 ./scripts/review-pr.sh -v
 ```
 
+**動作モード:**
+
+| モード | オプション | 動作 |
+|---|---|---|
+| レビュー+対応 | なし（デフォルト） | hachimokuレビュー → `/respond-review`（従来動作） |
+| レビューのみ | `--review-only` | hachimokuレビューのみ実行 |
+| 対応のみ | `--respond-only` | `/respond-review` のみ実行（既存JSONL使用） |
+
+`--review-only` と `--respond-only` の同時指定はエラーになります。
+
 **実行内容:**
-1. `gh pr view` で現在のブランチに紐づくPR番号を自動検出
-2. `/pr-review-toolkit:review-pr` スキルを実行
-3. レビュー結果をPRにコメント
+1. `gh pr list --state open` で現在のブランチに紐づくオープンPR番号を自動検出
+2. `8moku` でhachimokuレビューを実行（`--respond-only` 時はスキップ）
+3. `/respond-review` でレビュー結果に対応（`--review-only` 時はスキップ）
+
+### push-changes.sh
+
+レビュー対応後の変更をコミットしてプッシュします。PRが既に存在する場合はcommit + pushのみ実行し、PR作成をスキップします。
+
+```bash
+# worktreeディレクトリで実行
+./scripts/push-changes.sh
+
+# 途中経過を表示
+./scripts/push-changes.sh -v
+```
+
+**実行内容:**
+- `/commit-push-pr` コマンドを実行
+- PRが既に存在する場合: commit + push のみ
+- PRが存在しない場合: commit + push + PR作成
 
 ### respond-comments.sh
 
@@ -93,7 +130,7 @@ PRのレビューコメントに対応します。
 ```
 
 **実行内容:**
-1. `gh pr view` でPR番号を自動検出
+1. `gh pr list --state open` でオープンPR番号を自動検出
 2. `/review-pr-comments` コマンドを実行
 3. レビューコメントへの対応
 
@@ -110,7 +147,7 @@ PRをマージします（CI完了待機付き）。
 ```
 
 **実行内容:**
-1. `gh pr view` でPR番号を自動検出
+1. `gh pr list --state open` でオープンPR番号を自動検出
 2. `/merge-pr` コマンドを実行
 3. CIチェック完了まで待機
 4. squash mergeを実行
@@ -133,10 +170,10 @@ PRをマージします（CI完了待機付き）。
 ```
 
 **実行内容:**
-1. worktree作成 + start-issue（計画立案・実装）
-2. complete-issue（commit + push + PR作成）
-3. review-pr（PRレビュー + コメント投稿）
-4. respond-comments（レビューコメントに対応）
+1. worktree準備（作成 or 既存検出）
+2. start-issue（計画立案・実装）
+3. create-pr（commit + push + PR作成）
+4. hachimokuレビュー + respond-review + respond-comments + push-changes
 5. merge-pr（CI待機 → マージ → 後処理）
 
 ### add-worktree.sh
@@ -158,9 +195,10 @@ issueに対応するworktreeを作成します（setup-issue.sh から呼び出�
 | `setup-issue.sh` | mainリポジトリ |
 | `add-worktree.sh` | mainリポジトリ |
 | `full-workflow.sh` | mainリポジトリ |
-| `complete-issue.sh` | worktree |
+| `create-pr.sh` | worktree |
 | `review-pr.sh` | worktree |
 | `respond-comments.sh` | worktree |
+| `push-changes.sh` | worktree |
 | `merge-pr.sh` | worktree |
 
 ## 前提条件

@@ -105,7 +105,11 @@ get_highest_from_branches() {
     local highest=0
     
     # Get all branches (local and remote)
-    branches=$(git branch -a 2>/dev/null || echo "")
+    if ! branches=$(git branch -a 2>&1); then
+        echo "Error: 'git branch -a' failed. Repository may be corrupted or inaccessible." >&2
+        echo "Details: $branches" >&2
+        return 1
+    fi
     
     if [ -n "$branches" ]; then
         while IFS= read -r branch; do
@@ -130,11 +134,15 @@ get_highest_from_branches() {
 check_existing_branches() {
     local specs_dir="$1"
 
-    # Fetch all remotes to get latest branch info (suppress errors if no remotes)
-    git fetch --all --prune 2>/dev/null || true
+    # Fetch failure is tolerated (e.g., no remotes configured) but errors are visible for diagnosis
+    git fetch --all --prune || true
 
     # Get highest number from ALL branches (not just matching short name)
-    local highest_branch=$(get_highest_from_branches)
+    # Explicit error check: set -e does not apply inside command substitutions
+    local highest_branch
+    if ! highest_branch=$(get_highest_from_branches); then
+        return 1
+    fi
 
     # Get highest number from ALL specs (not just matching short name)
     local highest_spec=$(get_highest_from_specs "$specs_dir")
@@ -237,10 +245,11 @@ fi
 # Determine branch number
 if [ -z "$BRANCH_NUMBER" ]; then
     if [ "$HAS_GIT" = true ]; then
-        # Check existing branches on remotes
-        BRANCH_NUMBER=$(check_existing_branches "$SPECS_DIR")
+        if ! BRANCH_NUMBER=$(check_existing_branches "$SPECS_DIR"); then
+            echo "Error: Failed to determine branch number from existing branches." >&2
+            exit 1
+        fi
     else
-        # Fall back to local directory check
         HIGHEST=$(get_highest_from_specs "$SPECS_DIR")
         BRANCH_NUMBER=$((HIGHEST + 1))
     fi

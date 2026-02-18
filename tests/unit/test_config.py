@@ -62,15 +62,10 @@ class TestWorkflowSettings:
         assert settings.quality_gate_required is False
         assert settings.auto_report is False
 
-    def test_default_ci_review_is_false(self) -> None:
-        """Test ci_review defaults to False."""
+    def test_ci_review_field_removed(self) -> None:
+        """Test ci_review field no longer exists on WorkflowSettings."""
         settings = WorkflowSettings()
-        assert settings.ci_review is False
-
-    def test_ci_review_can_be_enabled(self) -> None:
-        """Test ci_review can be set to True."""
-        settings = WorkflowSettings(ci_review=True)
-        assert settings.ci_review is True
+        assert not hasattr(settings, "ci_review")
 
 
 class TestLanguageName:

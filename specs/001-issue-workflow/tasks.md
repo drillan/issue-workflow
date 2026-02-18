@@ -7,6 +7,22 @@
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
+> **⚠️ User Story番号の注意**: Phase 1-11（T001-T065）は初期実装時のUser Story番号を使用しています。Issue #32でspec.mdのUser Storyが再編され、Phase 12以降では新しい番号体系を使用しています。対応表:
+>
+> | 旧番号 (Phase 1-11) | 内容 | 新番号 (Phase 12+, spec.md準拠) |
+> |---------------------|------|--------------------------------|
+> | US1 | プロジェクト初期化 | US1（同じ） |
+> | US2 | Issue作業の開始 | US2（同じ） |
+> | US3 | TDD駆動の実装 | US3（同じ） |
+> | US4 | 品質チェックゲート | US4（同じ） |
+> | US5 | PRマージとクリーンアップ | US7（再編） |
+> | US6 | ワークツリー並行作業 | US8（再編） |
+> | US7 | レビューコメント対応 | US10（再編） |
+> | US8 | 進捗の自動報告 | US11（再編） |
+> | — | コミット・プッシュ・PR | US5（新規） |
+> | — | PRレビュー実行 | US6（新規） |
+> | — | レビュー指摘への対応 | US9（新規） |
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
@@ -321,13 +337,277 @@ Task: "Create Worktree dataclass in src/issue_workflow/models/worktree.py"
 5. Add US6-8 (Worktree, Review, Report) → Test → Advanced features
 6. Polish → Release v1.0
 
-### Priority Execution Order
+### Priority Execution Order (初期実装時の番号体系)
+
+> **注**: 以下は初期実装時のUser Story番号です。Issue #32での新番号はファイル冒頭の対応表を参照してください。
 
 | Priority | User Stories | Description |
 |----------|--------------|-------------|
 | P1 | US1, US2 | Core workflow (Init + Start Issue) |
 | P2 | US3, US4, US5 | Quality enforcement (TDD, Quality Gate, Merge) |
 | P3 | US6, US7, US8 | Advanced features (Worktree, Review, Reporter) |
+
+---
+
+# Issue #32: 外部プラグイン依存排除
+
+**Input**: plan.md (Issue #32), spec.md (Session 2026-02-13 Clarifications)
+**Branch**: `feat/32-remove-external-plugin-deps`
+**Date**: 2026-02-14
+
+**目的**: 外部プラグイン（`commit-commands`, `pr-review-toolkit`）への依存を完全排除し、git-workflow-haikuをバンドル、hachimokuを外部ツールとして統合する。
+
+**Tests**: TDD必須（Constitution Article 1）
+
+---
+
+## Phase 12: Foundational for Issue #32 (Blocking Prerequisites)
+
+**Purpose**: Issue #32の全ユーザーストーリーに先行して完了すべきモデル・ライブラリ変更
+
+**⚠️ CRITICAL**: Issue #32のユーザーストーリー作業はこのPhase完了後に開始
+
+### 12a. Default Branch Auto-Detection (FR-025/FR-026)
+
+- [ ] T066 [P] Write tests for `get_default_branch()` in tests/unit/test_git.py — テスト対象: `git symbolic-ref`で正常取得、`set-head --auto`で自動設定後に取得、両方失敗時にエラー送出
+- [ ] T067 Implement `get_default_branch()` in src/issue_workflow/lib/git.py — `git symbolic-ref refs/remotes/origin/HEAD`で自動検出。未設定時は`git remote set-head origin --auto`を試行し再取得。失敗時はエラー（GREEN T066）
+
+### 12b. ReviewResult Model
+
+- [ ] T068 [P] Write tests for ReviewResult, ReviewIssue, ReviewSeverity in tests/unit/test_review.py — テスト対象: 正常生成、optional fields（`location: None`, `suggestion: None`, `category: None`）、`issue_count`/`has_critical`プロパティ、JSONL行パースのシナリオ
+- [ ] T069 Implement ReviewResult models in src/issue_workflow/models/review.py — ReviewSeverity(Enum), ReviewIssueLocation(frozen dataclass), ReviewIssue(frozen dataclass, location/suggestion/category optional), ReviewResult(frozen dataclass)（GREEN T068）
+
+### 12c. Config ci_review Removal
+
+- [ ] T070 [P] Update tests for ci_review removal in tests/unit/test_config.py — `ci_review`フィールド参照を削除、WorkflowSettingsのテストを更新
+- [ ] T071 Remove `ci_review` field from WorkflowSettings in src/issue_workflow/models/config.py（GREEN T070）
+
+### 12d. UpdateResult agents_changes Extension
+
+- [ ] T072 [P] Update tests for `agents_changes` in tests/unit/test_update.py — `agents_changes`フィールド追加、`added_count`/`updated_count`/`has_changes`プロパティが`agents_changes`を含めて集計することを検証
+- [ ] T073 Add `agents_changes` field to UpdateResult in src/issue_workflow/models/update.py — `added_count`/`updated_count`/`has_changes`プロパティも`agents_changes`を含めて更新（GREEN T072）
+
+**Checkpoint**: Foundation ready — Issue #32のユーザーストーリー実装を開始可能
+
+---
+
+## Phase 13: User Story 1 - プロジェクト初期化拡張 (Priority: P1) 🎯 MVP
+
+**Goal**: `issue-workflow init`で`.claude/agents/`のコピーとhachimokuのインストール・初期化が実行される。`issue-workflow update`でagents/の更新もサポートする。
+
+**Independent Test**: `issue-workflow init -l python`を実行し、`.claude/agents/`にエージェントファイルがコピーされ、hachimokuがインストールされることを確認する。
+
+### 13a. TemplateService agents/ Support (TDD)
+
+- [ ] T074 [P] [US1] Write tests for `get_agents_source_dir()` in tests/unit/test_template.py — パスが`src/issue_workflow/agents/`を指すことを検証
+- [ ] T075 [P] [US1] Write tests for `copy_agents()` in tests/unit/test_copy_commands_skills.py — 新規コピー、既存スキップ、ソースディレクトリ不在時の`SourceDirectoryNotFoundError`送出を検証（`copy_skills()`テストパターンを踏襲）
+- [ ] T076 [P] [US1] Write tests for `update_agents()` in tests/unit/test_update.py — ADDED/UPDATED検出、dry_runモード、エラーハンドリングを検証（`update_skills()`テストパターンを踏襲）
+- [ ] T077 [P] [US1] Write tests for `generate_all()` agents inclusion in tests/unit/test_template.py — `generate_all()`の返り値にagentsパスが含まれることを検証
+- [ ] T078 [US1] Implement `get_agents_source_dir()`, `copy_agents()`, `update_agents()` in src/issue_workflow/services/template.py — 既存の`copy_commands()`/`update_commands()`パターンを踏襲。`generate_all()`に`self.copy_agents(target_dir)`を追加（GREEN T074-T077）
+
+### 13b. Agents Bundle Content
+
+- [ ] T079 [P] [US1] Create src/issue_workflow/agents/ directory with git-workflow-haiku agent files — git-committer.md, pr-creator.md, pr-merger.md, branch-cleaner.md（git-workflow-haikuから取得し、`main`ハードコードを`git symbolic-ref refs/remotes/origin/HEAD`に置換）
+
+### 13c. New Command Bundle Content
+
+- [ ] T080 [P] [US1] Create src/issue_workflow/commands/commit-push-pr.md — git-workflow-haikuのpr-creatorエージェントを活用するコマンド定義。ベースブランチは`git symbolic-ref refs/remotes/origin/HEAD`で自動検出（FR-025）
+- [ ] T081 [P] [US1] Create src/issue_workflow/commands/respond-review.md — hachimoku JSONL読み取り（`.hachimoku/reviews/pr-{number}.jsonl`）、重要度順テーブル表示、Accept/Reject対応方針決定、引数なし時のPR番号自動検出
+
+### 13d. HachimokuService (TDD)
+
+- [ ] T082 [P] [US1] Write tests for `setup_hachimoku()` in tests/unit/test_hachimoku.py — テスト対象: (1)未インストール時のインストール+初期化、(2)インストール済み+`.hachimoku/`未存在時の初期化のみ、(3)インストール済み+初期化済み時のスキップ、(4)インストール失敗時のエラー送出
+- [ ] T083 [US1] Implement `setup_hachimoku()` in src/issue_workflow/services/hachimoku.py — installチェック（`shutil.which("8moku")`）とinitチェック（`.hachimoku/`存在）を分離。`subprocess.run`で`uv tool install hachimoku`と`8moku init`を実行（GREEN T082）
+
+### 13e. Init Command Update (TDD)
+
+- [ ] T084 [US1] Update tests for init command in tests/unit/test_init.py and tests/integration/test_init_command.py — hachimokuインストール+初期化ステップの検証、agents/コピーが`generate_all()`に含まれることの検証を追加
+- [ ] T085 [US1] Update init command in src/issue_workflow/cli/commands/init.py — `generate_all()`後に`setup_hachimoku(project_dir)`を呼び出し。UIフィードバック追加（GREEN T084）
+
+### 13f. Update Command Update (TDD)
+
+- [ ] T086 [US1] Update tests for update command in tests/integration/test_update_command.py — agents/更新の検証を追加（`update_agents()`結果のUIフィードバック）
+- [ ] T087 [US1] Update update command in src/issue_workflow/cli/commands/update.py — `update_agents()`呼び出しを追加。UpdateResult表示に`agents_changes`を含める（GREEN T086）
+
+**Checkpoint**: `issue-workflow init`でagents/コピー＋hachimokuセットアップが動作。`issue-workflow update`でagents/更新が動作。SC-009検証可能。
+
+---
+
+## Phase 14: User Story 5 - コミット・プッシュ・PR作成 (Priority: P2)
+
+**Goal**: 外部プラグイン`commit-commands`を使わずに、バンドルされた`/commit-push-pr`コマンドでコミット・プッシュ・PR作成を実行できる。
+
+**Independent Test**: Claude Codeで`/commit-push-pr`を実行し、コミット・プッシュ・PR作成が外部プラグインなしで完了することを確認する。
+
+- [ ] T088 [US5] Finalize src/issue_workflow/commands/commit-push-pr.md content — T080で作成したファイルの内容を検証・調整。git-workflow-haikuのpr-creatorエージェント参照が正しいことを確認
+
+**Checkpoint**: `/commit-push-pr`がバンドルコマンドとして機能。外部プラグイン不要。
+
+---
+
+## Phase 15: User Story 7 - PRマージとクリーンアップ (Priority: P2)
+
+**Goal**: `/merge-pr`のPost-Merge Cleanupで`main`ハードコードを排除し、デフォルトブランチを自動検出する。
+
+**Independent Test**: デフォルトブランチが`main`以外のリポジトリで`/merge-pr`を実行し、正しいブランチに切り替わることを確認する。
+
+- [ ] T089 [US7] Update src/issue_workflow/commands/merge-pr.md — Step 4 Post-Merge Cleanupの`git checkout main`を`git symbolic-ref refs/remotes/origin/HEAD`によるデフォルトブランチ自動検出+チェックアウトに置換（FR-025）
+
+**Checkpoint**: `/merge-pr`がデフォルトブランチを自動検出して切り替え。
+
+---
+
+## Phase 16: User Story 9 - レビュー指摘への対応 (Priority: P3)
+
+**Goal**: hachimokuのJSONLレビュー結果を読み取り、指摘一覧を表示して対応する`/respond-review`コマンドが機能する。
+
+**Independent Test**: `.hachimoku/reviews/pr-{number}.jsonl`が存在する状態で`/respond-review`を実行し、指摘一覧が表示されることを確認する。
+
+- [ ] T090 [US9] Finalize src/issue_workflow/commands/respond-review.md content — T081で作成したファイルの内容を検証・調整。ReviewResultモデル（T069）のフィールドとJSONLスキーマの整合性を確認
+
+**Checkpoint**: `/respond-review`がhachimoku JSONL出力を読み取り、指摘一覧を表示。
+
+---
+
+## Phase 17: Polish & Cross-Cutting Concerns (Issue #32)
+
+**Purpose**: 複数のユーザーストーリーに影響する更新と最終検証
+
+### 17a. Command FR-025 Verification
+
+- [ ] T091 [P] Review src/issue_workflow/commands/start-issue.md for `main` hardcode — `main`のハードコードがないことを確認。暗黙的な基点ブランチ参照があれば`git symbolic-ref`ベースの説明に更新
+- [ ] T092 [P] Review src/issue_workflow/commands/add-worktree.md for `main` hardcode — `main`のハードコードがないことを確認
+
+### 17b. Script Updates
+
+- [ ] T093 [P] Update scripts/full-workflow.sh — Step 3: `/commit-commands:commit-push-pr`→`/commit-push-pr`に変更。Step 4: `/pr-review-toolkit:review-pr`→`8moku <番号>`直接呼び出しに変更。`lib_is_ci_review_enabled`分岐を削除。`/respond-review`ステップを追加
+- [ ] T094 [P] Update scripts/_lib.sh — `lib_is_ci_review_enabled()`関数を削除
+
+### 17c. Quality & Validation
+
+- [ ] T095 Run `ruff check --fix . && ruff format . && mypy .` across all changed files — 全エラー解消まで次工程禁止（Constitution Article 5）
+- [ ] T096 Validate quickstart.md scenarios — init→start-issue→commit-push-pr→8moku review→respond-review→merge-prの一連のフローが文書と整合していることを確認
+
+---
+
+## Dependencies & Execution Order (Issue #32)
+
+### Phase Dependencies
+
+- **Foundational (Phase 12)**: No dependencies on previous phases — can start immediately. BLOCKS all Issue #32 user stories
+- **US1 (Phase 13)**: Depends on Phase 12（models/update.py, lib/git.py）
+- **US5 (Phase 14)**: Depends on Phase 13（commit-push-pr.md作成済み）
+- **US7 (Phase 15)**: Depends on Phase 12（lib/git.py for symbolic-ref）— US1と並行可能
+- **US9 (Phase 16)**: Depends on Phase 12（models/review.py）— US1と並行可能
+- **Polish (Phase 17)**: Depends on Phases 13-16 completion
+
+### User Story Dependencies
+
+- **US1 (P1)**: Phase 12完了後に開始 — 他のストーリーに依存なし
+- **US5 (P2)**: US1に依存（commit-push-pr.mdがバンドル済みである必要）
+- **US7 (P2)**: Phase 12完了後に開始 — US1/US5に独立
+- **US9 (P3)**: Phase 12完了後に開始 — US1/US5/US7に独立
+
+### Within Each User Story
+
+- Tests MUST be written and FAIL before implementation（Constitution Article 1）
+- Models/lib before services
+- Services before CLI commands
+- Bundle content after Python infrastructure
+
+### Parallel Opportunities
+
+- Phase 12: T066/T068/T070/T072 are all [P] — different files, can run in parallel
+- Phase 13: T074/T075/T076/T077 are all [P] — different test targets
+- Phase 13: T079/T080/T081/T082 are all [P] — different files
+- Phase 15 (US7) can run in parallel with Phase 13 (US1) after Phase 12 completes
+- Phase 16 (US9) can run in parallel with Phase 13 (US1) after Phase 12 completes
+- Phase 17: T091/T092/T093/T094 are all [P] — different files
+
+---
+
+## Parallel Example: Phase 12 (Foundational)
+
+```bash
+# Launch all RED tests in parallel:
+Task: "T066 - Write tests for get_default_branch() in tests/unit/test_git.py"
+Task: "T068 - Write tests for ReviewResult in tests/unit/test_review.py"
+Task: "T070 - Update tests for ci_review removal in tests/unit/test_config.py"
+Task: "T072 - Update tests for agents_changes in tests/unit/test_update.py"
+
+# After RED confirmed, launch GREEN implementations:
+Task: "T067 - Implement get_default_branch() in lib/git.py"
+Task: "T069 - Implement ReviewResult in models/review.py"
+Task: "T071 - Remove ci_review from config.py"
+Task: "T073 - Add agents_changes to update.py"
+```
+
+## Parallel Example: Phase 13 (US1)
+
+```bash
+# Launch all TemplateService tests in parallel:
+Task: "T074 - Test get_agents_source_dir()"
+Task: "T075 - Test copy_agents()"
+Task: "T076 - Test update_agents()"
+Task: "T077 - Test generate_all() agents inclusion"
+
+# After RED confirmed, implement:
+Task: "T078 - Implement agents support in template.py"
+
+# In parallel with T078, launch bundle content + hachimoku test:
+Task: "T079 - Create agents/ bundle files"
+Task: "T080 - Create commit-push-pr.md"
+Task: "T081 - Create respond-review.md"
+Task: "T082 - Test setup_hachimoku()"
+```
+
+---
+
+## Implementation Strategy (Issue #32)
+
+### MVP First (User Story 1 Only)
+
+1. Complete Phase 12: Foundational (models + lib)
+2. Complete Phase 13: US1 (init/update agents + hachimoku)
+3. **STOP and VALIDATE**: `issue-workflow init -l python`でagents/コピー＋hachimoku動作を確認
+4. SC-009検証: 外部プラグイン設定が不要であることを確認
+
+### Incremental Delivery
+
+1. Phase 12 → Foundation ready
+2. Phase 13 (US1) → init/update動作 → **MVP!**
+3. Phase 14 (US5) → `/commit-push-pr`バンドル動作
+4. Phase 15 (US7) → `/merge-pr`デフォルトブランチ自動検出
+5. Phase 16 (US9) → `/respond-review`hachimoku JSONL対応
+6. Phase 17 → スクリプト更新 + 品質検証
+7. 各フェーズが前のフェーズを壊さずに価値を追加
+
+### Parallel Team Strategy
+
+With multiple developers:
+
+1. Team completes Phase 12 together（4 TDD pairs）
+2. Once Phase 12 is done:
+   - Developer A: US1 (Phase 13) — most complex, MVP
+   - Developer B: US7 (Phase 15) + US9 (Phase 16) — independent, only needs Phase 12
+3. After Phase 13:
+   - Developer A: US5 (Phase 14) — depends on US1
+   - Developer B: Phase 17 Polish
+4. Final: Quality checks + validation
+
+---
+
+## Issue #32 Summary
+
+| Phase | Story | Task Count | Description |
+|-------|-------|-----------|-------------|
+| Phase 12 | — | 8 | Foundational: models + lib |
+| Phase 13 | US1 (P1) | 14 | Init/Update agents + hachimoku 🎯 MVP |
+| Phase 14 | US5 (P2) | 1 | commit-push-pr validation |
+| Phase 15 | US7 (P2) | 1 | merge-pr FR-025 update |
+| Phase 16 | US9 (P3) | 1 | respond-review validation |
+| Phase 17 | — | 6 | Polish: scripts, quality, validation |
+| **Total** | | **31** | |
 
 ---
 
@@ -339,4 +619,4 @@ Task: "Create Worktree dataclass in src/issue_workflow/models/worktree.py"
 - Verify tests fail before implementing
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
-- Quality check required before every commit per CLAUDE.md
+- `ruff check --fix . && ruff format . && mypy .` must pass before commit (Constitution Article 5)

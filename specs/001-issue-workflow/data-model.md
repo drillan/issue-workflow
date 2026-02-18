@@ -242,6 +242,147 @@ class Worktree:
 - 配置場所: メインリポジトリの親ディレクトリ
 - Format: `../${PROJECT_NAME}-${BRANCH_NAME}` （`/`を`-`に置換）
 
+### 7. ReviewResult
+
+hachimokuによるレビュー結果を保持する。1回のレビューセッションは複数エージェントの実行結果を含み、
+各エージェントが個別の指摘を報告する。JSONLファイルの1行が1セッションに対応する。
+
+```python
+from dataclasses import dataclass
+from enum import Enum
+
+
+class ReviewMode(str, Enum):
+    """レビューモード"""
+    DIFF = "diff"
+    PR = "pr"
+
+
+class AgentResultStatus(str, Enum):
+    """レビューエージェントの実行ステータス"""
+    SUCCESS = "success"
+    ERROR = "error"
+
+
+class ReviewSeverity(str, Enum):
+    """レビュー指摘の重要度"""
+    CRITICAL = "Critical"
+    IMPORTANT = "Important"
+    SUGGESTION = "Suggestion"
+    NITPICK = "Nitpick"
+
+
+@dataclass(frozen=True)
+class ReviewIssueLocation:
+    """レビュー指摘の位置情報"""
+    file_path: str
+    line_number: int
+
+
+@dataclass(frozen=True)
+class ReviewIssue:
+    """レビューの個別指摘"""
+    agent_name: str
+    severity: ReviewSeverity
+    description: str
+    location: ReviewIssueLocation | None = None
+    suggestion: str | None = None
+    category: str | None = None
+
+
+@dataclass(frozen=True)
+class ReviewAgentResult:
+    """単一エージェントの実行結果"""
+    status: AgentResultStatus
+    agent_name: str
+    issues: list[ReviewIssue]
+    elapsed_time: float
+    error_message: str | None = None
+
+
+@dataclass(frozen=True)
+class ReviewSummary:
+    """レビューセッションのサマリー統計"""
+    total_issues: int
+    max_severity: ReviewSeverity | None
+    total_elapsed_time: float
+
+
+@dataclass(frozen=True)
+class ReviewResult:
+    """hachimokuによるレビュー結果（JSONLの1行に対応）"""
+    review_mode: ReviewMode
+    commit_hash: str
+    branch_name: str
+    reviewed_at: str
+    results: list[ReviewAgentResult]
+    summary: ReviewSummary
+    pr_number: int | None = None
+
+    _COMMIT_HASH_LENGTH = 40
+    _HEX_CHARS = frozenset("0123456789abcdef")
+
+    def __post_init__(self) -> None:
+        """commit_hashの形式を検証"""
+        if len(self.commit_hash) != self._COMMIT_HASH_LENGTH or not all(
+            c in self._HEX_CHARS for c in self.commit_hash.lower()
+        ):
+            msg = f"commit_hash must be a 40-character hexadecimal string, got '{self.commit_hash}'"
+            raise ValueError(msg)
+
+    @property
+    def all_issues(self) -> list[ReviewIssue]:
+        """成功したエージェント結果から全指摘をフラットに取得"""
+        return [
+            issue
+            for agent_result in self.results
+            if agent_result.status == AgentResultStatus.SUCCESS
+            for issue in agent_result.issues
+        ]
+
+    @property
+    def has_critical(self) -> bool:
+        """Critical指摘が存在するか"""
+        return any(issue.severity == ReviewSeverity.CRITICAL for issue in self.all_issues)
+```
+
+**Source**: `.hachimoku/reviews/pr-{number}.jsonl` または `.hachimoku/reviews/diff.jsonl`（JSONL形式、1行1レビューセッション）
+
+**Structure**:
+```
+ReviewResult
+├── review_mode: ReviewMode
+├── commit_hash: str (40文字hex)
+├── branch_name: str
+├── reviewed_at: str (ISO 8601)
+├── pr_number: int | None
+├── results: list[ReviewAgentResult]
+│   └── ReviewAgentResult
+│       ├── status: AgentResultStatus
+│       ├── agent_name: str
+│       ├── issues: list[ReviewIssue]
+│       │   └── ReviewIssue
+│       │       ├── agent_name: str
+│       │       ├── severity: ReviewSeverity
+│       │       ├── description: str
+│       │       ├── location: ReviewIssueLocation | None
+│       │       ├── suggestion: str | None
+│       │       └── category: str | None
+│       ├── elapsed_time: float
+│       └── error_message: str | None
+└── summary: ReviewSummary
+    ├── total_issues: int
+    ├── max_severity: ReviewSeverity | None
+    └── total_elapsed_time: float
+```
+
+**Validation Rules**:
+- `review_mode`: `ReviewMode` enum（"diff" または "pr"）
+- `commit_hash`: 40文字のhexadecimal文字列（`__post_init__`で検証）
+- `status`: `AgentResultStatus` enum（"success" または "error"）
+- `severity`: `ReviewSeverity` enum（"Critical", "Important", "Suggestion", "Nitpick"）
+- `pr_number`: 任意。PRモード時に設定される（diffモード時は通常None）
+
 ## Entity Relationships
 
 ```
@@ -278,6 +419,19 @@ class Worktree:
 │ - head_ref_name │────▶│ - branch        │
 │ - state         │     │ - project_name  │
 └─────────────────┘     └─────────────────┘
+        │
+        │ reviewed by
+        ▼
+┌─────────────────┐
+│  ReviewResult   │
+│                 │
+│ - review_mode   │
+│ - commit_hash   │
+│ - branch_name   │
+│ - pr_number     │
+│ - results[]     │──▶ ReviewAgentResult[]
+│ - summary       │──▶ ReviewSummary
+└─────────────────┘
 ```
 
 ## State Transitions
@@ -304,7 +458,16 @@ class Worktree:
       │               [Quality Gate]
       │                      │
       │                      ▼
+      │               [/commit-push-pr]
+      │                      │
+      │                      ▼
       │               [PR Created]
+      │                      │
+      │                      ▼
+      │               [8moku review]
+      │                      │
+      │                      ▼
+      │               [/respond-review]
       │                      │
       │                      ▼
       │               [/merge-pr]

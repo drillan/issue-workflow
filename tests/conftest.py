@@ -1,13 +1,42 @@
 """Pytest configuration and shared fixtures."""
 
+import json
 from collections.abc import Generator
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 
+from issue_workflow.models.claude_result import ClaudeResult
+
 if TYPE_CHECKING:
     from _pytest.tmpdir import TempPathFactory
+
+
+def make_claude_result(
+    exit_code: int = 0,
+    is_error: bool = False,
+    raw_json: str = "",
+) -> ClaudeResult:
+    """Create a ClaudeResult for testing.
+
+    Args:
+        exit_code: Process exit code.
+        is_error: Whether this result represents an error.
+        raw_json: Raw JSON output (auto-generated if empty).
+
+    Returns:
+        A ClaudeResult instance for testing.
+    """
+    if not raw_json:
+        raw_json = json.dumps({"type": "result", "subtype": "success"})
+    return ClaudeResult(
+        type="result",
+        subtype="success",
+        is_error=is_error,
+        exit_code=exit_code,
+        raw_json=raw_json,
+    )
 
 
 @pytest.fixture

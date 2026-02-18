@@ -25,7 +25,7 @@
 
 4. **開発効率**
    - Typerで`--help`、`--non-interactive`が自動生成（FR-003, FR-004）
-   - Pydanticで設定ファイルのJSON Schema検証（FR-020）
+   - Pydanticで設定ファイルのJSON Schema検証（FR-027）
    - pytest + TDD workflowで品質担保
 
 ### Alternatives Considered
@@ -61,7 +61,7 @@
 
 ### Rationale
 
-1. **JSON Schema対応**: FR-020要件を満たす
+1. **JSON Schema対応**: FR-027要件を満たす
 2. **Pydantic統合**: 型安全な設定読み込み
 3. **エディタ支援**: JSON Schemaでオートコンプリート
 
@@ -129,37 +129,33 @@
 }
 ```
 
-## 5. Plugin配布方式
+## 5. コンテンツ配布方式
 
-### Decision: GitHub Repository Fragment
+### Decision: CLIバンドル + 外部ツール
 
-### Rationale
+### Rationale (Issue #32で更新)
 
-1. **Claude Code標準**: `github:owner/repo#path`形式でPlugin参照
-2. **バージョン管理**: タグ指定で特定バージョンを参照可能
-3. **自動更新**: リポジトリ更新で即座に反映
+1. **外部プラグイン依存排除**: `commit-commands`, `pr-review-toolkit`への依存をなくし、自作ツールで統一
+2. **git-workflow-haikuバンドル**: commands/とagents/をissue-workflowに取り込み、`init`/`update`でコピー
+3. **hachimoku外部ツール**: `uv tool install hachimoku`で導入、PRレビュー機能を提供
 
-### Plugin構造
+### バンドル構造
 
 ```
-plugin/
-├── commands/           # スラッシュコマンド
+src/issue_workflow/templates/
+├── commands/           # スラッシュコマンド（start-issue, commit-push-pr, merge-pr等）
+├── agents/             # エージェント定義（git-workflow-haiku由来）
 ├── skills/             # バックグラウンドスキル
-├── git-conventions.md  # Git規約（FR-022）
-└── settings.json       # Plugin設定テンプレート
+└── git-conventions.md  # Git規約（FR-029）
 ```
 
 ### インストール方式
 
-CLIの`init`コマンドで`.claude/settings.json`に以下を追加:
-
-```json
-{
-  "plugins": [
-    "github:drillan/issue-workflow#plugin"
-  ]
-}
-```
+CLIの`init`コマンドで以下を実行:
+1. `.claude/commands/`にコマンドファイルをコピー
+2. `.claude/agents/`にエージェントファイルをコピー
+3. `.claude/skills/`にスキルファイルをコピー
+4. `uv tool install hachimoku`でhachimokuをインストール
 
 ## 6. GitHub CLI連携
 
@@ -260,6 +256,103 @@ dev = [
 issue-workflow = "issue_workflow.cli.main:app"
 ```
 
+## 9. hachimoku統合方式
+
+### Decision: サブプロセス委譲（Issue #32）
+
+### Rationale
+
+1. **バージョン不整合リスク回避**: `8moku init`のロジックを再実装すると、hachimokuのバージョンアップ時に不整合が発生する
+2. **責務の明確な分離**: issue-workflowはインストールとサブプロセス呼び出しのみ担当。hachimokuの内部実装・認証設定はスコープ外
+3. **最小限のコード変更**: `subprocess.run(["8moku", "init"])` のみで完結
+
+### 実装方式
+
+```python
+def setup_hachimoku(project_dir: Path) -> None:
+    """hachimokuをインストールし、プロジェクトを初期化する。"""
+    # Step 1: インストール済みチェック（グローバル）
+    if shutil.which("8moku") is None:
+        # uv tool install で最新版をインストール（バージョン指定なし）
+        subprocess.run(["uv", "tool", "install", "hachimoku"], check=True)
+
+    # Step 2: プロジェクト初期化チェック（ローカル）
+    hachimoku_dir = project_dir / ".hachimoku"
+    if not hachimoku_dir.exists():
+        subprocess.run(["8moku", "init"], check=True, cwd=project_dir)
+```
+
+### Alternatives Considered
+
+| 方式 | 却下理由 |
+|------|---------|
+| ロジック吸収（`8moku init`の再実装） | バージョン不整合リスク、保守コスト増大 |
+| 手動インストール（ユーザーに委ねる） | SC-001（5分以内の導入完了）を満たせない |
+
+## 10. Default branch自動検出
+
+### Decision: `git symbolic-ref`による自動検出（Issue #32）
+
+### Rationale
+
+1. **FR-025/FR-026準拠**: `main`ハードコード禁止。Gitflow（`develop`）、`master`、その他のブランチ戦略に対応
+2. **`git symbolic-ref refs/remotes/origin/HEAD`**: リモートのデフォルトブランチを正確に取得
+3. **エッジケース対応**: 未設定時は`git remote set-head origin --auto`で自動設定を試行。失敗時はエラー
+
+### 実装
+
+```python
+def get_default_branch() -> str:
+    """リモートのデフォルトブランチを取得する。"""
+    result = subprocess.run(
+        ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+        capture_output=True, text=True,
+    )
+    if result.returncode == 0:
+        # refs/remotes/origin/main → main
+        return result.stdout.strip().removeprefix("refs/remotes/origin/")
+
+    # 未設定の場合、自動設定を試行
+    auto_result = subprocess.run(
+        ["git", "remote", "set-head", "origin", "--auto"],
+        capture_output=True, text=True,
+    )
+    if auto_result.returncode != 0:
+        msg = (
+            "デフォルトブランチを検出できません。\n"
+            "git remote set-head origin --auto を実行してください。"
+        )
+        raise RuntimeError(msg)
+
+    # 再取得
+    retry = subprocess.run(
+        ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+        capture_output=True, text=True, check=True,
+    )
+    return retry.stdout.strip().removeprefix("refs/remotes/origin/")
+```
+
+## 11. 外部プラグイン排除戦略
+
+### Decision: バンドル + hachimoku直接呼び出し（Issue #32）
+
+### 置き換えマッピング
+
+| 旧（外部プラグイン） | 新（Issue #32後） |
+|---------------------|-------------------|
+| `/commit-commands:commit-push-pr` | `/commit-push-pr`（バンドルコマンド） |
+| `/pr-review-toolkit:review-pr` | `8moku <番号>`（直接呼び出し） |
+| `ci_review`設定 | 削除（hachimokuに統一） |
+| `.claude/settings.json` Plugin設定 | 不要（バンドル方式） |
+
+### ワークフロースクリプト変更
+
+`scripts/full-workflow.sh` の主な変更:
+- Step 3: `/commit-commands:commit-push-pr` → `/commit-push-pr`
+- Step 4: `/pr-review-toolkit:review-pr` → `8moku <番号>`直接呼び出し
+- Step 4: `ci_review`モード分岐を削除
+- Step 4: `/respond-review`（hachimoku JSONL対応）を追加
+
 ## Summary
 
 | 項目 | 決定 |
@@ -268,7 +361,10 @@ issue-workflow = "issue_workflow.cli.main:app"
 | CLIフレームワーク | Typer |
 | 設定形式 | JSON + Pydantic |
 | 配布 | PyPI (`uv tool install`) |
-| Plugin配布 | `github:drillan/issue-workflow#plugin` |
+| コンテンツ配布 | CLIバンドル（commands/ + agents/） + hachimoku外部ツール |
 | GitHub連携 | `gh` CLI |
 | テスト | pytest |
 | 品質チェック | ruff + mypy |
+| hachimoku統合 | サブプロセス委譲（`8moku init`呼び出し） |
+| Default branch | `git symbolic-ref`による自動検出 |
+| 外部プラグイン | 完全排除（バンドル + hachimoku直接呼び出し） |

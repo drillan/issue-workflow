@@ -37,10 +37,13 @@ cd your-project
 issue-workflow init -l python
 ```
 
-以下のファイルが生成されます:
+以下が生成されます:
 - `.claude/workflow-config.json` - ワークフロー設定
 - `.claude/git-conventions.md` - Git命名規則
-- `.claude/settings.json` - Plugin設定（更新）
+- `.claude/commands/` - スラッシュコマンド（start-issue, commit-push-pr, merge-pr等）
+- `.claude/agents/` - エージェント定義（git-workflow-haiku由来）
+- `.claude/skills/` - バックグラウンドスキル
+- `.hachimoku/` - hachimoku設定（自動インストール + 初期化）
 
 ### Step 2: Claude Codeを起動
 
@@ -48,7 +51,7 @@ issue-workflow init -l python
 claude
 ```
 
-Pluginが自動的に読み込まれます。
+バンドルされたコマンド・スキルが自動的に読み込まれます。
 
 ## Basic Workflow
 
@@ -81,7 +84,41 @@ code-quality-gateスキルがコミット前に自動チェック:
 uv run ruff check --fix . && uv run ruff format . && uv run mypy .
 ```
 
-### 4. PRをマージ
+### 4. コミット・プッシュ・PR作成
+
+```
+/commit-push-pr
+```
+
+このコマンドは:
+1. 変更をコミット（メッセージ自動生成）
+2. リモートにプッシュ
+3. PRを作成
+
+### 5. PRレビュー
+
+hachimoku CLIでPRレビューを実行:
+
+```bash
+8moku 300
+```
+
+レビュー結果は`.hachimoku/reviews/pr-300.jsonl`に出力されます。
+
+### 6. レビュー指摘への対応
+
+```
+/respond-review 300
+```
+
+hachimokuのJSONLレビュー結果を読み取り、各指摘への対応方針を決定・実行します。
+引数なしの場合は現在のブランチから自動検出:
+
+```
+/respond-review
+```
+
+### 7. PRをマージ
 
 ```
 /merge-pr 100
@@ -108,7 +145,9 @@ uv run ruff check --fix . && uv run ruff format . && uv run mypy .
 ../your-project-feat-200-add-feature/
 ```
 
-### レビューコメント対応
+### レビューコメント対応（人間レビューア）
+
+GitHub上のレビューコメント（人間レビューア等）に対応:
 
 ```
 /review-pr-comments 100
@@ -167,6 +206,16 @@ gh auth login
 
 ```bash
 issue-workflow init -l python --force
+```
+
+### hachimokuのインストールエラー
+
+```bash
+# 手動インストール
+uv tool install hachimoku
+
+# 初期化
+8moku init
 ```
 
 ### worktreeの手動削除
