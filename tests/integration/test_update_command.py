@@ -2,10 +2,12 @@
 
 import os
 from pathlib import Path
+from unittest.mock import patch
 
 from typer.testing import CliRunner
 
 from issue_workflow.cli.main import app
+from issue_workflow.services.hachimoku_version import HachimokuVersionResult
 
 runner = CliRunner()
 
@@ -290,5 +292,124 @@ class TestUpdateAgentsIntegration:
             assert result.exit_code == 0
             # Should show "Agents" in the output since new agents are added
             assert "agents" in result.output.lower() or "added" in result.output.lower()
+        finally:
+            os.chdir(original_cwd)
+
+
+class TestHachimokuVersionHint:
+    """Integration tests for hachimoku version hint display."""
+
+    def test_shows_hint_when_update_available(self, tmp_path: Path) -> None:
+        """Test hint is displayed when newer hachimoku version is available."""
+        claude_dir = tmp_path / ".claude"
+        (claude_dir / "skills").mkdir(parents=True)
+
+        original_cwd = Path.cwd()
+        os.chdir(tmp_path)
+
+        version_result = HachimokuVersionResult(
+            installed_version="0.0.2",
+            remote_version="0.0.3",
+            update_available=True,
+        )
+
+        try:
+            with patch(
+                "issue_workflow.cli.commands.update.check_hachimoku_version",
+                return_value=version_result,
+            ):
+                result = runner.invoke(app, ["update"])
+                assert result.exit_code == 0
+                assert "0.0.2" in result.output
+                assert "0.0.3" in result.output
+                assert "uv tool install --reinstall" in result.output
+        finally:
+            os.chdir(original_cwd)
+
+    def test_no_hint_when_up_to_date(self, tmp_path: Path) -> None:
+        """Test no hint is displayed when hachimoku is up to date."""
+        claude_dir = tmp_path / ".claude"
+        (claude_dir / "skills").mkdir(parents=True)
+
+        original_cwd = Path.cwd()
+        os.chdir(tmp_path)
+
+        version_result = HachimokuVersionResult(
+            installed_version="0.0.3",
+            remote_version="0.0.3",
+            update_available=False,
+        )
+
+        try:
+            with patch(
+                "issue_workflow.cli.commands.update.check_hachimoku_version",
+                return_value=version_result,
+            ):
+                result = runner.invoke(app, ["update"])
+                assert result.exit_code == 0
+                assert "アップグレード" not in result.output
+        finally:
+            os.chdir(original_cwd)
+
+    def test_no_hint_when_not_installed(self, tmp_path: Path) -> None:
+        """Test no hint when hachimoku is not installed."""
+        claude_dir = tmp_path / ".claude"
+        (claude_dir / "skills").mkdir(parents=True)
+
+        original_cwd = Path.cwd()
+        os.chdir(tmp_path)
+
+        try:
+            with patch(
+                "issue_workflow.cli.commands.update.check_hachimoku_version",
+                return_value=None,
+            ):
+                result = runner.invoke(app, ["update"])
+                assert result.exit_code == 0
+                assert "アップグレード" not in result.output
+        finally:
+            os.chdir(original_cwd)
+
+    def test_hint_shown_in_dry_run_mode(self, tmp_path: Path) -> None:
+        """Test hint is displayed even in dry-run mode."""
+        claude_dir = tmp_path / ".claude"
+        (claude_dir / "skills").mkdir(parents=True)
+
+        original_cwd = Path.cwd()
+        os.chdir(tmp_path)
+
+        version_result = HachimokuVersionResult(
+            installed_version="0.0.2",
+            remote_version="0.0.3",
+            update_available=True,
+        )
+
+        try:
+            with patch(
+                "issue_workflow.cli.commands.update.check_hachimoku_version",
+                return_value=version_result,
+            ):
+                result = runner.invoke(app, ["update", "--dry-run"])
+                assert result.exit_code == 0
+                assert "0.0.2" in result.output
+                assert "0.0.3" in result.output
+        finally:
+            os.chdir(original_cwd)
+
+    def test_update_succeeds_when_version_check_fails(self, tmp_path: Path) -> None:
+        """Test update command succeeds even when version check raises an exception."""
+        claude_dir = tmp_path / ".claude"
+        (claude_dir / "skills").mkdir(parents=True)
+
+        original_cwd = Path.cwd()
+        os.chdir(tmp_path)
+
+        try:
+            with patch(
+                "issue_workflow.cli.commands.update.check_hachimoku_version",
+                side_effect=Exception("Unexpected error"),
+            ):
+                result = runner.invoke(app, ["update"])
+                assert result.exit_code == 0
         finally:
             os.chdir(original_cwd)

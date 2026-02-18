@@ -7,6 +7,10 @@ import typer
 
 from issue_workflow.cli import ui
 from issue_workflow.models.update import FileChangeType, UpdateResult
+from issue_workflow.services.hachimoku_version import (
+    check_hachimoku_version,
+    format_upgrade_hint,
+)
 from issue_workflow.services.template import SourceDirectoryNotFoundError, TemplateService
 
 app = typer.Typer(
@@ -82,6 +86,24 @@ def _display_errors(result: UpdateResult) -> None:
         ui.console.print(f"  - {path.name}: {error}")
 
 
+def _display_hachimoku_hint() -> None:
+    """Check and display hachimoku upgrade hint if a newer version is available.
+
+    This is a best-effort check. Any failure is silently ignored
+    so it never affects the update command's exit code or output.
+    """
+    try:
+        version_result = check_hachimoku_version()
+    except Exception:
+        return
+
+    if version_result is None or not version_result.update_available:
+        return
+
+    ui.console.print()
+    ui.print_info(format_upgrade_hint(version_result))
+
+
 def _run_update(dry_run: bool = False) -> None:
     """Run the update command logic.
 
@@ -125,6 +147,9 @@ def _run_update(dry_run: bool = False) -> None:
     _display_changes(combined_result, "Agents", dry_run)
     _display_summary(combined_result)
     _display_errors(combined_result)
+
+    # Check hachimoku version (best-effort, never affects exit code)
+    _display_hachimoku_hint()
 
     # Set exit code
     if combined_result.has_errors:

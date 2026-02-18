@@ -58,6 +58,14 @@ issue-workflow update
 > **Note**: `uv tool install` does nothing if the package is already installed.
 > The `--reinstall` flag fetches the latest code from the remote repository and reinstalls it.
 
+The `update` command also checks if a newer version of [hachimoku](https://github.com/drillan/hachimoku) is available and displays an upgrade hint:
+
+```
+ℹ hachimoku の新しいバージョンが利用可能です (現在: 0.0.2, 最新: 0.0.3)
+  アップグレード:   uv tool install --reinstall git+https://github.com/drillan/hachimoku.git
+  エージェント更新: 8moku init --force
+```
+
 Use `--dry-run` to preview changes before applying:
 
 ```bash

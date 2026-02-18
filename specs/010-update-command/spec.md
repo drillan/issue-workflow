@@ -2,7 +2,7 @@
 
 **Feature Branch**: `010-update-command`
 **Created**: 2026-01-15
-**Updated**: 2026-02-15
+**Updated**: 2026-02-18
 **Status**: Draft
 **Input**: User description: "specs/001-issue-workflow/spec.mdを親仕様としたupdateコマンドを定義してください、src/issue_workflow/skillsやsrc/issue_workflow/agentsの内容が更新されたときに、ユーザプロジェクトの.claude/skillsや.claude/agentsなどが更新されるイメージです"
 **Parent Spec**: `specs/001-issue-workflow/spec.md` (FR-007)
@@ -49,12 +49,31 @@
 
 ---
 
+### User Story 3 - hachimoku 更新ヒント表示 (Priority: P3)
+
+開発者として、`issue-workflow update`実行時に hachimoku の新しいバージョンが利用可能な場合にヒントを表示してほしい。これにより、依存ツールの更新タイミングを見逃さずに済む。
+
+**Why this priority**: 情報提供のみで update 本体の動作に影響しない補助的機能。
+
+**Independent Test**: hachimoku がインストール済みかつリモートに新しいバージョンがある状態で `issue-workflow update` を実行し、ヒントメッセージが表示されることで、独立してテスト可能。
+
+**Acceptance Scenarios**:
+
+1. **Given** hachimoku がインストール済みでリモートに新しいバージョンがある, **When** `issue-workflow update`を実行する, **Then** アップグレードヒントが表示される
+2. **Given** hachimoku がインストール済みで最新バージョン, **When** `issue-workflow update`を実行する, **Then** ヒントは表示されない
+3. **Given** hachimoku が未インストール, **When** `issue-workflow update`を実行する, **Then** ヒントはスキップされ、update 本体は正常に動作する
+4. **Given** リモートバージョンの取得に失敗（ネットワークエラー等）, **When** `issue-workflow update`を実行する, **Then** ヒントはスキップされ、update 本体は正常に動作する
+5. **Given** `--dry-run` モード, **When** `issue-workflow update --dry-run`を実行する, **Then** ヒントは通常通り表示される
+
+---
+
 ### Edge Cases
 
 - `.claude/`ディレクトリが存在しない（initコマンド未実行）場合、明確なエラーメッセージと`init`コマンドの案内を表示する
 - ツールキットのバージョンがプロジェクトより古い場合 → 警告なしで上書き（v1.2でバージョン比較機能を検討）
 - ファイル権限エラー時の適切なエラーメッセージ表示
 - 部分的に更新が失敗した場合 → エラーメッセージを表示して終了（ロールバックしない、既にコピーされたファイルは残る）
+- hachimoku バージョンチェック失敗時（未インストール、ネットワークエラー、パース失敗）→ ヒントをスキップし、update 本体は継続
 
 ## Requirements *(mandatory)*
 
@@ -81,6 +100,13 @@
 #### 動作要件
 
 - **FR-010**: 更新時はskills/agentsを常に上書きしなければならない（確認プロンプトなし、カスタムファイルは別ディレクトリで管理）
+
+#### hachimoku バージョンチェック要件
+
+- **FR-011**: `issue-workflow update`実行時に、hachimoku のローカルバージョンとリモート最新バージョンを比較し、更新が利用可能な場合にヒントメッセージを表示しなければならない
+- **FR-012**: ローカルバージョンは`8moku --version`コマンドの出力から取得しなければならない
+- **FR-013**: リモート最新バージョンは`https://raw.githubusercontent.com/drillan/hachimoku/refs/heads/main/pyproject.toml`をHTTP GETし、`tomllib`でパースして取得しなければならない
+- **FR-014**: バージョンチェックの失敗（未インストール、ネットワークエラー、パース失敗）は update 本体の処理に影響を与えてはならない
 
 ### Key Entities
 
@@ -111,7 +137,8 @@
 
 - `workflow-config.json`の更新（設定変更は別コマンドまたは手動で対応）
 - `git-conventions.md`の更新（プロジェクト固有設定のため）
-- 自動バージョン管理・更新通知機能（v1.2で検討）
+- hachimoku の自動アップグレード実行（ヒント表示のみ提供）
+- hachimoku エージェント定義の自動更新（`8moku init --force` はユーザーが手動実行）
 - リモートからの直接ダウンロード更新（現バージョンはローカルインストール前提）
 - ユーザーカスタムskills/agentsのバックアップ機能（v1.2で検討）
 - 選択的更新（--skills-only/--agents-only）- 常に両方を更新する
