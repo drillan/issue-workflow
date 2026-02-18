@@ -55,6 +55,9 @@ uv tool install --reinstall git+https://github.com/drillan/issue-workflow.git
 issue-workflow update
 ```
 
+> **Note**: `uv tool install` does nothing if the package is already installed.
+> The `--reinstall` flag fetches the latest code from the remote repository and reinstalls it.
+
 Use `--dry-run` to preview changes before applying:
 
 ```bash
