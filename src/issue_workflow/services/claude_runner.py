@@ -59,6 +59,8 @@ class ClaudeRunner:
             "-p",
             prompt,
             "--dangerously-skip-permissions",
+            "--disallowed-tools",
+            "AskUserQuestion",
             "--output-format",
             "json",
         ]
@@ -110,6 +112,8 @@ class ClaudeRunner:
             "-p",
             prompt,
             "--dangerously-skip-permissions",
+            "--disallowed-tools",
+            "AskUserQuestion",
             "--output-format",
             "stream-json",
             "--verbose",
