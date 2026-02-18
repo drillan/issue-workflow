@@ -5,9 +5,9 @@ from unittest.mock import patch
 import pytest
 
 from issue_workflow.services.hachimoku_version import (
+    COMMAND_TIMEOUT_SECONDS,
     HACHIMOKU_PYPROJECT_URL,
     HACHIMOKU_UPGRADE_COMMAND,
-    HTTP_TIMEOUT_SECONDS,
     HachimokuVersionResult,
     check_hachimoku_version,
     format_upgrade_hint,
@@ -25,7 +25,7 @@ class TestGetInstalledVersion:
             mock_which.return_value = "/usr/bin/8moku"
             with patch("issue_workflow.services.hachimoku_version.subprocess.run") as mock_run:
                 mock_run.return_value.returncode = 0
-                mock_run.return_value.stdout = "hachimoku 0.0.2\n"
+                mock_run.return_value.stdout = "0.0.2\n"
                 result = get_installed_version()
                 assert result == "0.0.2"
 
@@ -46,13 +46,13 @@ class TestGetInstalledVersion:
                 result = get_installed_version()
                 assert result is None
 
-    def test_returns_none_when_version_parse_fails(self) -> None:
-        """Test returns None when version output cannot be parsed."""
+    def test_returns_none_when_output_is_empty(self) -> None:
+        """Test returns None when version output is empty."""
         with patch("issue_workflow.services.hachimoku_version.shutil.which") as mock_which:
             mock_which.return_value = "/usr/bin/8moku"
             with patch("issue_workflow.services.hachimoku_version.subprocess.run") as mock_run:
                 mock_run.return_value.returncode = 0
-                mock_run.return_value.stdout = "unexpected output format"
+                mock_run.return_value.stdout = "\n"
                 result = get_installed_version()
                 assert result is None
 
@@ -71,14 +71,14 @@ class TestGetInstalledVersion:
             mock_which.return_value = "/usr/bin/8moku"
             with patch("issue_workflow.services.hachimoku_version.subprocess.run") as mock_run:
                 mock_run.return_value.returncode = 0
-                mock_run.return_value.stdout = "hachimoku 0.0.3\n"
+                mock_run.return_value.stdout = "0.0.3\n"
                 get_installed_version()
                 mock_run.assert_called_once_with(
                     ["8moku", "--version"],
                     capture_output=True,
                     text=True,
                     check=False,
-                    timeout=HTTP_TIMEOUT_SECONDS,
+                    timeout=COMMAND_TIMEOUT_SECONDS,
                 )
 
 
@@ -137,7 +137,7 @@ class TestGetRemoteVersion:
             call_args = mock_urlopen.call_args
             request = call_args[0][0]
             assert request.full_url == HACHIMOKU_PYPROJECT_URL
-            assert call_args[1]["timeout"] == HTTP_TIMEOUT_SECONDS
+            assert call_args[1]["timeout"] == COMMAND_TIMEOUT_SECONDS
 
 
 class TestCheckHachimokuVersion:
@@ -294,8 +294,8 @@ class TestConstants:
         assert "pyproject.toml" in HACHIMOKU_PYPROJECT_URL
 
     def test_timeout_is_reasonable(self) -> None:
-        """Test HTTP_TIMEOUT_SECONDS is a reasonable value."""
-        assert HTTP_TIMEOUT_SECONDS == 5
+        """Test COMMAND_TIMEOUT_SECONDS is a reasonable value."""
+        assert COMMAND_TIMEOUT_SECONDS == 5
 
     def test_upgrade_command(self) -> None:
         """Test HACHIMOKU_UPGRADE_COMMAND contains expected components."""

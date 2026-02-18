@@ -19,9 +19,7 @@ HACHIMOKU_UPGRADE_COMMAND: str = (
 
 HACHIMOKU_AGENT_UPDATE_COMMAND: str = "8moku init --force"
 
-HTTP_TIMEOUT_SECONDS: int = 5
-
-_VERSION_OUTPUT_PREFIX: str = "hachimoku "
+COMMAND_TIMEOUT_SECONDS: int = 5
 
 
 @dataclass(frozen=True)
@@ -48,7 +46,7 @@ def get_installed_version() -> str | None:
             capture_output=True,
             text=True,
             check=False,
-            timeout=HTTP_TIMEOUT_SECONDS,
+            timeout=COMMAND_TIMEOUT_SECONDS,
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -56,11 +54,7 @@ def get_installed_version() -> str | None:
     if completed.returncode != 0:
         return None
 
-    output = completed.stdout.strip()
-    if not output.startswith(_VERSION_OUTPUT_PREFIX):
-        return None
-
-    return output[len(_VERSION_OUTPUT_PREFIX) :]
+    return completed.stdout.strip() or None
 
 
 def get_remote_version() -> str | None:
@@ -73,7 +67,7 @@ def get_remote_version() -> str | None:
     """
     request = Request(HACHIMOKU_PYPROJECT_URL)
     try:
-        with urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+        with urlopen(request, timeout=COMMAND_TIMEOUT_SECONDS) as response:
             content = response.read()
     except (OSError, URLError):
         return None
