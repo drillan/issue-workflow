@@ -5,7 +5,11 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
+from issue_workflow.services.claude_runner import (
+    _DISALLOWED_TOOLS,
+    DEFAULT_TIMEOUT_SECONDS,
+    ClaudeRunner,
+)
 
 
 class TestClaudeRunnerNonVerbose:
@@ -73,7 +77,7 @@ class TestClaudeRunnerNonVerbose:
         cmd = mock_run.call_args[0][0]
         assert "--disallowed-tools" in cmd
         disallowed_index = cmd.index("--disallowed-tools")
-        assert cmd[disallowed_index + 1] == "AskUserQuestion"
+        assert cmd[disallowed_index + 1] in _DISALLOWED_TOOLS
 
     @patch("issue_workflow.services.claude_runner.subprocess.run")
     def test_run_with_custom_cwd(self, mock_run: MagicMock) -> None:
@@ -225,7 +229,7 @@ class TestClaudeRunnerVerbose:
         cmd = mock_popen.call_args[0][0]
         assert "--disallowed-tools" in cmd
         disallowed_index = cmd.index("--disallowed-tools")
-        assert cmd[disallowed_index + 1] == "AskUserQuestion"
+        assert cmd[disallowed_index + 1] in _DISALLOWED_TOOLS
 
     @patch("issue_workflow.services.claude_runner.subprocess.Popen")
     def test_verbose_on_tool_use_callback(self, mock_popen: MagicMock) -> None:

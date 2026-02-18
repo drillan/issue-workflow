@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from issue_workflow.models.claude_result import ClaudeResult
 
 DEFAULT_TIMEOUT_SECONDS: int = 3600
+_DISALLOWED_TOOLS: list[str] = ["AskUserQuestion"]
 
 
 class ClaudeRunner:
@@ -59,11 +60,10 @@ class ClaudeRunner:
             "-p",
             prompt,
             "--dangerously-skip-permissions",
-            "--disallowed-tools",
-            "AskUserQuestion",
-            "--output-format",
-            "json",
         ]
+        for tool in _DISALLOWED_TOOLS:
+            cmd.extend(["--disallowed-tools", tool])
+        cmd.extend(["--output-format", "json"])
 
         try:
             proc = subprocess.run(
@@ -112,12 +112,10 @@ class ClaudeRunner:
             "-p",
             prompt,
             "--dangerously-skip-permissions",
-            "--disallowed-tools",
-            "AskUserQuestion",
-            "--output-format",
-            "stream-json",
-            "--verbose",
         ]
+        for tool in _DISALLOWED_TOOLS:
+            cmd.extend(["--disallowed-tools", tool])
+        cmd.extend(["--output-format", "stream-json", "--verbose"])
 
         proc = subprocess.Popen(
             cmd,
