@@ -25,6 +25,14 @@ GitHub Issue-driven development workflow toolkit for Claude Code. Automates and 
 uv tool install git+https://github.com/drillan/issue-workflow.git
 ```
 
+### Installing a Specific Version
+
+To install a specific version, specify the tag:
+
+```bash
+uv tool install git+https://github.com/drillan/issue-workflow@v0.1.1
+```
+
 ## Quick Start
 
 ```bash
