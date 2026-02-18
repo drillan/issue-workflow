@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2026-02-14
+## [0.2.0] - 2026-02-18
 
 ### Added
 
@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Default branch auto-detection via `git symbolic-ref` and `gh api`
 - Docker development environment (`docker-compose.yml`, `Makefile`)
 - Version consistency tests (`test_version.py`)
+- Workflow subcommands via `claude -p` (`start-issue`, `create-pr`, `review-pr`, `push-changes`, `respond-comments`, `merge-pr`, `run`)
+- `--force` flag for `/start-issue` to skip TDD confirmations in non-interactive mode
+- `.gitignore` management service in `issue-workflow init`
+- Real-time 8moku output streaming in `review-pr` subcommand
+- Hachimoku version upgrade hint in `issue-workflow update`
+- `.hachimoku/` configuration copy to new worktrees
+- Versioned installation instructions in README
 
 ### Changed
 
@@ -28,6 +35,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `UpdateResult` extended with `agents_changes` field
 - `scripts/full-workflow.sh` migrated to hachimoku and bundled commands
 - Rename "Plugin Commands" section to "Slash Commands" in README
+- Git utilities extracted into separate `lib` module
+- `complete-issue.sh` renamed to `create-pr.sh`
+
+### Fixed
+
+- `AskUserQuestion` tool disallowed in non-interactive mode
+- PR creation incorrectly skipped when merged/closed PRs exist for same branch
+- Error suppression patterns replaced with explicit error propagation
+- JSON path for assistant event message content in verbose stream
+- Null jq output handling in PR creation workflow
 
 ### Removed
 
