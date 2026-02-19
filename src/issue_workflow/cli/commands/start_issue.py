@@ -1,5 +1,6 @@
 """Start-issue subcommand for issue-workflow CLI."""
 
+import contextlib
 from pathlib import Path
 from typing import Annotated
 
@@ -56,6 +57,8 @@ def _prepare_worktree(issue_number: int) -> Path | None:
         copy_hachimoku_to_worktree(git.repo_path, worktree_path)
     except OSError as e:
         ui.print_error(f"Failed to copy .hachimoku to worktree: {e}")
+        with contextlib.suppress(GitError):
+            git.worktree_remove(worktree_path)
         return None
 
     return worktree_path

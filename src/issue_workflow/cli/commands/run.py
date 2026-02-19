@@ -10,7 +10,6 @@ from issue_workflow.cli import ui
 from issue_workflow.cli.commands._common import EXIT_SUCCESS, log_execution, on_tool_use
 from issue_workflow.cli.commands.push_changes import PUSH_CHANGES_PROMPT
 from issue_workflow.cli.commands.start_issue import _prepare_worktree
-from issue_workflow.lib.git import GitError
 from issue_workflow.models.workflow_context import WorkflowContext
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
 from issue_workflow.services.dependency_checker import (
@@ -142,11 +141,7 @@ def _run_workflow(
         return 1
 
     # Detect PR number after create-pr
-    try:
-        pr_number: int = detect_pr_number(cwd=ctx.cwd_for_skill)
-    except (SystemExit, GitError):
-        _print_failure("detect-pr")
-        return 1
+    pr_number: int = detect_pr_number(cwd=ctx.cwd_for_skill)
     ctx.pr_number = pr_number
 
     # Step 3a: hachimoku review (subprocess, no ClaudeResult)
