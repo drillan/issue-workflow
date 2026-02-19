@@ -363,6 +363,21 @@ class TestClaudeRunnerVerbose:
         callback.assert_not_called()
         assert result.exit_code == 0
 
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_uses_devnull_for_stderr(self, mock_popen: MagicMock) -> None:
+        """Test verbose mode uses subprocess.DEVNULL for stderr to prevent deadlock."""
+        mock_process = MagicMock()
+        mock_process.stdout = iter([json.dumps({"type": "result", "subtype": "success"}) + "\n"])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 0
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        runner.run("prompt", verbose=True)
+
+        call_kwargs = mock_popen.call_args
+        assert call_kwargs.kwargs.get("stderr") == subprocess.DEVNULL
+
     @patch("issue_workflow.services.claude_runner.time.monotonic")
     @patch("issue_workflow.services.claude_runner.subprocess.Popen")
     def test_verbose_wait_uses_remaining_timeout(
