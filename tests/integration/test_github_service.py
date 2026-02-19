@@ -2,11 +2,24 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from issue_workflow.services.github import (
+    GhResult,
     check_gh_availability,
     get_issue,
     get_pr,
 )
+
+
+class TestGhResult:
+    """Tests for GhResult dataclass."""
+
+    def test_is_frozen(self) -> None:
+        """Test GhResult is immutable."""
+        result = GhResult(success=True, data=None, error=None)
+        with pytest.raises(AttributeError):
+            result.success = False  # type: ignore[misc]
 
 
 class TestGhAvailability:

@@ -190,6 +190,16 @@ class TestIssueFromGhJson:
         with pytest.raises(KeyError):
             Issue.from_gh_json(data)
 
+    def test_from_gh_json_non_int_str_number_raises_typeerror(self) -> None:
+        """Test creating issue with non-int/str number raises TypeError."""
+        data: dict[str, object] = {
+            "number": [1, 2, 3],
+            "title": "Test",
+            "state": "OPEN",
+        }
+        with pytest.raises(TypeError, match="number must be int or str"):
+            Issue.from_gh_json(data)
+
     def test_from_gh_json_invalid_state_raises_valueerror(self) -> None:
         """Test creating issue with invalid state raises ValueError."""
         data = {

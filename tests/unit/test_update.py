@@ -23,6 +23,12 @@ class TestFileChangeType:
         """Test UNCHANGED enum value."""
         assert FileChangeType.UNCHANGED.value == "unchanged"
 
+    def test_is_str_enum(self) -> None:
+        """Test FileChangeType inherits from str."""
+        assert isinstance(FileChangeType.ADDED, str)
+        assert isinstance(FileChangeType.UPDATED, str)
+        assert isinstance(FileChangeType.UNCHANGED, str)
+
 
 class TestFileChangeInfo:
     """Tests for FileChangeInfo dataclass."""
