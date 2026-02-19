@@ -760,6 +760,82 @@ class TestReviewPrTimeout:
         call_kwargs = mock_runner.run.call_args
         assert call_kwargs.kwargs.get("timeout_seconds") == 3600
 
+    def test_timeout_passed_to_8moku_subprocess(
+        self,
+        mock_deps: MagicMock,
+        mock_runner: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """--timeout value is forwarded to 8moku subprocess.run."""
+        from issue_workflow.cli.commands.review_pr import _run_review_pr
+
+        _run_review_pr(
+            pr_number=300,
+            review_only=False,
+            respond_only=False,
+            verbose=False,
+            timeout=600,
+        )
+
+        call_kwargs = mock_subprocess.call_args
+        assert call_kwargs.kwargs.get("timeout") == 600
+
+    def test_8moku_timeout_expired_returns_1(
+        self,
+        mock_deps: MagicMock,
+        mock_runner: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """subprocess.TimeoutExpired from 8moku returns exit_code=1."""
+        import subprocess
+
+        mock_subprocess.side_effect = subprocess.TimeoutExpired(cmd=["8moku", "300"], timeout=600)
+
+        with patch(f"{_MOD}.ui") as mock_ui:
+            from issue_workflow.cli.commands.review_pr import _run_review_pr
+
+            exit_code = _run_review_pr(
+                pr_number=300,
+                review_only=False,
+                respond_only=False,
+                verbose=False,
+                timeout=600,
+            )
+
+            assert exit_code == 1
+            error_calls = [str(c) for c in mock_ui.print_error.call_args_list]
+            assert any("timed out" in c and "600" in c for c in error_calls)
+
+    def test_8moku_timeout_expired_skips_respond_review(
+        self,
+        mock_deps: MagicMock,
+        mock_runner: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """When 8moku times out, respond-review is not executed."""
+        import subprocess
+
+        mock_subprocess.side_effect = subprocess.TimeoutExpired(cmd=["8moku", "300"], timeout=600)
+
+        with patch(f"{_MOD}.ui"):
+            from issue_workflow.cli.commands.review_pr import _run_review_pr
+
+            _run_review_pr(
+                pr_number=300,
+                review_only=False,
+                respond_only=False,
+                verbose=False,
+                timeout=600,
+            )
+
+            mock_runner.run.assert_not_called()
+
 
 class TestReviewPrLogArgs:
     """Tests for log_execution call arguments."""
