@@ -103,3 +103,17 @@ class TestDetectPrNumber:
         detect_pr_number()
 
         mock_git_ops.assert_called_once_with(repo_path=None)
+
+    @patch("issue_workflow.services.pr_detector.GitOperations")
+    def test_git_error_raises_typer_exit(self, mock_git_ops: MagicMock) -> None:
+        """Test GitError from git operations raises typer.Exit (Issue #112)."""
+        from issue_workflow.lib.git import GitError
+
+        mock_instance = MagicMock()
+        mock_instance.get_current_branch.side_effect = GitError("git not found")
+        mock_git_ops.return_value = mock_instance
+
+        with pytest.raises(typer.Exit) as exc_info:
+            detect_pr_number()
+
+        assert exc_info.value.exit_code == 1

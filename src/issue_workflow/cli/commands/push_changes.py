@@ -4,7 +4,6 @@ from typing import Annotated
 
 import typer
 
-from issue_workflow.cli import ui
 from issue_workflow.cli.commands._common import EXIT_SUCCESS, run_claude_skill
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS
 from issue_workflow.services.dependency_checker import (
@@ -37,14 +36,7 @@ def _run_push_changes(
     check_dependencies([CLAUDE_DEPENDENCY, GH_DEPENDENCY])
 
     # PR number auto-detection (FR-015a) for log filename
-    try:
-        pr_number = detect_pr_number()
-    except SystemExit:
-        ui.print_error(
-            "No PR found for current branch.\n\n"
-            "Please create a PR first using 'issue-workflow create-pr'."
-        )
-        raise typer.Exit(code=1) from None
+    pr_number = detect_pr_number()
 
     return run_claude_skill(
         COMMAND_NAME,

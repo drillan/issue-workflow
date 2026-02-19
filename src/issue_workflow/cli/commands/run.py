@@ -141,11 +141,7 @@ def _run_workflow(
         return 1
 
     # Detect PR number after create-pr
-    try:
-        pr_number: int = detect_pr_number(cwd=ctx.cwd_for_skill)
-    except SystemExit:
-        _print_failure("detect-pr")
-        return 1
+    pr_number: int = detect_pr_number(cwd=ctx.cwd_for_skill)
     ctx.pr_number = pr_number
 
     # Step 3a: hachimoku review (subprocess, no ClaudeResult)

@@ -31,6 +31,8 @@ class GitOperations:
             )
         except subprocess.CalledProcessError as e:
             raise GitError(f"Git command failed: {e.stderr}") from e
+        except OSError as e:
+            raise GitError(str(e)) from e
 
     def get_current_branch(self) -> str:
         """Get current branch name."""
