@@ -42,14 +42,14 @@ class TestGitAddForceRule:
 
     def test_pr_creator_has_stop_on_gitignore_failure(self, pr_creator_content: str) -> None:
         """pr-creator.md must instruct to stop when git add fails due to .gitignore."""
-        content_lower = pr_creator_content.lower()
-        assert "report" in content_lower or "stop" in content_lower, (
-            "pr-creator.md must instruct to report error and stop"
+        assert "report the error and stop" in pr_creator_content.lower(), (
+            "pr-creator.md must instruct to 'report the error and stop' "
+            "in the .gitignore safety rule"
         )
 
     def test_git_committer_has_stop_on_gitignore_failure(self, git_committer_content: str) -> None:
         """git-committer.md must instruct to stop when git add fails due to .gitignore."""
-        content_lower = git_committer_content.lower()
-        assert "report" in content_lower or "stop" in content_lower, (
-            "git-committer.md must instruct to report error and stop"
+        assert "report the error and stop" in git_committer_content.lower(), (
+            "git-committer.md must instruct to 'report the error and stop' "
+            "in the .gitignore safety rule"
         )
