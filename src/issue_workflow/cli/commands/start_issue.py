@@ -7,9 +7,9 @@ from typing import Annotated
 import typer
 
 from issue_workflow.cli import ui
-from issue_workflow.cli.commands._common import EXIT_SUCCESS, log_execution, on_tool_use
+from issue_workflow.cli.commands._common import EXIT_SUCCESS, run_claude_skill
 from issue_workflow.lib.git import GitError, GitOperations
-from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
+from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS
 from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
     GH_DEPENDENCY,
@@ -97,32 +97,14 @@ def _run_start_issue(
         if cwd is None:
             return 1
 
-    # Console output (escape brackets for Rich markup)
-    mode_suffix = " (verbose mode)" if verbose else ""
-    ui.console.print(f"\\[start-issue] Starting...{mode_suffix}")
-
-    # Execute claude -p
-    runner = ClaudeRunner()
-    result = runner.run(
-        f"/start-issue {issue_number} --force",
-        cwd=cwd,
-        timeout_seconds=timeout,
-        verbose=verbose,
-        on_tool_use=on_tool_use if verbose else None,
-    )
-
-    # Log execution
-    log_execution(
+    return run_claude_skill(
         COMMAND_NAME,
+        f"/start-issue {issue_number} --force",
         {"issue_number": issue_number, "worktree": worktree},
-        result,
-        timeout,
+        cwd=cwd,
+        verbose=verbose,
+        timeout=timeout,
     )
-
-    # Done message
-    ui.console.print(f"\\[start-issue] Done. (exit_code={result.exit_code})")
-
-    return result.exit_code
 
 
 def start_issue(

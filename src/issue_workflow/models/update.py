@@ -53,23 +53,28 @@ class UpdateResult:
     errors: list[tuple[Path, str]] = field(default_factory=list)
     dry_run: bool = False
 
+    def _count_by_type(self, change_type: FileChangeType) -> int:
+        """Count changes matching the given type.
+
+        Args:
+            change_type: FileChangeType to count.
+
+        Returns:
+            Number of matching changes across skills and agents.
+        """
+        return sum(
+            1 for c in self.skills_changes + self.agents_changes if c.change_type == change_type
+        )
+
     @property
     def added_count(self) -> int:
         """Count of added files/directories."""
-        return sum(
-            1
-            for c in self.skills_changes + self.agents_changes
-            if c.change_type == FileChangeType.ADDED
-        )
+        return self._count_by_type(FileChangeType.ADDED)
 
     @property
     def updated_count(self) -> int:
         """Count of updated files/directories."""
-        return sum(
-            1
-            for c in self.skills_changes + self.agents_changes
-            if c.change_type == FileChangeType.UPDATED
-        )
+        return self._count_by_type(FileChangeType.UPDATED)
 
     @property
     def has_changes(self) -> bool:
