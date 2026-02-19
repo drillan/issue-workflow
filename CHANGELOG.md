@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `update_skills` non-atomic directory replacement causing data loss on `copytree` failure (#111)
 - `_run_verbose()` deadlock risk from unread `stderr=subprocess.PIPE` (#110)
 - `AskUserQuestion` tool disallowed in non-interactive mode
 - PR creation incorrectly skipped when merged/closed PRs exist for same branch

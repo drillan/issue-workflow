@@ -309,20 +309,21 @@ class TemplateService:
                 elif (
                     change.change_type == FileChangeType.UPDATED and change.source_path is not None
                 ):
-                    target_removed = False
+                    temp_path = change.path.with_suffix(".new")
+                    backup_path = change.path.with_suffix(".bak")
                     try:
-                        shutil.rmtree(change.path)
-                        target_removed = True
-                        shutil.copytree(change.source_path, change.path)
+                        shutil.copytree(change.source_path, temp_path)
+                        change.path.rename(backup_path)
+                        try:
+                            temp_path.rename(change.path)
+                        except OSError:
+                            backup_path.rename(change.path)
+                            raise
+                        shutil.rmtree(backup_path)
                     except OSError as e:
-                        if target_removed:
-                            error_msg = (
-                                f"{e} (WARNING: Original directory was removed "
-                                "but new version could not be copied)"
-                            )
-                        else:
-                            error_msg = str(e)
-                        errors.append((change.path, error_msg))
+                        if temp_path.exists():
+                            shutil.rmtree(temp_path, ignore_errors=True)
+                        errors.append((change.path, str(e)))
 
         return UpdateResult(
             skills_changes=changes,
