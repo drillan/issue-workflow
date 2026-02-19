@@ -184,7 +184,11 @@ class ClaudeRunner:
                     raw_json=last_result_line,
                 )
             except (ValidationError, ValueError):
-                pass
+                return ClaudeResult(
+                    exit_code=proc.returncode,
+                    is_error=True,
+                    raw_json=last_result_line,
+                )
 
         return ClaudeResult(
             exit_code=proc.returncode,
