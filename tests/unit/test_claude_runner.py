@@ -404,6 +404,38 @@ class TestClaudeRunnerVerbose:
         assert actual_timeout <= 500
 
 
+class TestBuildBaseCmd:
+    """Tests for ClaudeRunner._build_base_cmd method."""
+
+    def test_base_cmd_starts_with_claude_p(self) -> None:
+        """Test base command starts with 'claude -p <prompt>'."""
+        runner = ClaudeRunner()
+        cmd = runner._build_base_cmd("test prompt")
+        assert cmd[0] == "claude"
+        assert cmd[1] == "-p"
+        assert cmd[2] == "test prompt"
+
+    def test_base_cmd_includes_skip_permissions(self) -> None:
+        """Test base command includes --dangerously-skip-permissions."""
+        runner = ClaudeRunner()
+        cmd = runner._build_base_cmd("prompt")
+        assert "--dangerously-skip-permissions" in cmd
+
+    def test_base_cmd_includes_disallowed_tools(self) -> None:
+        """Test base command includes --disallowed-tools AskUserQuestion."""
+        runner = ClaudeRunner()
+        cmd = runner._build_base_cmd("prompt")
+        assert "--disallowed-tools" in cmd
+        idx = cmd.index("--disallowed-tools")
+        assert cmd[idx + 1] == "AskUserQuestion"
+
+    def test_base_cmd_does_not_include_output_format(self) -> None:
+        """Test base command does not include --output-format (added by callers)."""
+        runner = ClaudeRunner()
+        cmd = runner._build_base_cmd("prompt")
+        assert "--output-format" not in cmd
+
+
 class TestClaudeRunnerConstants:
     """Tests for ClaudeRunner constants."""
 

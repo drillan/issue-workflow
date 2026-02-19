@@ -47,14 +47,15 @@ class ClaudeRunner:
             )
         return self._run_non_verbose(prompt, cwd=cwd, timeout_seconds=timeout_seconds)
 
-    def _run_non_verbose(
-        self,
-        prompt: str,
-        *,
-        cwd: Path | None = None,
-        timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
-    ) -> ClaudeResult:
-        """Execute claude -p in non-verbose mode using subprocess.run."""
+    def _build_base_cmd(self, prompt: str) -> list[str]:
+        """Build base claude command with common flags.
+
+        Args:
+            prompt: Prompt text to send to claude.
+
+        Returns:
+            Base command list without output format flags.
+        """
         cmd = [
             "claude",
             "-p",
@@ -63,6 +64,17 @@ class ClaudeRunner:
         ]
         for tool in _DISALLOWED_TOOLS:
             cmd.extend(["--disallowed-tools", tool])
+        return cmd
+
+    def _run_non_verbose(
+        self,
+        prompt: str,
+        *,
+        cwd: Path | None = None,
+        timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    ) -> ClaudeResult:
+        """Execute claude -p in non-verbose mode using subprocess.run."""
+        cmd = self._build_base_cmd(prompt)
         cmd.extend(["--output-format", "json"])
 
         try:
@@ -107,14 +119,7 @@ class ClaudeRunner:
         on_tool_use: Callable[[str, str], None] | None = None,
     ) -> ClaudeResult:
         """Execute claude -p in verbose mode using subprocess.Popen."""
-        cmd = [
-            "claude",
-            "-p",
-            prompt,
-            "--dangerously-skip-permissions",
-        ]
-        for tool in _DISALLOWED_TOOLS:
-            cmd.extend(["--disallowed-tools", tool])
+        cmd = self._build_base_cmd(prompt)
         cmd.extend(["--output-format", "stream-json", "--verbose"])
 
         proc = subprocess.Popen(
