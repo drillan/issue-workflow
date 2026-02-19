@@ -87,7 +87,7 @@ def cleanup_worktree(repo_path: Path, branch_name: str, force: bool = False) -> 
 
 def cleanup_branch_and_worktree(
     repo_path: Path, branch_name: str, force: bool = False
-) -> dict[str, bool]:
+) -> dict[str, bool | str | None]:
     """Clean up both worktree and branch.
 
     Args:
@@ -96,9 +96,13 @@ def cleanup_branch_and_worktree(
         force: Force removal
 
     Returns:
-        Dict with 'worktree_removed' and 'branch_deleted' keys
+        Dict with 'worktree_removed', 'branch_deleted', and 'branch_delete_error' keys.
     """
-    result = {"worktree_removed": False, "branch_deleted": False}
+    result: dict[str, bool | str | None] = {
+        "worktree_removed": False,
+        "branch_deleted": False,
+        "branch_delete_error": None,
+    }
 
     # Remove worktree first
     result["worktree_removed"] = cleanup_worktree(repo_path, branch_name, force)
@@ -108,7 +112,8 @@ def cleanup_branch_and_worktree(
     try:
         git.delete_branch(branch_name, force=force)
         result["branch_deleted"] = True
-    except GitError:
+    except GitError as e:
         result["branch_deleted"] = False
+        result["branch_delete_error"] = str(e)
 
     return result

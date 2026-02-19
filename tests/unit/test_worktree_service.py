@@ -168,6 +168,43 @@ class TestCleanupBranchAndWorktree:
         assert result["worktree_removed"] is False
         assert result["branch_deleted"] is False
 
+    def test_cleanup_branch_failure_preserves_error_detail(self, temp_git_repo: Path) -> None:
+        """Branch deletion failure preserves error detail (Issue #112)."""
+        # Setup
+        (temp_git_repo / "README.md").write_text("# Test")
+        subprocess.run(["git", "add", "."], cwd=temp_git_repo, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=temp_git_repo, check=True)
+
+        worktree_path = temp_git_repo.parent / "error-detail-test"
+        subprocess.run(
+            ["git", "worktree", "add", "-b", "error-detail-branch", str(worktree_path)],
+            cwd=temp_git_repo,
+            check=True,
+        )
+
+        # Add a commit to the branch (makes it unmerged)
+        (worktree_path / "new.txt").write_text("content")
+        subprocess.run(["git", "add", "."], cwd=worktree_path, check=True)
+        subprocess.run(["git", "commit", "-m", "new commit"], cwd=worktree_path, check=True)
+
+        # Remove worktree but don't force delete unmerged branch
+        result = cleanup_branch_and_worktree(temp_git_repo, "error-detail-branch", force=False)
+        assert result["branch_deleted"] is False
+        assert "branch_delete_error" in result
+        assert result["branch_delete_error"] is not None
+
+    def test_cleanup_branch_success_has_no_error(self, temp_git_repo: Path) -> None:
+        """Successful branch deletion has no error detail (Issue #112)."""
+        # Setup
+        (temp_git_repo / "README.md").write_text("# Test")
+        subprocess.run(["git", "add", "."], cwd=temp_git_repo, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=temp_git_repo, check=True)
+        subprocess.run(["git", "branch", "success-branch"], cwd=temp_git_repo, check=True)
+
+        result = cleanup_branch_and_worktree(temp_git_repo, "success-branch")
+        assert result["branch_deleted"] is True
+        assert result.get("branch_delete_error") is None
+
     def test_cleanup_worktree_only_branch_fails(self, temp_git_repo: Path) -> None:
         """Test when worktree is removed but branch deletion fails."""
         # Setup

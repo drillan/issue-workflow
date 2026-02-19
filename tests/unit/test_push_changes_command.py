@@ -237,3 +237,25 @@ class TestPushChangesErrorHandling:
             assert exc_info.value.exit_code == 1
             error_calls = [str(c) for c in mock_ui.print_error.call_args_list]
             assert any("create-pr" in c.lower() for c in error_calls)
+
+    def test_git_error_from_detect_pr_raises_exit(
+        self,
+        mock_deps: MagicMock,
+        mock_run_skill: MagicMock,
+    ) -> None:
+        """GitError from detect_pr_number raises typer.Exit(1) (Issue #112)."""
+        import typer
+
+        from issue_workflow.lib.git import GitError
+
+        with (
+            patch(f"{_MOD}.detect_pr_number", side_effect=GitError("branch detection failed")),
+            patch(f"{_MOD}.ui") as mock_ui,
+        ):
+            from issue_workflow.cli.commands.push_changes import _run_push_changes
+
+            with pytest.raises(typer.Exit) as exc_info:
+                _run_push_changes(verbose=False, timeout=3600)
+
+            assert exc_info.value.exit_code == 1
+            mock_ui.print_error.assert_called_once()

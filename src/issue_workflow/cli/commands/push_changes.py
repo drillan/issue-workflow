@@ -6,6 +6,7 @@ import typer
 
 from issue_workflow.cli import ui
 from issue_workflow.cli.commands._common import EXIT_SUCCESS, run_claude_skill
+from issue_workflow.lib.git import GitError
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS
 from issue_workflow.services.dependency_checker import (
     CLAUDE_DEPENDENCY,
@@ -39,7 +40,7 @@ def _run_push_changes(
     # PR number auto-detection (FR-015a) for log filename
     try:
         pr_number = detect_pr_number()
-    except SystemExit:
+    except (SystemExit, GitError):
         ui.print_error(
             "No PR found for current branch.\n\n"
             "Please create a PR first using 'issue-workflow create-pr'."

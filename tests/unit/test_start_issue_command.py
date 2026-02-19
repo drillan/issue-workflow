@@ -331,6 +331,61 @@ class TestStartIssueErrorHandling:
             assert any("worktree" in c.lower() for c in error_calls)
 
 
+class TestStartIssueCopyHachimokuError:
+    """Tests for OSError from copy_hachimoku_to_worktree (Issue #112)."""
+
+    def test_copy_hachimoku_os_error_returns_1(
+        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+    ) -> None:
+        """OSError from copy_hachimoku_to_worktree returns exit code 1."""
+        with (
+            patch(f"{_MOD}.find_worktree_for_branch", return_value=None),
+            patch(f"{_MOD}.GitOperations") as mock_git_cls,
+            patch(
+                f"{_MOD}.copy_hachimoku_to_worktree",
+                side_effect=OSError("disk full"),
+            ),
+            patch(f"{_MOD}.ui") as mock_ui,
+        ):
+            mock_git = MagicMock()
+            mock_git.repo_path = Path("/tmp/repo")
+            mock_git_cls.return_value = mock_git
+
+            from issue_workflow.cli.commands.start_issue import _run_start_issue
+
+            exit_code = _run_start_issue(
+                issue_number=199, worktree=True, verbose=False, timeout=3600
+            )
+
+            assert exit_code == 1
+            mock_ui.print_error.assert_called_once()
+            mock_runner.run.assert_not_called()
+
+    def test_copy_hachimoku_os_error_message_contains_detail(
+        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+    ) -> None:
+        """Error message includes the OSError detail."""
+        with (
+            patch(f"{_MOD}.find_worktree_for_branch", return_value=None),
+            patch(f"{_MOD}.GitOperations") as mock_git_cls,
+            patch(
+                f"{_MOD}.copy_hachimoku_to_worktree",
+                side_effect=OSError("permission denied"),
+            ),
+            patch(f"{_MOD}.ui") as mock_ui,
+        ):
+            mock_git = MagicMock()
+            mock_git.repo_path = Path("/tmp/repo")
+            mock_git_cls.return_value = mock_git
+
+            from issue_workflow.cli.commands.start_issue import _run_start_issue
+
+            _run_start_issue(issue_number=199, worktree=True, verbose=False, timeout=3600)
+
+            error_msg = str(mock_ui.print_error.call_args)
+            assert "permission denied" in error_msg.lower()
+
+
 class TestStartIssueLogArgs:
     """Tests for log_execution call arguments."""
 

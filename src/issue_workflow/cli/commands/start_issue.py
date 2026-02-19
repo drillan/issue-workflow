@@ -52,7 +52,11 @@ def _prepare_worktree(issue_number: int) -> Path | None:
         ui.print_error(f"Failed to create worktree: {e}")
         return None
 
-    copy_hachimoku_to_worktree(git.repo_path, worktree_path)
+    try:
+        copy_hachimoku_to_worktree(git.repo_path, worktree_path)
+    except OSError as e:
+        ui.print_error(f"Failed to copy .hachimoku to worktree: {e}")
+        return None
 
     return worktree_path
 

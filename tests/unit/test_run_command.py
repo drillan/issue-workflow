@@ -316,6 +316,25 @@ class TestRunStepFailure:
             assert mock_runner.run.call_count == 2
             mock_subprocess.assert_not_called()
 
+    def test_detect_pr_git_error_stops_workflow(
+        self,
+        mock_deps: MagicMock,
+        mock_runner: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """detect_pr_number raising GitError is caught and returns 1 (Issue #112)."""
+        from issue_workflow.lib.git import GitError
+
+        with patch(f"{_MOD}.detect_pr_number", side_effect=GitError("branch error")):
+            from issue_workflow.cli.commands.run import _run_workflow
+
+            exit_code = _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=3600)
+
+            assert exit_code == 1
+            assert mock_runner.run.call_count == 2
+            mock_subprocess.assert_not_called()
+
     def test_step3a_timeout_stops_workflow(
         self,
         mock_deps: MagicMock,

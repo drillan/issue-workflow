@@ -417,6 +417,39 @@ class TestGetDefaultBranch:
             git.get_default_branch()
 
 
+class TestRunOSErrorWrapping:
+    """Tests for _run() OSError wrapping (Issue #112)."""
+
+    def test_file_not_found_raises_git_error(self, temp_git_repo: Path) -> None:
+        """FileNotFoundError (git binary not found) is wrapped as GitError."""
+        git = GitOperations(temp_git_repo)
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError("git not found")),
+            pytest.raises(GitError, match="git not found"),
+        ):
+            git._run(["status"])
+
+    def test_permission_error_raises_git_error(self, temp_git_repo: Path) -> None:
+        """PermissionError is wrapped as GitError."""
+        git = GitOperations(temp_git_repo)
+        with (
+            patch("subprocess.run", side_effect=PermissionError("permission denied")),
+            pytest.raises(GitError, match="permission denied"),
+        ):
+            git._run(["status"])
+
+    def test_os_error_preserves_original_as_cause(self, temp_git_repo: Path) -> None:
+        """Original OSError is preserved as __cause__."""
+        git = GitOperations(temp_git_repo)
+        original = FileNotFoundError("git binary missing")
+        with (
+            patch("subprocess.run", side_effect=original),
+            pytest.raises(GitError) as exc_info,
+        ):
+            git._run(["status"])
+        assert exc_info.value.__cause__ is original
+
+
 class TestGetRemoteUrl:
     """Tests for get_remote_url method."""
 
