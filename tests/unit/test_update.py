@@ -472,10 +472,8 @@ class TestFileCmpErrorHandling:
             finally:
                 template_module.get_skills_source_dir = original_func
 
-    def test_skills_update_rmtree_copytree_failure_shows_data_loss_warning(
-        self, tmp_path: Path
-    ) -> None:
-        """Test that copytree failure after rmtree warns about data loss."""
+    def test_skills_update_copytree_failure_preserves_original(self, tmp_path: Path) -> None:
+        """Test that copytree failure preserves the original directory (#111)."""
         from unittest.mock import patch
 
         # Setup source with updated skill
@@ -505,13 +503,45 @@ class TestFileCmpErrorHandling:
         ):
             try:
                 result = service.update_skills(target_dir, dry_run=False)
-                # Should have recorded the error with data loss warning
                 assert result.has_errors
-                error_messages = [str(err) for _, err in result.errors]
-                # Should mention that original directory was removed (data loss warning)
-                assert any("removed" in msg.lower() for msg in error_messages)
+                # Original directory must be preserved (not deleted)
+                assert (skills_target / "existing-skill").exists()
+                assert (skills_target / "existing-skill" / "skill.md").read_text() == "# Old Skill"
             finally:
                 template_module.get_skills_source_dir = original_func
+
+    def test_skills_update_atomic_no_temp_dirs_after_success(self, tmp_path: Path) -> None:
+        """Test that no temp/backup directories remain after successful update (#111)."""
+        # Setup source with updated skill
+        source_dir = tmp_path / "source_package" / "skills"
+        source_dir.mkdir(parents=True)
+        (source_dir / "my-skill").mkdir()
+        (source_dir / "my-skill" / "skill.md").write_text("# Updated")
+
+        # Setup target with existing skill
+        target_dir = tmp_path / ".claude"
+        skills_target = target_dir / "skills"
+        (skills_target / "my-skill").mkdir(parents=True)
+        (skills_target / "my-skill" / "skill.md").write_text("# Old")
+
+        service = TemplateService()
+        import issue_workflow.services.template as template_module
+
+        original_func = template_module.get_skills_source_dir
+        template_module.get_skills_source_dir = lambda: source_dir
+
+        try:
+            result = service.update_skills(target_dir, dry_run=False)
+            assert not result.has_errors
+            # Updated content is in place
+            assert (skills_target / "my-skill" / "skill.md").read_text() == "# Updated"
+            # No temp or backup directories remain
+            temp_dirs = list(skills_target.glob("*.new"))
+            backup_dirs = list(skills_target.glob("*.bak"))
+            assert temp_dirs == []
+            assert backup_dirs == []
+        finally:
+            template_module.get_skills_source_dir = original_func
 
 
 class TestDircmpRecursive:
