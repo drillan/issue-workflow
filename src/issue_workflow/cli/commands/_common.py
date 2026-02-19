@@ -109,6 +109,8 @@ def run_claude_skill(
 
     ui.console.print(f"\\[{command_name}] Done. (exit_code={result.exit_code})")
 
+    if result.is_error and result.exit_code == EXIT_SUCCESS:
+        return 1
     return result.exit_code
 
 

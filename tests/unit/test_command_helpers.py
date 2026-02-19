@@ -44,6 +44,22 @@ class TestRunClaudeSkill:
 
     @patch(f"{_MOD}.log_execution")
     @patch(f"{_MOD}.ClaudeRunner")
+    def test_returns_nonzero_when_is_error_true_and_exit_code_zero(
+        self, mock_runner_cls: MagicMock, mock_log: MagicMock
+    ) -> None:
+        """is_error=True with exit_code=0 must return non-zero (not silently succeed)."""
+        mock_runner_cls.return_value.run.return_value = make_claude_result(
+            exit_code=0, is_error=True
+        )
+
+        from issue_workflow.cli.commands._common import run_claude_skill
+
+        exit_code = run_claude_skill("test-cmd", "/test-prompt", {}, verbose=False, timeout=3600)
+
+        assert exit_code != 0
+
+    @patch(f"{_MOD}.log_execution")
+    @patch(f"{_MOD}.ClaudeRunner")
     def test_passes_prompt_to_runner(self, mock_runner_cls: MagicMock, mock_log: MagicMock) -> None:
         """Prompt is forwarded to ClaudeRunner.run."""
         mock_runner_cls.return_value.run.return_value = make_claude_result()

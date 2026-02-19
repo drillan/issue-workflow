@@ -294,6 +294,24 @@ class TestClaudeRunnerVerbose:
         assert result.exit_code == 1
 
     @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_malformed_result_with_zero_exit_sets_is_error_true(
+        self, mock_popen: MagicMock
+    ) -> None:
+        """Parse failure with exit_code=0 must set is_error=True (not rely on returncode)."""
+        bad_result_line = json.dumps({"type": "result", "is_error": "not_a_bool"})
+
+        mock_process = MagicMock()
+        mock_process.stdout = iter([bad_result_line + "\n"])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 0
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        result = runner.run("prompt", verbose=True)
+
+        assert result.is_error is True
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
     def test_verbose_no_result_event_returns_basic_result(self, mock_popen: MagicMock) -> None:
         """When no result event in stream, returns basic ClaudeResult from returncode."""
         assistant_event = json.dumps(
