@@ -121,7 +121,7 @@ class ClaudeRunner:
             cmd,
             cwd=cwd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             text=True,
         )
 

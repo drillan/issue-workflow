@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `_run_verbose()` deadlock risk from unread `stderr=subprocess.PIPE` (#110)
 - `AskUserQuestion` tool disallowed in non-interactive mode
 - PR creation incorrectly skipped when merged/closed PRs exist for same branch
 - Error suppression patterns replaced with explicit error propagation
