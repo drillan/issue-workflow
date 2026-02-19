@@ -6,17 +6,32 @@ from pathlib import Path
 def get_test_file_path(source_path: str) -> str:
     """Get test file path for a source file.
 
+    Preserves directory structure relative to the package root.
+    For standard src layout: src/<package>/<subpath>/<file>.py -> tests/<subpath>/test_<file>.py
+
     Args:
-        source_path: Path to source file (e.g., 'src/auth.py')
+        source_path: Path to source file (e.g., 'src/issue_workflow/services/branch.py')
 
     Returns:
-        Path to corresponding test file (e.g., 'tests/test_auth.py')
+        Path to corresponding test file (e.g., 'tests/services/test_branch.py')
     """
     path = Path(source_path)
-    filename = path.name
+    parts = list(path.parts)
 
-    # Add test_ prefix
+    # Strip 'src' prefix
+    if parts and parts[0] == "src":
+        parts = parts[1:]
+
+    # Strip top-level package directory (first directory after src/)
+    if len(parts) > 1:
+        parts = parts[1:]
+
+    filename = parts[-1]
+    subdirs = parts[:-1]
     test_filename = f"test_{filename}"
+
+    if subdirs:
+        return str(Path("tests", *subdirs, test_filename))
     return f"tests/{test_filename}"
 
 
@@ -30,12 +45,21 @@ def get_source_file_path(test_path: str) -> str:
         Path to corresponding source file (e.g., 'src/auth.py')
     """
     path = Path(test_path)
-    filename = path.name
+    parts = list(path.parts)
+
+    # Strip 'tests' prefix
+    if parts and parts[0] == "tests":
+        parts = parts[1:]
+
+    filename = parts[-1]
+    subdirs = parts[:-1]
 
     # Remove test_ prefix
     if filename.startswith("test_"):
         filename = filename[5:]
 
+    if subdirs:
+        return str(Path("src", *subdirs, filename))
     return f"src/{filename}"
 
 

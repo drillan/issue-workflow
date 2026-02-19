@@ -133,13 +133,13 @@ class TestReviewAgentResult:
     """Tests for ReviewAgentResult dataclass."""
 
     def test_success_result(self) -> None:
-        issues = [
+        issues = (
             ReviewIssue(
                 agent_name="code-reviewer",
                 severity=ReviewSeverity.IMPORTANT,
                 description="issue 1",
             ),
-        ]
+        )
         result = ReviewAgentResult(
             status=AgentResultStatus.SUCCESS,
             agent_name="code-reviewer",
@@ -156,19 +156,34 @@ class TestReviewAgentResult:
         result = ReviewAgentResult(
             status=AgentResultStatus.ERROR,
             agent_name="pr-test-analyzer",
-            issues=[],
+            issues=(),
             elapsed_time=156.1,
             error_message="Structured output recovery failed",
         )
         assert result.status == AgentResultStatus.ERROR
         assert result.error_message == "Structured output recovery failed"
-        assert result.issues == []
+        assert result.issues == ()
+
+    def test_issues_is_tuple(self) -> None:
+        """Test issues field is a tuple (immutable collection)."""
+        issue = ReviewIssue(
+            agent_name="code-reviewer",
+            severity=ReviewSeverity.IMPORTANT,
+            description="test issue",
+        )
+        result = ReviewAgentResult(
+            status=AgentResultStatus.SUCCESS,
+            agent_name="code-reviewer",
+            issues=(issue,),
+            elapsed_time=1.0,
+        )
+        assert isinstance(result.issues, tuple)
 
     def test_is_frozen(self) -> None:
         result = ReviewAgentResult(
             status=AgentResultStatus.SUCCESS,
             agent_name="agent",
-            issues=[],
+            issues=(),
             elapsed_time=1.0,
         )
         with pytest.raises(AttributeError):
@@ -215,7 +230,7 @@ class TestReviewResult:
             commit_hash="a" * 40,
             branch_name="feat/42-some-feature",
             reviewed_at="2026-02-14T12:00:00Z",
-            results=[],
+            results=(),
             summary=ReviewSummary(
                 total_issues=0,
                 max_severity=None,
@@ -225,7 +240,7 @@ class TestReviewResult:
         assert result.review_mode == ReviewMode.DIFF
         assert result.commit_hash == "a" * 40
         assert result.branch_name == "feat/42-some-feature"
-        assert result.results == []
+        assert result.results == ()
 
     def test_pr_mode_with_pr_number(self) -> None:
         result = ReviewResult(
@@ -233,7 +248,7 @@ class TestReviewResult:
             commit_hash="b" * 40,
             branch_name="feat/1-test",
             reviewed_at="2026-02-14T12:00:00Z",
-            results=[],
+            results=(),
             summary=ReviewSummary(
                 total_issues=0,
                 max_severity=None,
@@ -249,7 +264,7 @@ class TestReviewResult:
             commit_hash="a" * 40,
             branch_name="main",
             reviewed_at="2026-02-14T12:00:00Z",
-            results=[],
+            results=(),
             summary=ReviewSummary(
                 total_issues=0,
                 max_severity=None,
@@ -274,20 +289,20 @@ class TestReviewResult:
             commit_hash="c" * 40,
             branch_name="feat/1-test",
             reviewed_at="2026-02-14T12:00:00Z",
-            results=[
+            results=(
                 ReviewAgentResult(
                     status=AgentResultStatus.SUCCESS,
                     agent_name="code-reviewer",
-                    issues=[issue1],
+                    issues=(issue1,),
                     elapsed_time=100.0,
                 ),
                 ReviewAgentResult(
                     status=AgentResultStatus.SUCCESS,
                     agent_name="type-analyzer",
-                    issues=[issue2],
+                    issues=(issue2,),
                     elapsed_time=50.0,
                 ),
-            ],
+            ),
             summary=ReviewSummary(
                 total_issues=2,
                 max_severity=ReviewSeverity.IMPORTANT,
@@ -309,21 +324,21 @@ class TestReviewResult:
             commit_hash="d" * 40,
             branch_name="main",
             reviewed_at="2026-02-14T12:00:00Z",
-            results=[
+            results=(
                 ReviewAgentResult(
                     status=AgentResultStatus.SUCCESS,
                     agent_name="code-reviewer",
-                    issues=[issue],
+                    issues=(issue,),
                     elapsed_time=100.0,
                 ),
                 ReviewAgentResult(
                     status=AgentResultStatus.ERROR,
                     agent_name="pr-test-analyzer",
-                    issues=[],
+                    issues=(),
                     elapsed_time=156.0,
                     error_message="Recovery failed",
                 ),
-            ],
+            ),
             summary=ReviewSummary(
                 total_issues=1,
                 max_severity=ReviewSeverity.CRITICAL,
@@ -338,20 +353,20 @@ class TestReviewResult:
             commit_hash="e" * 40,
             branch_name="main",
             reviewed_at="2026-02-14T12:00:00Z",
-            results=[
+            results=(
                 ReviewAgentResult(
                     status=AgentResultStatus.SUCCESS,
                     agent_name="agent",
-                    issues=[
+                    issues=(
                         ReviewIssue(
                             agent_name="agent",
                             severity=ReviewSeverity.CRITICAL,
                             description="critical",
                         ),
-                    ],
+                    ),
                     elapsed_time=1.0,
                 ),
-            ],
+            ),
             summary=ReviewSummary(
                 total_issues=1,
                 max_severity=ReviewSeverity.CRITICAL,
@@ -366,20 +381,20 @@ class TestReviewResult:
             commit_hash="f" * 40,
             branch_name="main",
             reviewed_at="2026-02-14T12:00:00Z",
-            results=[
+            results=(
                 ReviewAgentResult(
                     status=AgentResultStatus.SUCCESS,
                     agent_name="agent",
-                    issues=[
+                    issues=(
                         ReviewIssue(
                             agent_name="agent",
                             severity=ReviewSeverity.SUGGESTION,
                             description="minor",
                         ),
-                    ],
+                    ),
                     elapsed_time=1.0,
                 ),
-            ],
+            ),
             summary=ReviewSummary(
                 total_issues=1,
                 max_severity=ReviewSeverity.SUGGESTION,
@@ -388,13 +403,29 @@ class TestReviewResult:
         )
         assert result.has_critical is False
 
+    def test_results_is_tuple(self) -> None:
+        """Test results field is a tuple (immutable collection)."""
+        result = ReviewResult(
+            review_mode=ReviewMode.DIFF,
+            commit_hash="a" * 40,
+            branch_name="main",
+            reviewed_at="2026-02-14T12:00:00Z",
+            results=(),
+            summary=ReviewSummary(
+                total_issues=0,
+                max_severity=None,
+                total_elapsed_time=0.0,
+            ),
+        )
+        assert isinstance(result.results, tuple)
+
     def test_is_frozen(self) -> None:
         result = ReviewResult(
             review_mode=ReviewMode.DIFF,
             commit_hash="a" * 40,
             branch_name="main",
             reviewed_at="2026-02-14T12:00:00Z",
-            results=[],
+            results=(),
             summary=ReviewSummary(
                 total_issues=0,
                 max_severity=None,
@@ -411,7 +442,7 @@ class TestReviewResult:
                 commit_hash="a" * 40,
                 branch_name="main",
                 reviewed_at="2026-02-14T12:00:00Z",
-                results=[],
+                results=(),
                 summary=ReviewSummary(
                     total_issues=0,
                     max_severity=None,
@@ -426,7 +457,7 @@ class TestReviewResult:
                 commit_hash="a" * 40,
                 branch_name="main",
                 reviewed_at="2026-02-14T12:00:00Z",
-                results=[],
+                results=(),
                 summary=ReviewSummary(
                     total_issues=0,
                     max_severity=None,
@@ -442,7 +473,7 @@ class TestReviewResult:
                 commit_hash="abc123",
                 branch_name="main",
                 reviewed_at="2026-02-14T12:00:00Z",
-                results=[],
+                results=(),
                 summary=ReviewSummary(
                     total_issues=0,
                     max_severity=None,
@@ -457,7 +488,7 @@ class TestReviewResult:
                 commit_hash="g" * 40,
                 branch_name="main",
                 reviewed_at="2026-02-14T12:00:00Z",
-                results=[],
+                results=(),
                 summary=ReviewSummary(
                     total_issues=0,
                     max_severity=None,

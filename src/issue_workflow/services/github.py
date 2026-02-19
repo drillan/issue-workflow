@@ -5,7 +5,7 @@ import subprocess
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class GhResult:
     """Result from gh CLI command."""
 

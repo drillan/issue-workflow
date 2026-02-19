@@ -5,7 +5,7 @@ from enum import Enum
 from pathlib import Path
 
 
-class FileChangeType(Enum):
+class FileChangeType(str, Enum):
     """Type of file change."""
 
     ADDED = "added"

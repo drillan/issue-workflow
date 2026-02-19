@@ -13,10 +13,18 @@ class TestTddFileMapping:
         assert get_test_file_path(source) == expected
 
     def test_nested_python_source_to_test_mapping(self) -> None:
-        """Test nested Python source file maps correctly."""
+        """Test nested Python source file preserves directory structure."""
         from issue_workflow.services.tdd import get_test_file_path
 
-        source = "src/services/auth.py"
+        source = "src/issue_workflow/services/branch.py"
+        expected = "tests/services/test_branch.py"
+        assert get_test_file_path(source) == expected
+
+    def test_package_only_source_to_test_mapping(self) -> None:
+        """Test source with package dir only (no subdirectory)."""
+        from issue_workflow.services.tdd import get_test_file_path
+
+        source = "src/issue_workflow/auth.py"
         expected = "tests/test_auth.py"
         assert get_test_file_path(source) == expected
 
