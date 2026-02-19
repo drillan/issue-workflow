@@ -212,3 +212,4 @@ Resolution: {WHAT_TO_DO_NEXT}
 3. **Always use proper authorization** - Never skip authentication (--no-gpg-sign)
 4. **Never commit secrets** - Block .env, credentials, keys
 5. **Prefer specific file additions** - Use `git add <file>` not `git add .` or `git add -A`
+6. **Never force-add .gitignore-excluded files** - NEVER use `git add -f` to force-add files ignored by .gitignore. If `git add` fails because a file is in .gitignore, report the error and stop. The .gitignore exclusion is intentional.

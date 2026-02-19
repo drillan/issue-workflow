@@ -72,6 +72,7 @@ EOF
 2. **NEVER skip hooks** - Do NOT use `--no-verify` or `--no-gpg-sign`
 3. **NEVER commit secrets** - Block commits with .env, credentials, keys, etc.
 4. **NEVER use force flags** - No `--force` or `--force-with-lease`
+5. **NEVER force-add .gitignore-excluded files** - NEVER use `git add -f` to force-add files ignored by .gitignore. If `git add` fails because a file is in .gitignore, report the error and stop. The .gitignore exclusion is intentional.
 
 ## Output Format
 
