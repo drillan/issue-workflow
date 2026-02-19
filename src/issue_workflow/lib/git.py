@@ -55,14 +55,6 @@ class GitOperations:
         """Checkout an existing branch."""
         self._run(["checkout", branch_name])
 
-    def create_or_checkout_branch(self, branch_name: str, start_point: str | None = None) -> bool:
-        """Create or checkout branch. Returns True if created, False if checked out."""
-        if self.branch_exists(branch_name):
-            self.checkout_branch(branch_name)
-            return False
-        self.create_branch(branch_name, start_point)
-        return True
-
     def delete_branch(self, branch_name: str, force: bool = False) -> None:
         """Delete a local branch."""
         flag = "-D" if force else "-d"
@@ -155,10 +147,3 @@ class GitOperations:
         raise GitError(
             "Cannot detect default branch. Ensure the remote 'origin' is configured and reachable."
         )
-
-    def get_remote_url(self) -> str | None:
-        """Get remote origin URL."""
-        result = self._run(["remote", "get-url", "origin"], check=False)
-        if result.returncode == 0:
-            return result.stdout.strip()
-        return None

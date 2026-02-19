@@ -115,7 +115,7 @@ class TestWorkflowContextTotalCost:
 
 
 class TestWorkflowContextCwd:
-    """Tests for cwd_for_skill and cwd_for_merge properties."""
+    """Tests for cwd_for_skill property."""
 
     def test_cwd_for_skill_none_without_worktree(self) -> None:
         """cwd_for_skill is None when no worktree_path."""
@@ -132,22 +132,6 @@ class TestWorkflowContextCwd:
         ctx = WorkflowContext(issue_number=199, worktree_path=Path("/tmp/wt"))
 
         assert ctx.cwd_for_skill == Path("/tmp/wt")
-
-    def test_cwd_for_merge_always_none(self) -> None:
-        """cwd_for_merge is always None (main repo) even with worktree."""
-        from issue_workflow.models.workflow_context import WorkflowContext
-
-        ctx = WorkflowContext(issue_number=199, worktree_path=Path("/tmp/wt"))
-
-        assert ctx.cwd_for_merge is None
-
-    def test_cwd_for_merge_none_without_worktree(self) -> None:
-        """cwd_for_merge is None without worktree."""
-        from issue_workflow.models.workflow_context import WorkflowContext
-
-        ctx = WorkflowContext(issue_number=199)
-
-        assert ctx.cwd_for_merge is None
 
 
 class TestWorkflowContextLogNumber:
