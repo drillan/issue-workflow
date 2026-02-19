@@ -74,7 +74,12 @@ def _run_review_pr(
             hachimoku_result = subprocess.run(
                 ["8moku", str(resolved_pr)],
                 check=False,
+                timeout=timeout,
             )
+        except subprocess.TimeoutExpired:
+            ui.print_error(f"8moku timed out after {timeout} seconds")
+            ui.console.print("\\[review-pr] Done. (exit_code=1)")
+            return 1
         except OSError as e:
             ui.print_error(f"Failed to execute 8moku: {e}")
             ui.console.print("\\[review-pr] Done. (exit_code=1)")
