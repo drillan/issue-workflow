@@ -59,8 +59,12 @@ class PullRequest:
         mergeable = MergeState(mergeable_str)
 
         number_val = data["number"]
+        if not isinstance(number_val, (int, str)):
+            msg = f"number must be int or str, got {type(number_val).__name__}"
+            raise TypeError(msg)
+
         return cls(
-            number=int(number_val) if isinstance(number_val, (int, str)) else 0,
+            number=int(number_val),
             title=str(data.get("title", "")),
             state=state,
             mergeable=mergeable,

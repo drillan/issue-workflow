@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 from typer.testing import CliRunner
 
 from issue_workflow.cli.main import app
-from tests.conftest import make_claude_result
 
 runner = CliRunner()
 
@@ -17,18 +16,14 @@ _MOD = "issue_workflow.cli.commands.start_issue"
 class TestStartIssueCliExecution:
     """CliRunner E2E tests for start-issue."""
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.check_dependencies")
     def test_basic_execution_succeeds(
         self,
         mock_deps: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
         """issue-workflow start-issue 199 succeeds."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
         result = runner.invoke(app, ["start-issue", "199"])
 
         assert result.exit_code == 0
@@ -59,102 +54,52 @@ class TestStartIssueCliExecution:
         assert result.exit_code == 0
         assert "ISSUE_NUMBER" in result.output
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.check_dependencies")
     def test_verbose_option_accepted(
         self,
         mock_deps: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
         """-v option is accepted."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
         result = runner.invoke(app, ["start-issue", "199", "-v"])
 
         assert result.exit_code == 0
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.check_dependencies")
     def test_timeout_option_accepted(
         self,
         mock_deps: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
         """--timeout option is accepted."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
         result = runner.invoke(app, ["start-issue", "199", "--timeout", "600"])
 
         assert result.exit_code == 0
 
     @patch(f"{_MOD}._prepare_worktree", return_value=Path("/tmp/mock-worktree"))
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=0)
     @patch(f"{_MOD}.check_dependencies")
     def test_worktree_option_accepted(
         self,
         mock_deps: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
         mock_prepare_wt: MagicMock,
     ) -> None:
         """--worktree option is accepted."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
         result = runner.invoke(app, ["start-issue", "199", "--worktree"])
 
         assert result.exit_code == 0
 
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
-    @patch(f"{_MOD}.check_dependencies")
-    def test_output_contains_starting_message(
-        self,
-        mock_deps: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
-    ) -> None:
-        """Output contains [start-issue] Starting... message."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
-        result = runner.invoke(app, ["start-issue", "199"])
-
-        assert "[start-issue] Starting" in result.output
-
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
-    @patch(f"{_MOD}.check_dependencies")
-    def test_output_contains_done_message(
-        self,
-        mock_deps: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
-    ) -> None:
-        """Output contains [start-issue] Done. message."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result()
-
-        result = runner.invoke(app, ["start-issue", "199"])
-
-        assert "[start-issue] Done." in result.output
-
-    @patch(f"{_MOD}.log_execution")
-    @patch(f"{_MOD}.ClaudeRunner")
+    @patch(f"{_MOD}.run_claude_skill", return_value=1)
     @patch(f"{_MOD}.check_dependencies")
     def test_nonzero_exit_code_propagated(
         self,
         mock_deps: MagicMock,
-        mock_runner_cls: MagicMock,
-        mock_log: MagicMock,
+        mock_skill: MagicMock,
     ) -> None:
-        """Non-zero exit code from ClaudeResult is propagated."""
-        mock_runner_cls.return_value.run.return_value = make_claude_result(
-            exit_code=1, is_error=True
-        )
-
+        """Non-zero exit code from run_claude_skill is propagated."""
         result = runner.invoke(app, ["start-issue", "199"])
 
         assert result.exit_code == 1

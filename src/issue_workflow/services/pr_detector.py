@@ -5,7 +5,7 @@ from pathlib import Path
 import typer
 
 from issue_workflow.cli import ui
-from issue_workflow.lib.git import GitOperations
+from issue_workflow.lib.git import GitError, GitOperations
 from issue_workflow.services.github import get_pr_for_branch
 
 
@@ -30,8 +30,12 @@ def detect_pr_number(
     if pr_number is not None:
         return pr_number
 
-    git = GitOperations(repo_path=cwd)
-    branch_name = git.get_current_branch()
+    try:
+        git = GitOperations(repo_path=cwd)
+        branch_name = git.get_current_branch()
+    except GitError as e:
+        ui.print_error(f"Git operation failed: {e}")
+        raise typer.Exit(code=1) from e
     result = get_pr_for_branch(branch_name)
 
     if not result.success or result.data is None:

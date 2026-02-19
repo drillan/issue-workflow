@@ -217,23 +217,19 @@ class TestPushChangesTimeout:
 class TestPushChangesErrorHandling:
     """Error handling tests."""
 
-    def test_pr_detection_failure_shows_error_and_exits(
+    def test_pr_detection_failure_propagates_exit(
         self,
         mock_deps: MagicMock,
         mock_run_skill: MagicMock,
     ) -> None:
-        """SystemExit from detect_pr_number raises typer.Exit with helpful message."""
+        """typer.Exit from detect_pr_number propagates through _run_push_changes."""
         import typer
 
-        with (
-            patch(f"{_MOD}.detect_pr_number", side_effect=SystemExit(1)),
-            patch(f"{_MOD}.ui") as mock_ui,
-        ):
+        with patch(f"{_MOD}.detect_pr_number", side_effect=typer.Exit(code=1)):
             from issue_workflow.cli.commands.push_changes import _run_push_changes
 
             with pytest.raises(typer.Exit) as exc_info:
                 _run_push_changes(verbose=False, timeout=3600)
 
             assert exc_info.value.exit_code == 1
-            error_calls = [str(c) for c in mock_ui.print_error.call_args_list]
-            assert any("create-pr" in c.lower() for c in error_calls)
+            mock_run_skill.assert_not_called()

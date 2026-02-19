@@ -93,7 +93,7 @@ def _parse_review_result(data: dict[str, object]) -> ReviewResult:
         msg = f"Expected 'results' to be a list, got {type(raw_results).__name__}"
         raise ReviewParseError(msg)
 
-    agent_results = [_parse_agent_result(r) for r in raw_results]
+    agent_results = tuple(_parse_agent_result(r) for r in raw_results)
 
     raw_summary = data["summary"]
     if not isinstance(raw_summary, dict):
@@ -124,7 +124,7 @@ def _parse_agent_result(data: dict[str, object]) -> ReviewAgentResult:
         msg = f"Expected 'issues' to be a list, got {type(raw_issues).__name__}"
         raise ReviewParseError(msg)
 
-    issues = [_parse_issue(i) for i in raw_issues]
+    issues = tuple(_parse_issue(i) for i in raw_issues)
 
     return ReviewAgentResult(
         status=AgentResultStatus(str(data["status"])),

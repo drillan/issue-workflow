@@ -298,20 +298,23 @@ class TestRunStepFailure:
             assert instance.run.call_count == 2
             mock_pr_detector.assert_not_called()
 
-    def test_detect_pr_system_exit_stops_workflow(
+    def test_detect_pr_exit_propagates_through_workflow(
         self,
         mock_deps: MagicMock,
         mock_runner: MagicMock,
         mock_log_execution: MagicMock,
         mock_subprocess: MagicMock,
     ) -> None:
-        """detect_pr_number raising SystemExit is caught and returns 1."""
-        with patch(f"{_MOD}.detect_pr_number", side_effect=SystemExit(1)):
+        """typer.Exit from detect_pr_number propagates through _run_workflow."""
+        import typer
+
+        with patch(f"{_MOD}.detect_pr_number", side_effect=typer.Exit(code=1)):
             from issue_workflow.cli.commands.run import _run_workflow
 
-            exit_code = _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=3600)
+            with pytest.raises(typer.Exit) as exc_info:
+                _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=3600)
 
-            assert exit_code == 1
+            assert exc_info.value.exit_code == 1
             # 2 Claude calls (start-issue, create-pr) before detect_pr_number failure
             assert mock_runner.run.call_count == 2
             mock_subprocess.assert_not_called()

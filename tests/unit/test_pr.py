@@ -197,6 +197,19 @@ class TestPullRequestFromGhJson:
         with pytest.raises(KeyError):
             PullRequest.from_gh_json(data)
 
+    def test_from_gh_json_non_int_str_number_raises_typeerror(self) -> None:
+        """Test creating PR with non-int/str number raises TypeError."""
+        data: dict[str, object] = {
+            "number": [1, 2, 3],
+            "title": "Test",
+            "state": "OPEN",
+            "mergeable": "MERGEABLE",
+            "baseRefName": "main",
+            "headRefName": "test",
+        }
+        with pytest.raises(TypeError, match="number must be int or str"):
+            PullRequest.from_gh_json(data)
+
 
 class TestMergeStrategy:
     """Tests for MergeStrategy enum."""

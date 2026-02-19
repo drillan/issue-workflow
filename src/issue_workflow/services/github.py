@@ -5,13 +5,55 @@ import subprocess
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class GhResult:
     """Result from gh CLI command."""
 
     success: bool
     data: dict[str, object] | list[dict[str, object]] | None
     error: str | None
+
+
+def _run_gh(
+    cmd: list[str],
+    *,
+    parse_json: bool = True,
+    timeout: int | None = None,
+) -> GhResult:
+    """Execute a gh CLI command and return the result.
+
+    Args:
+        cmd: Command and arguments to execute.
+        parse_json: If True, parse stdout as JSON. If False, wrap stdout in dict.
+        timeout: Timeout in seconds for subprocess execution.
+
+    Returns:
+        GhResult with command output or error details.
+    """
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+
+        if result.returncode != 0:
+            return GhResult(success=False, data=None, error=result.stderr.strip())
+
+        if parse_json:
+            data = json.loads(result.stdout)
+            return GhResult(success=True, data=data, error=None)
+
+        return GhResult(success=True, data={"output": result.stdout}, error=None)
+
+    except subprocess.TimeoutExpired:
+        return GhResult(success=False, data=None, error="Timed out waiting for checks")
+    except json.JSONDecodeError as e:
+        return GhResult(success=False, data=None, error=f"Invalid JSON response: {e}")
+    except subprocess.SubprocessError as e:
+        return GhResult(success=False, data=None, error=str(e))
 
 
 def check_gh_availability() -> tuple[bool, str]:
@@ -70,31 +112,16 @@ def get_issue(issue_number: int) -> GhResult:
     Returns:
         GhResult with issue data
     """
-    try:
-        result = subprocess.run(
-            [
-                "gh",
-                "issue",
-                "view",
-                str(issue_number),
-                "--json",
-                "number,title,body,labels,state",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result.returncode != 0:
-            return GhResult(success=False, data=None, error=result.stderr.strip())
-
-        data = json.loads(result.stdout)
-        return GhResult(success=True, data=data, error=None)
-
-    except json.JSONDecodeError as e:
-        return GhResult(success=False, data=None, error=f"Invalid JSON response: {e}")
-    except subprocess.SubprocessError as e:
-        return GhResult(success=False, data=None, error=str(e))
+    return _run_gh(
+        [
+            "gh",
+            "issue",
+            "view",
+            str(issue_number),
+            "--json",
+            "number,title,body,labels,state",
+        ]
+    )
 
 
 def get_pr(pr_number: int) -> GhResult:
@@ -106,31 +133,16 @@ def get_pr(pr_number: int) -> GhResult:
     Returns:
         GhResult with PR data
     """
-    try:
-        result = subprocess.run(
-            [
-                "gh",
-                "pr",
-                "view",
-                str(pr_number),
-                "--json",
-                "number,title,state,mergeable,baseRefName,headRefName",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result.returncode != 0:
-            return GhResult(success=False, data=None, error=result.stderr.strip())
-
-        data = json.loads(result.stdout)
-        return GhResult(success=True, data=data, error=None)
-
-    except json.JSONDecodeError as e:
-        return GhResult(success=False, data=None, error=f"Invalid JSON response: {e}")
-    except subprocess.SubprocessError as e:
-        return GhResult(success=False, data=None, error=str(e))
+    return _run_gh(
+        [
+            "gh",
+            "pr",
+            "view",
+            str(pr_number),
+            "--json",
+            "number,title,state,mergeable,baseRefName,headRefName",
+        ]
+    )
 
 
 def wait_for_checks(pr_number: int, timeout: int = 600) -> GhResult:
@@ -143,24 +155,11 @@ def wait_for_checks(pr_number: int, timeout: int = 600) -> GhResult:
     Returns:
         GhResult with check results
     """
-    try:
-        result = subprocess.run(
-            ["gh", "pr", "checks", str(pr_number), "--watch"],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-
-        if result.returncode != 0:
-            return GhResult(success=False, data=None, error=result.stderr.strip())
-
-        return GhResult(success=True, data={"output": result.stdout}, error=None)
-
-    except subprocess.TimeoutExpired:
-        return GhResult(success=False, data=None, error="Timed out waiting for checks")
-    except subprocess.SubprocessError as e:
-        return GhResult(success=False, data=None, error=str(e))
+    return _run_gh(
+        ["gh", "pr", "checks", str(pr_number), "--watch"],
+        parse_json=False,
+        timeout=timeout,
+    )
 
 
 def merge_pr(pr_number: int, strategy: str = "squash", delete_branch: bool = True) -> GhResult:
@@ -174,25 +173,11 @@ def merge_pr(pr_number: int, strategy: str = "squash", delete_branch: bool = Tru
     Returns:
         GhResult with merge result
     """
-    args = ["gh", "pr", "merge", str(pr_number), f"--{strategy}"]
+    cmd = ["gh", "pr", "merge", str(pr_number), f"--{strategy}"]
     if delete_branch:
-        args.append("--delete-branch")
+        cmd.append("--delete-branch")
 
-    try:
-        result = subprocess.run(
-            args,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result.returncode != 0:
-            return GhResult(success=False, data=None, error=result.stderr.strip())
-
-        return GhResult(success=True, data={"output": result.stdout}, error=None)
-
-    except subprocess.SubprocessError as e:
-        return GhResult(success=False, data=None, error=str(e))
+    return _run_gh(cmd, parse_json=False)
 
 
 def post_issue_comment(issue_number: int, body: str) -> GhResult:
@@ -205,21 +190,10 @@ def post_issue_comment(issue_number: int, body: str) -> GhResult:
     Returns:
         GhResult with comment result
     """
-    try:
-        result = subprocess.run(
-            ["gh", "issue", "comment", str(issue_number), "--body", body],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result.returncode != 0:
-            return GhResult(success=False, data=None, error=result.stderr.strip())
-
-        return GhResult(success=True, data={"output": result.stdout}, error=None)
-
-    except subprocess.SubprocessError as e:
-        return GhResult(success=False, data=None, error=str(e))
+    return _run_gh(
+        ["gh", "issue", "comment", str(issue_number), "--body", body],
+        parse_json=False,
+    )
 
 
 def get_pr_comments(pr_number: int) -> GhResult:
@@ -231,26 +205,14 @@ def get_pr_comments(pr_number: int) -> GhResult:
     Returns:
         GhResult with comments data
     """
-    try:
-        result = subprocess.run(
-            ["gh", "api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/comments"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result.returncode != 0:
-            return GhResult(success=False, data=None, error=result.stderr.strip())
-
-        data = json.loads(result.stdout)
-        if isinstance(data, list):
-            return GhResult(success=True, data=data, error=None)
-        return GhResult(success=True, data=[data], error=None)
-
-    except json.JSONDecodeError as e:
-        return GhResult(success=False, data=None, error=f"Invalid JSON response: {e}")
-    except subprocess.SubprocessError as e:
-        return GhResult(success=False, data=None, error=str(e))
+    result = _run_gh(["gh", "api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/comments"])
+    if not result.success:
+        return result
+    if isinstance(result.data, list):
+        return result
+    if isinstance(result.data, dict):
+        return GhResult(success=True, data=[result.data], error=None)
+    return result
 
 
 def get_pr_for_branch(branch_name: str) -> GhResult:
@@ -262,35 +224,23 @@ def get_pr_for_branch(branch_name: str) -> GhResult:
     Returns:
         GhResult with PR data
     """
-    try:
-        result = subprocess.run(
-            [
-                "gh",
-                "pr",
-                "list",
-                "--head",
-                branch_name,
-                "--state",
-                "open",
-                "--json",
-                "number,title,state,mergeable,baseRefName,headRefName",
-                "--limit",
-                "1",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result.returncode != 0:
-            return GhResult(success=False, data=None, error=result.stderr.strip())
-
-        data = json.loads(result.stdout)
-        if isinstance(data, list) and len(data) > 0:
-            return GhResult(success=True, data=data[0], error=None)
-        return GhResult(success=False, data=None, error="No PR found for branch")
-
-    except json.JSONDecodeError as e:
-        return GhResult(success=False, data=None, error=f"Invalid JSON response: {e}")
-    except subprocess.SubprocessError as e:
-        return GhResult(success=False, data=None, error=str(e))
+    result = _run_gh(
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            branch_name,
+            "--state",
+            "open",
+            "--json",
+            "number,title,state,mergeable,baseRefName,headRefName",
+            "--limit",
+            "1",
+        ]
+    )
+    if not result.success:
+        return result
+    if isinstance(result.data, list) and len(result.data) > 0:
+        return GhResult(success=True, data=result.data[0], error=None)
+    return GhResult(success=False, data=None, error="No PR found for branch")

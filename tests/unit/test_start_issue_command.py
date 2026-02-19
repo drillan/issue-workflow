@@ -8,7 +8,6 @@ import pytest
 
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS
 from issue_workflow.services.dependency_checker import CLAUDE_DEPENDENCY, GH_DEPENDENCY
-from tests.conftest import make_claude_result
 
 # Module path prefix for patching
 _MOD = "issue_workflow.cli.commands.start_issue"
@@ -22,19 +21,9 @@ def mock_deps() -> Iterator[MagicMock]:
 
 
 @pytest.fixture()
-def mock_runner() -> Iterator[MagicMock]:
-    """Mock ClaudeRunner with a successful result."""
-    with patch(f"{_MOD}.ClaudeRunner") as cls:
-        instance = MagicMock()
-        instance.run.return_value = make_claude_result()
-        cls.return_value = instance
-        yield instance
-
-
-@pytest.fixture()
-def mock_log_execution() -> Iterator[MagicMock]:
-    """Mock log_execution to do nothing."""
-    with patch(f"{_MOD}.log_execution") as m:
+def mock_run_skill() -> Iterator[MagicMock]:
+    """Mock run_claude_skill with a successful return."""
+    with patch(f"{_MOD}.run_claude_skill", return_value=0) as m:
         yield m
 
 
@@ -42,7 +31,7 @@ class TestStartIssueBasic:
     """Basic behavior tests."""
 
     def test_calls_check_dependencies_with_claude(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
         """Dependency check includes CLAUDE_DEPENDENCY."""
         from issue_workflow.cli.commands.start_issue import _run_start_issue
@@ -54,32 +43,35 @@ class TestStartIssueBasic:
         assert CLAUDE_DEPENDENCY in deps_arg
         assert GH_DEPENDENCY not in deps_arg
 
-    def test_calls_claude_runner_with_correct_prompt(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+    def test_calls_run_claude_skill_with_correct_args(
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
-        """ClaudeRunner.run is called with '/start-issue {issue_number}'."""
+        """run_claude_skill is called with correct command_name and prompt."""
         from issue_workflow.cli.commands.start_issue import _run_start_issue
 
         _run_start_issue(issue_number=199, worktree=False, verbose=False, timeout=3600)
 
-        mock_runner.run.assert_called_once()
-        call_kwargs = mock_runner.run.call_args
-        assert call_kwargs[0][0] == "/start-issue 199 --force"
+        mock_run_skill.assert_called_once()
+        call_args = mock_run_skill.call_args
+        assert call_args[0][0] == "start-issue"
+        assert call_args[0][1] == "/start-issue 199 --force"
 
-    def test_calls_log_execution(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+    def test_log_args_contain_issue_number_and_worktree(
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
-        """log_execution is called."""
+        """run_claude_skill log_args contains issue_number and worktree."""
         from issue_workflow.cli.commands.start_issue import _run_start_issue
 
         _run_start_issue(issue_number=199, worktree=False, verbose=False, timeout=3600)
 
-        mock_log_execution.assert_called_once()
+        log_args = mock_run_skill.call_args[0][2]
+        assert log_args["issue_number"] == 199
+        assert log_args["worktree"] is False
 
     def test_returns_zero_exit_code_on_success(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
-        """Returns exit_code=0 when ClaudeResult.exit_code=0."""
+        """Returns exit_code=0 when run_claude_skill returns 0."""
         from issue_workflow.cli.commands.start_issue import _run_start_issue
 
         exit_code = _run_start_issue(issue_number=199, worktree=False, verbose=False, timeout=3600)
@@ -87,10 +79,10 @@ class TestStartIssueBasic:
         assert exit_code == 0
 
     def test_returns_nonzero_exit_code_on_failure(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
-        """Returns exit_code=1 when ClaudeResult.exit_code=1."""
-        mock_runner.run.return_value = make_claude_result(exit_code=1, is_error=True)
+        """Returns exit_code=1 when run_claude_skill returns 1."""
+        mock_run_skill.return_value = 1
 
         from issue_workflow.cli.commands.start_issue import _run_start_issue
 
@@ -98,92 +90,37 @@ class TestStartIssueBasic:
 
         assert exit_code == 1
 
-    def test_console_output_starting_message(
-        self,
-        mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
-    ) -> None:
-        """Output contains '[start-issue] Starting...'."""
-        with patch(f"{_MOD}.ui") as mock_ui:
-            from issue_workflow.cli.commands.start_issue import _run_start_issue
-
-            _run_start_issue(issue_number=199, worktree=False, verbose=False, timeout=3600)
-
-            all_calls = [str(c) for c in mock_ui.console.print.call_args_list]
-            assert any("[start-issue] Starting" in c for c in all_calls)
-
-    def test_console_output_done_message(
-        self,
-        mock_deps: MagicMock,
-        mock_runner: MagicMock,
-        mock_log_execution: MagicMock,
-    ) -> None:
-        """Output contains '[start-issue] Done. (exit_code=0)'."""
-        with patch(f"{_MOD}.ui") as mock_ui:
-            from issue_workflow.cli.commands.start_issue import _run_start_issue
-
-            _run_start_issue(issue_number=199, worktree=False, verbose=False, timeout=3600)
-
-            all_calls = [str(c) for c in mock_ui.console.print.call_args_list]
-            assert any("[start-issue] Done" in c and "exit_code=0" in c for c in all_calls)
-
 
 class TestStartIssueVerbose:
     """Verbose mode tests."""
 
-    def test_verbose_passes_verbose_to_runner(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+    def test_verbose_passed_to_run_claude_skill(
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
-        """verbose=True is forwarded to ClaudeRunner.run."""
+        """verbose=True is forwarded to run_claude_skill."""
         from issue_workflow.cli.commands.start_issue import _run_start_issue
 
         _run_start_issue(issue_number=199, worktree=False, verbose=True, timeout=3600)
 
-        call_kwargs = mock_runner.run.call_args
+        call_kwargs = mock_run_skill.call_args
         assert call_kwargs.kwargs.get("verbose") is True
-
-    def test_verbose_starting_message(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
-    ) -> None:
-        """Verbose mode shows '(verbose mode)' in starting message."""
-        with patch(f"{_MOD}.ui") as mock_ui:
-            from issue_workflow.cli.commands.start_issue import _run_start_issue
-
-            _run_start_issue(issue_number=199, worktree=False, verbose=True, timeout=3600)
-
-            all_calls = [str(c) for c in mock_ui.console.print.call_args_list]
-            assert any("verbose mode" in c for c in all_calls)
-
-    def test_verbose_passes_on_tool_use_callback(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
-    ) -> None:
-        """Verbose mode passes on_tool_use callback to ClaudeRunner.run."""
-        from issue_workflow.cli.commands.start_issue import _run_start_issue
-
-        _run_start_issue(issue_number=199, worktree=False, verbose=True, timeout=3600)
-
-        call_kwargs = mock_runner.run.call_args
-        assert call_kwargs.kwargs.get("on_tool_use") is not None
 
 
 class TestStartIssueTimeout:
     """Timeout option tests."""
 
-    def test_custom_timeout_passed_to_runner(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+    def test_custom_timeout_passed_to_run_claude_skill(
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
-        """Custom --timeout value is forwarded to ClaudeRunner.run."""
+        """Custom --timeout value is forwarded to run_claude_skill."""
         from issue_workflow.cli.commands.start_issue import _run_start_issue
 
         _run_start_issue(issue_number=199, worktree=False, verbose=False, timeout=600)
 
-        call_kwargs = mock_runner.run.call_args
-        assert call_kwargs.kwargs.get("timeout_seconds") == 600
+        call_kwargs = mock_run_skill.call_args
+        assert call_kwargs.kwargs.get("timeout") == 600
 
-    def test_default_timeout_is_3600(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
-    ) -> None:
+    def test_default_timeout_is_3600(self, mock_deps: MagicMock, mock_run_skill: MagicMock) -> None:
         """Default timeout is DEFAULT_TIMEOUT_SECONDS (3600)."""
         from issue_workflow.cli.commands.start_issue import _run_start_issue
 
@@ -194,16 +131,14 @@ class TestStartIssueTimeout:
             timeout=DEFAULT_TIMEOUT_SECONDS,
         )
 
-        call_kwargs = mock_runner.run.call_args
-        assert call_kwargs.kwargs.get("timeout_seconds") == 3600
+        call_kwargs = mock_run_skill.call_args
+        assert call_kwargs.kwargs.get("timeout") == 3600
 
 
 class TestStartIssueWorktree:
     """Worktree option tests."""
 
-    def test_worktree_adds_gh_dependency(
-        self, mock_runner: MagicMock, mock_log_execution: MagicMock
-    ) -> None:
+    def test_worktree_adds_gh_dependency(self, mock_run_skill: MagicMock) -> None:
         """--worktree adds GH_DEPENDENCY to dependency check."""
         with (
             patch(f"{_MOD}.check_dependencies") as mock_deps,
@@ -218,7 +153,7 @@ class TestStartIssueWorktree:
             assert GH_DEPENDENCY in deps_arg
 
     def test_worktree_detects_existing_worktree(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
         """Existing worktree is detected and used as cwd."""
         existing_path = Path("/tmp/existing-wt")
@@ -231,11 +166,11 @@ class TestStartIssueWorktree:
 
             _run_start_issue(issue_number=199, worktree=True, verbose=False, timeout=3600)
 
-            call_kwargs = mock_runner.run.call_args
+            call_kwargs = mock_run_skill.call_args
             assert call_kwargs.kwargs.get("cwd") == existing_path
 
     def test_worktree_creates_new_when_not_found(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
         """New worktree is created when not found."""
         with (
@@ -254,7 +189,7 @@ class TestStartIssueWorktree:
             mock_git.worktree_add.assert_called_once()
 
     def test_worktree_copies_hachimoku(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
         """copy_hachimoku_to_worktree is called after worktree creation."""
         with (
@@ -272,10 +207,10 @@ class TestStartIssueWorktree:
 
             mock_copy.assert_called_once()
 
-    def test_worktree_sets_cwd_for_claude_runner(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+    def test_worktree_sets_cwd_for_run_claude_skill(
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
-        """Worktree path is passed as cwd to ClaudeRunner.run."""
+        """Worktree path is passed as cwd to run_claude_skill."""
         wt_path = Path("/tmp/worktree-199")
 
         with (
@@ -286,18 +221,19 @@ class TestStartIssueWorktree:
 
             _run_start_issue(issue_number=199, worktree=True, verbose=False, timeout=3600)
 
-            call_kwargs = mock_runner.run.call_args
+            call_kwargs = mock_run_skill.call_args
             assert call_kwargs.kwargs.get("cwd") == wt_path
 
     def test_no_worktree_sets_cwd_none(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
-        """Without --worktree, cwd is None (current directory)."""
+        """Without --worktree, cwd is not passed (defaults in run_claude_skill)."""
         from issue_workflow.cli.commands.start_issue import _run_start_issue
 
         _run_start_issue(issue_number=199, worktree=False, verbose=False, timeout=3600)
 
-        call_kwargs = mock_runner.run.call_args
+        call_kwargs = mock_run_skill.call_args
+        # cwd should not be in kwargs (not passed when no worktree)
         assert call_kwargs.kwargs.get("cwd") is None
 
 
@@ -305,7 +241,7 @@ class TestStartIssueErrorHandling:
     """Error handling tests."""
 
     def test_worktree_git_error_shows_message_and_exits(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
         """GitError in _prepare_worktree prints error and returns 1."""
         from issue_workflow.lib.git import GitError
@@ -331,45 +267,56 @@ class TestStartIssueErrorHandling:
             assert any("worktree" in c.lower() for c in error_calls)
 
 
-class TestStartIssueLogArgs:
-    """Tests for log_execution call arguments."""
+class TestStartIssueCopyHachimokuError:
+    """Tests for OSError from copy_hachimoku_to_worktree (Issue #112)."""
 
-    def test_log_command_name(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+    def test_copy_hachimoku_os_error_returns_1(
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
-        """log_execution is called with command_name='start-issue'."""
-        from issue_workflow.cli.commands.start_issue import _run_start_issue
+        """OSError from copy_hachimoku_to_worktree returns exit code 1."""
+        with (
+            patch(f"{_MOD}.find_worktree_for_branch", return_value=None),
+            patch(f"{_MOD}.GitOperations") as mock_git_cls,
+            patch(
+                f"{_MOD}.copy_hachimoku_to_worktree",
+                side_effect=OSError("disk full"),
+            ),
+            patch(f"{_MOD}.ui") as mock_ui,
+        ):
+            mock_git = MagicMock()
+            mock_git.repo_path = Path("/tmp/repo")
+            mock_git_cls.return_value = mock_git
 
-        _run_start_issue(issue_number=199, worktree=False, verbose=False, timeout=3600)
+            from issue_workflow.cli.commands.start_issue import _run_start_issue
 
-        assert mock_log_execution.call_args[0][0] == "start-issue"
+            exit_code = _run_start_issue(
+                issue_number=199, worktree=True, verbose=False, timeout=3600
+            )
 
-    def test_log_args_contain_issue_number(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
+            assert exit_code == 1
+            mock_ui.print_error.assert_called_once()
+            mock_run_skill.assert_not_called()
+
+    def test_copy_hachimoku_os_error_message_contains_detail(
+        self, mock_deps: MagicMock, mock_run_skill: MagicMock
     ) -> None:
-        """log_execution args dict contains issue_number."""
-        from issue_workflow.cli.commands.start_issue import _run_start_issue
+        """Error message includes the OSError detail."""
+        with (
+            patch(f"{_MOD}.find_worktree_for_branch", return_value=None),
+            patch(f"{_MOD}.GitOperations") as mock_git_cls,
+            patch(
+                f"{_MOD}.copy_hachimoku_to_worktree",
+                side_effect=OSError("permission denied"),
+            ),
+            patch(f"{_MOD}.ui") as mock_ui,
+        ):
+            mock_git = MagicMock()
+            mock_git.repo_path = Path("/tmp/repo")
+            mock_git_cls.return_value = mock_git
 
-        _run_start_issue(issue_number=199, worktree=False, verbose=False, timeout=3600)
+            from issue_workflow.cli.commands.start_issue import _run_start_issue
 
-        assert mock_log_execution.call_args[0][1]["issue_number"] == 199
+            _run_start_issue(issue_number=199, worktree=True, verbose=False, timeout=3600)
 
-    def test_log_args_contain_worktree_flag(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
-    ) -> None:
-        """log_execution args dict contains worktree flag."""
-        from issue_workflow.cli.commands.start_issue import _run_start_issue
-
-        _run_start_issue(issue_number=199, worktree=False, verbose=False, timeout=3600)
-
-        assert mock_log_execution.call_args[0][1]["worktree"] is False
-
-    def test_log_timeout_passed(
-        self, mock_deps: MagicMock, mock_runner: MagicMock, mock_log_execution: MagicMock
-    ) -> None:
-        """log_execution receives timeout value."""
-        from issue_workflow.cli.commands.start_issue import _run_start_issue
-
-        _run_start_issue(issue_number=199, worktree=False, verbose=False, timeout=600)
-
-        assert mock_log_execution.call_args[0][3] == 600
+            error_msg = str(mock_ui.print_error.call_args)
+            assert "permission denied" in error_msg.lower()

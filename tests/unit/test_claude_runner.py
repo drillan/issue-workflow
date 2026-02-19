@@ -294,6 +294,24 @@ class TestClaudeRunnerVerbose:
         assert result.exit_code == 1
 
     @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_malformed_result_with_zero_exit_sets_is_error_true(
+        self, mock_popen: MagicMock
+    ) -> None:
+        """Parse failure with exit_code=0 must set is_error=True (not rely on returncode)."""
+        bad_result_line = json.dumps({"type": "result", "is_error": "not_a_bool"})
+
+        mock_process = MagicMock()
+        mock_process.stdout = iter([bad_result_line + "\n"])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 0
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        result = runner.run("prompt", verbose=True)
+
+        assert result.is_error is True
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
     def test_verbose_no_result_event_returns_basic_result(self, mock_popen: MagicMock) -> None:
         """When no result event in stream, returns basic ClaudeResult from returncode."""
         assistant_event = json.dumps(
@@ -363,6 +381,21 @@ class TestClaudeRunnerVerbose:
         callback.assert_not_called()
         assert result.exit_code == 0
 
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_uses_devnull_for_stderr(self, mock_popen: MagicMock) -> None:
+        """Test verbose mode uses subprocess.DEVNULL for stderr to prevent deadlock."""
+        mock_process = MagicMock()
+        mock_process.stdout = iter([json.dumps({"type": "result", "subtype": "success"}) + "\n"])
+        mock_process.wait.return_value = 0
+        mock_process.returncode = 0
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        runner.run("prompt", verbose=True)
+
+        call_kwargs = mock_popen.call_args
+        assert call_kwargs.kwargs.get("stderr") == subprocess.DEVNULL
+
     @patch("issue_workflow.services.claude_runner.time.monotonic")
     @patch("issue_workflow.services.claude_runner.subprocess.Popen")
     def test_verbose_wait_uses_remaining_timeout(
@@ -387,6 +420,38 @@ class TestClaudeRunnerVerbose:
         actual_timeout = wait_kwargs.kwargs.get("timeout") or wait_kwargs[1].get("timeout")
         assert actual_timeout is not None
         assert actual_timeout <= 500
+
+
+class TestBuildBaseCmd:
+    """Tests for ClaudeRunner._build_base_cmd method."""
+
+    def test_base_cmd_starts_with_claude_p(self) -> None:
+        """Test base command starts with 'claude -p <prompt>'."""
+        runner = ClaudeRunner()
+        cmd = runner._build_base_cmd("test prompt")
+        assert cmd[0] == "claude"
+        assert cmd[1] == "-p"
+        assert cmd[2] == "test prompt"
+
+    def test_base_cmd_includes_skip_permissions(self) -> None:
+        """Test base command includes --dangerously-skip-permissions."""
+        runner = ClaudeRunner()
+        cmd = runner._build_base_cmd("prompt")
+        assert "--dangerously-skip-permissions" in cmd
+
+    def test_base_cmd_includes_disallowed_tools(self) -> None:
+        """Test base command includes --disallowed-tools AskUserQuestion."""
+        runner = ClaudeRunner()
+        cmd = runner._build_base_cmd("prompt")
+        assert "--disallowed-tools" in cmd
+        idx = cmd.index("--disallowed-tools")
+        assert cmd[idx + 1] == "AskUserQuestion"
+
+    def test_base_cmd_does_not_include_output_format(self) -> None:
+        """Test base command does not include --output-format (added by callers)."""
+        runner = ClaudeRunner()
+        cmd = runner._build_base_cmd("prompt")
+        assert "--output-format" not in cmd
 
 
 class TestClaudeRunnerConstants:

@@ -53,7 +53,7 @@ class ReviewAgentResult:
 
     status: AgentResultStatus
     agent_name: str
-    issues: list[ReviewIssue]
+    issues: tuple[ReviewIssue, ...]
     elapsed_time: float
     error_message: str | None = None
 
@@ -79,7 +79,7 @@ class ReviewResult:
     commit_hash: str
     branch_name: str
     reviewed_at: str
-    results: list[ReviewAgentResult]
+    results: tuple[ReviewAgentResult, ...]
     summary: ReviewSummary
     pr_number: int | None = None
 
