@@ -39,11 +39,6 @@ class WorkflowContext:
         """Working directory for skill execution (worktree or None for current)."""
         return self.worktree_path
 
-    @property
-    def cwd_for_merge(self) -> Path | None:
-        """Working directory for merge (always main repo, i.e. None for current)."""
-        return None
-
     def log_number_for_step(self, command: str) -> int | None:
         """Get the appropriate number for log file naming.
 

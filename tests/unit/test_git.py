@@ -128,35 +128,6 @@ class TestCheckoutBranch:
             git.checkout_branch("nonexistent")
 
 
-class TestCreateOrCheckoutBranch:
-    """Tests for create_or_checkout_branch method."""
-
-    def test_creates_new_branch(self, temp_git_repo: Path) -> None:
-        """Test creates new branch when it doesn't exist."""
-        git = GitOperations(temp_git_repo)
-        # Setup
-        (temp_git_repo / "README.md").write_text("# Test")
-        subprocess.run(["git", "add", "."], cwd=temp_git_repo, check=True)
-        subprocess.run(["git", "commit", "-m", "init"], cwd=temp_git_repo, check=True)
-
-        created = git.create_or_checkout_branch("new-branch")
-        assert created is True
-        assert git.get_current_branch() == "new-branch"
-
-    def test_checks_out_existing_branch(self, temp_git_repo: Path) -> None:
-        """Test checks out existing branch."""
-        git = GitOperations(temp_git_repo)
-        # Setup
-        (temp_git_repo / "README.md").write_text("# Test")
-        subprocess.run(["git", "add", "."], cwd=temp_git_repo, check=True)
-        subprocess.run(["git", "commit", "-m", "init"], cwd=temp_git_repo, check=True)
-        subprocess.run(["git", "branch", "existing"], cwd=temp_git_repo, check=True)
-
-        created = git.create_or_checkout_branch("existing")
-        assert created is False
-        assert git.get_current_branch() == "existing"
-
-
 class TestDeleteBranch:
     """Tests for delete_branch method."""
 
@@ -448,22 +419,3 @@ class TestRunOSErrorWrapping:
         ):
             git._run(["status"])
         assert exc_info.value.__cause__ is original
-
-
-class TestGetRemoteUrl:
-    """Tests for get_remote_url method."""
-
-    def test_get_remote_url_no_remote(self, temp_git_repo: Path) -> None:
-        """Test returns None when no remote configured."""
-        git = GitOperations(temp_git_repo)
-        assert git.get_remote_url() is None
-
-    def test_get_remote_url_with_remote(self, temp_git_repo: Path) -> None:
-        """Test returns URL when remote is configured."""
-        git = GitOperations(temp_git_repo)
-        subprocess.run(
-            ["git", "remote", "add", "origin", "https://github.com/test/repo.git"],
-            cwd=temp_git_repo,
-            check=True,
-        )
-        assert git.get_remote_url() == "https://github.com/test/repo.git"

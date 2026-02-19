@@ -201,7 +201,7 @@ def _run_workflow(
         "merge-pr",
         f"/merge-pr {pr_number}",
         {"pr_number": pr_number},
-        cwd=ctx.cwd_for_merge,
+        cwd=None,
         verbose=verbose,
         timeout=timeout,
     ):

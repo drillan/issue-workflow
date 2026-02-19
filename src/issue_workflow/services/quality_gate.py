@@ -75,18 +75,3 @@ def is_quality_gate_required(project_dir: Path) -> bool:
             stacklevel=2,
         )
         return False
-
-
-def get_all_command(project_dir: Path) -> str | None:
-    """Get the 'all' quality command for the project.
-
-    Args:
-        project_dir: Project root directory
-
-    Returns:
-        The 'all' command string if available, None otherwise
-    """
-    commands = load_quality_commands(project_dir)
-    if commands is None:
-        return None
-    return commands.all
