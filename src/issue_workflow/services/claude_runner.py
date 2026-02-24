@@ -92,6 +92,12 @@ class ClaudeRunner:
                 is_error=True,
                 raw_json="{}",
             )
+        except KeyboardInterrupt:
+            return ClaudeResult(
+                exit_code=-1,
+                is_error=True,
+                raw_json="{}",
+            )
 
         raw_stdout = proc.stdout
 
@@ -167,6 +173,14 @@ class ClaudeRunner:
             remaining = max(0, timeout_seconds - elapsed)
             proc.wait(timeout=remaining)
         except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            return ClaudeResult(
+                exit_code=-1,
+                is_error=True,
+                raw_json="{}",
+            )
+        except KeyboardInterrupt:
             proc.kill()
             proc.wait()
             return ClaudeResult(

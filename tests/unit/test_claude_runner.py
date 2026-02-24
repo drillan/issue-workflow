@@ -422,6 +422,49 @@ class TestClaudeRunnerVerbose:
         assert actual_timeout <= 500
 
 
+class TestClaudeRunnerKeyboardInterrupt:
+    """Tests for KeyboardInterrupt (Ctrl+C) handling."""
+
+    @patch("issue_workflow.services.claude_runner.subprocess.run")
+    def test_non_verbose_keyboard_interrupt_returns_error_result(self, mock_run: MagicMock) -> None:
+        """Non-verbose: KeyboardInterrupt returns ClaudeResult with exit_code=-1, is_error=True."""
+        mock_run.side_effect = KeyboardInterrupt()
+
+        runner = ClaudeRunner()
+        result = runner.run("prompt")
+
+        assert result.exit_code == -1
+        assert result.is_error is True
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_keyboard_interrupt_kills_process(self, mock_popen: MagicMock) -> None:
+        """Verbose: KeyboardInterrupt triggers proc.kill() and proc.wait()."""
+        mock_process = MagicMock()
+        mock_process.stdout = MagicMock()
+        mock_process.stdout.__iter__ = MagicMock(side_effect=KeyboardInterrupt())
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        runner.run("prompt", verbose=True)
+
+        mock_process.kill.assert_called_once()
+        mock_process.wait.assert_called_once()
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_keyboard_interrupt_returns_error_result(self, mock_popen: MagicMock) -> None:
+        """Verbose: KeyboardInterrupt returns ClaudeResult with exit_code=-1, is_error=True."""
+        mock_process = MagicMock()
+        mock_process.stdout = MagicMock()
+        mock_process.stdout.__iter__ = MagicMock(side_effect=KeyboardInterrupt())
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        result = runner.run("prompt", verbose=True)
+
+        assert result.exit_code == -1
+        assert result.is_error is True
+
+
 class TestBuildBaseCmd:
     """Tests for ClaudeRunner._build_base_cmd method."""
 
