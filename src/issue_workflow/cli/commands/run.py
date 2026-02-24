@@ -105,6 +105,32 @@ def _run_workflow(
 
     ctx = WorkflowContext(issue_number=issue_number)
 
+    try:
+        return _run_workflow_steps(ctx, issue_number, worktree, verbose, timeout)
+    except KeyboardInterrupt:
+        ui.print_info("Workflow cancelled")
+        return 1
+
+
+def _run_workflow_steps(
+    ctx: WorkflowContext,
+    issue_number: int,
+    worktree: bool,
+    verbose: bool,
+    timeout: int,
+) -> int:
+    """Execute all workflow steps sequentially.
+
+    Args:
+        ctx: Workflow context.
+        issue_number: GitHub Issue number.
+        worktree: Whether to use worktree.
+        verbose: Whether to show verbose output.
+        timeout: Timeout in seconds for claude -p execution.
+
+    Returns:
+        Exit code (0 for success, non-zero for failure).
+    """
     # Step 0 (optional): worktree preparation
     if worktree:
         cwd = _prepare_worktree(issue_number)
@@ -242,11 +268,15 @@ def run(
     Claude Code's permission checks for automated execution. Only run in
     trusted environments.
     """
-    exit_code = _run_workflow(
-        issue_number=issue_number,
-        worktree=worktree,
-        verbose=verbose,
-        timeout=timeout,
-    )
+    try:
+        exit_code = _run_workflow(
+            issue_number=issue_number,
+            worktree=worktree,
+            verbose=verbose,
+            timeout=timeout,
+        )
+    except KeyboardInterrupt:
+        ui.print_info("Workflow cancelled")
+        raise typer.Exit(code=1) from None
     if exit_code != EXIT_SUCCESS:
         raise typer.Exit(code=exit_code)

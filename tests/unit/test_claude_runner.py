@@ -5,6 +5,8 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from issue_workflow.services.claude_runner import (
     DEFAULT_TIMEOUT_SECONDS,
     ClaudeRunner,
@@ -420,6 +422,46 @@ class TestClaudeRunnerVerbose:
         actual_timeout = wait_kwargs.kwargs.get("timeout") or wait_kwargs[1].get("timeout")
         assert actual_timeout is not None
         assert actual_timeout <= 500
+
+
+class TestClaudeRunnerKeyboardInterrupt:
+    """Tests for KeyboardInterrupt (Ctrl+C) handling."""
+
+    @patch("issue_workflow.services.claude_runner.subprocess.run")
+    def test_non_verbose_keyboard_interrupt_propagates(self, mock_run: MagicMock) -> None:
+        """Non-verbose: KeyboardInterrupt propagates to caller."""
+        mock_run.side_effect = KeyboardInterrupt()
+
+        runner = ClaudeRunner()
+        with pytest.raises(KeyboardInterrupt):
+            runner.run("prompt")
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_keyboard_interrupt_kills_process(self, mock_popen: MagicMock) -> None:
+        """Verbose: KeyboardInterrupt triggers proc.kill() and proc.wait()."""
+        mock_process = MagicMock()
+        mock_process.stdout = MagicMock()
+        mock_process.stdout.__iter__ = MagicMock(side_effect=KeyboardInterrupt())
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        with pytest.raises(KeyboardInterrupt):
+            runner.run("prompt", verbose=True)
+
+        mock_process.kill.assert_called_once()
+        mock_process.wait.assert_called_once()
+
+    @patch("issue_workflow.services.claude_runner.subprocess.Popen")
+    def test_verbose_keyboard_interrupt_propagates(self, mock_popen: MagicMock) -> None:
+        """Verbose: KeyboardInterrupt propagates to caller after cleanup."""
+        mock_process = MagicMock()
+        mock_process.stdout = MagicMock()
+        mock_process.stdout.__iter__ = MagicMock(side_effect=KeyboardInterrupt())
+        mock_popen.return_value = mock_process
+
+        runner = ClaudeRunner()
+        with pytest.raises(KeyboardInterrupt):
+            runner.run("prompt", verbose=True)
 
 
 class TestBuildBaseCmd:

@@ -499,6 +499,44 @@ class TestRunWorktree:
         mock_pr_detector.assert_called_once_with(cwd=Path("/tmp/wt"))
 
 
+class TestRunKeyboardInterrupt:
+    """Tests for KeyboardInterrupt (Ctrl+C) during workflow."""
+
+    def test_keyboard_interrupt_during_claude_step_returns_1(
+        self,
+        mock_deps: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """KeyboardInterrupt during ClaudeRunner.run causes _run_workflow to return 1."""
+        with patch(f"{_MOD}.ClaudeRunner") as cls:
+            instance = MagicMock()
+            instance.run.side_effect = KeyboardInterrupt()
+            cls.return_value = instance
+
+            from issue_workflow.cli.commands.run import _run_workflow
+
+            exit_code = _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=3600)
+
+            assert exit_code == 1
+
+    def test_keyboard_interrupt_during_8moku_returns_1(
+        self,
+        mock_deps: MagicMock,
+        mock_runner: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+    ) -> None:
+        """KeyboardInterrupt during 8moku subprocess causes _run_workflow to return 1."""
+        with patch(f"{_MOD}.subprocess.run", side_effect=KeyboardInterrupt()):
+            from issue_workflow.cli.commands.run import _run_workflow
+
+            exit_code = _run_workflow(issue_number=199, worktree=False, verbose=False, timeout=3600)
+
+            assert exit_code == 1
+
+
 class TestRunVerbose:
     """Verbose mode tests."""
 

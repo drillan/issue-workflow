@@ -92,7 +92,6 @@ class ClaudeRunner:
                 is_error=True,
                 raw_json="{}",
             )
-
         raw_stdout = proc.stdout
 
         try:
@@ -174,6 +173,10 @@ class ClaudeRunner:
                 is_error=True,
                 raw_json="{}",
             )
+        except KeyboardInterrupt:
+            proc.kill()
+            proc.wait()
+            raise
 
         if last_result_line:
             try:
