@@ -18,7 +18,7 @@ Load a GitHub Issue, create a branch, and develop an implementation plan.
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
 | `issue-number` | integer | Yes | GitHub Issue number |
-| `--force` | flag | No | Skip plan mode and all interactive confirmations (including TDD user approval) |
+| `--force` | flag | No | Skip plan mode and all interactive confirmations (including TDD user approval). **Full autonomous mode**: Do not output any questions or confirmations as text. Execute all steps (including Issue reporting) without pausing. |
 | `--current-branch` | flag | No | Skip branch creation, use the current branch |
 
 ## Instructions
@@ -78,7 +78,9 @@ If branch exists, checkout instead of create.
 
 ### Step 4: Plan Implementation
 
-Unless `--force` is specified, enter plan mode before proceeding. With `--force`, execute all phases directly without entering plan mode and without interactive confirmations.
+Unless `--force` is specified, enter plan mode before proceeding. With `--force`, execute all phases directly without entering plan mode and without any interactive confirmations.
+
+**CRITICAL (`--force` mode):** You are running in a non-interactive `claude -p` pipeline. There is no user to respond. You MUST NOT output any questions, confirmations, or prompts as text (e.g., "〜しますか？", "〜してよろしいですか？"). Execute every step autonomously and proceed to the next step immediately. This applies to ALL steps including Step 5 (Report to Issue).
 
 Regardless of `--force`, execute the following phases to create an implementation plan.
 
@@ -94,7 +96,7 @@ Check `documentation.ddd.enabled` to determine if DDD workflow is active.
 
 1. Extract requirements from issue body
 2. Identify acceptance criteria
-3. Clarify any ambiguous requirements with user
+3. If `--force` is not specified, clarify any ambiguous requirements with user. With `--force`, make reasonable assumptions and proceed.
 
 #### Phase 2: Identify Impact Scope
 
@@ -131,7 +133,7 @@ Before implementation, update documentation as specification using **doc-updater
    - CLI `--help` text (in code comments)
    - `CHANGELOG.md` (from `documentation.changelog`) if applicable
 
-3. **Review documentation with user**
+3. **Review documentation with user** (skip if `--force` — treat documentation as approved and proceed)
    - Documentation becomes the "contract" for implementation
 
 #### Phase 4: Design Test Cases (TDD Approach)
@@ -148,6 +150,7 @@ Skip all TDD user confirmation steps and execute the Red-Green-Refactor cycle au
 
 - Do **not** ask "Do you want me to follow TDD workflow?" — assume yes
 - Do **not** wait for user approval of test cases — proceed directly to Red confirmation
+- Do **not** output any question or confirmation text (e.g., "〜しますか？") — there is no user to respond
 - Write tests → confirm failure (Red) → implement (Green) → refactor — all automatically
 - Still report test results at each phase, but do not pause for confirmation
 
@@ -166,6 +169,8 @@ Follow the standard TDD workflow with user confirmation:
 3. Summarize in table format
 
 ### Step 5: Report to Issue
+
+**With `--force`: Execute this step immediately without asking for confirmation. Do not output questions like "Issueに報告しますか？" — just do it.**
 
 Post the plan as a comment on the issue using issue-reporter skill:
 
@@ -216,7 +221,7 @@ Post the plan as a comment on the issue using issue-reporter skill:
 | Error | Action |
 |-------|--------|
 | Issue not found | Display error with `gh issue view` suggestion |
-| Issue is closed | Warn user and ask for confirmation |
+| Issue is closed | Warn user and ask for confirmation. With `--force`, warn in output but proceed without confirmation. |
 | gh not authenticated | Display `gh auth login` instruction |
 | Uncommitted changes | Ask user to commit or stash changes |
 | Branch creation failed | Display error details |
