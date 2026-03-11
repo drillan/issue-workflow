@@ -96,7 +96,7 @@ Check `documentation.ddd.enabled` to determine if DDD workflow is active.
 
 1. Extract requirements from issue body
 2. Identify acceptance criteria
-3. Clarify any ambiguous requirements with user
+3. If `--force` is not specified, clarify any ambiguous requirements with user. With `--force`, make reasonable assumptions and proceed.
 
 #### Phase 2: Identify Impact Scope
 
@@ -133,7 +133,7 @@ Before implementation, update documentation as specification using **doc-updater
    - CLI `--help` text (in code comments)
    - `CHANGELOG.md` (from `documentation.changelog`) if applicable
 
-3. **Review documentation with user**
+3. **Review documentation with user** (skip if `--force` — treat documentation as approved and proceed)
    - Documentation becomes the "contract" for implementation
 
 #### Phase 4: Design Test Cases (TDD Approach)
@@ -221,7 +221,7 @@ Post the plan as a comment on the issue using issue-reporter skill:
 | Error | Action |
 |-------|--------|
 | Issue not found | Display error with `gh issue view` suggestion |
-| Issue is closed | Warn user and ask for confirmation |
+| Issue is closed | Warn user and ask for confirmation. With `--force`, warn in output but proceed without confirmation. |
 | gh not authenticated | Display `gh auth login` instruction |
 | Uncommitted changes | Ask user to commit or stash changes |
 | Branch creation failed | Display error details |
