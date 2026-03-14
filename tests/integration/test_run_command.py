@@ -58,11 +58,24 @@ class TestRunCliExecution:
         assert "dangerously-skip-permissions" in result.output
 
     def test_help_shows_usage(self) -> None:
-        """--help output shows ISSUE_NUMBER argument."""
+        """--help output shows ISSUES argument."""
         result = runner.invoke(app, ["run", "--help"])
 
         assert result.exit_code == 0
-        assert "ISSUE_NUMBER" in result.output
+        assert "ISSUES" in result.output
+
+    def test_multi_issue_range_accepted(self) -> None:
+        """Range format like '30-32' is accepted."""
+        with _patch_all_success():
+            result = runner.invoke(app, ["run", "30-32"])
+
+            assert result.exit_code == 0
+
+    def test_invalid_issue_format_fails(self) -> None:
+        """Invalid issue format returns non-zero exit code."""
+        result = runner.invoke(app, ["run", "abc"])
+
+        assert result.exit_code != 0
 
     def test_verbose_option_accepted(self) -> None:
         """-v option is accepted."""
