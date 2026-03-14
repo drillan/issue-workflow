@@ -145,6 +145,21 @@ class TestParseIssueRangeErrors:
         with pytest.raises(IssueRangeError):
             parse_issue_range("30-35-40")
 
+    def test_range_too_large(self) -> None:
+        """Range exceeding MAX_ISSUE_COUNT raises IssueRangeError."""
+        with pytest.raises(IssueRangeError, match="Too many issues"):
+            parse_issue_range("1-101")
+
+    def test_combined_ranges_too_large(self) -> None:
+        """Combined ranges exceeding MAX_ISSUE_COUNT raises IssueRangeError."""
+        with pytest.raises(IssueRangeError, match="Too many issues"):
+            parse_issue_range("1-60,70-130")
+
+    def test_range_at_max_limit_succeeds(self) -> None:
+        """Exactly MAX_ISSUE_COUNT issues is allowed."""
+        result = parse_issue_range("1-100")
+        assert len(result) == 100
+
     def test_issue_range_error_is_value_error(self) -> None:
         """IssueRangeError is a subclass of ValueError."""
         with pytest.raises(ValueError):

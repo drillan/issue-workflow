@@ -1,5 +1,7 @@
 """Parser for issue range specifier strings."""
 
+MAX_ISSUE_COUNT: int = 100
+
 
 class IssueRangeError(ValueError):
     """Raised when the issue range string is invalid."""
@@ -77,4 +79,7 @@ def parse_issue_range(spec: str) -> list[int]:
     for segment in segments:
         issue_numbers.update(_parse_segment(segment))
 
-    return sorted(issue_numbers)
+    result = sorted(issue_numbers)
+    if len(result) > MAX_ISSUE_COUNT:
+        raise IssueRangeError(f"Too many issues: {len(result)} (maximum is {MAX_ISSUE_COUNT})")
+    return result
