@@ -106,7 +106,7 @@ Automate the development workflow via `claude -p` subprocess execution. Each sub
 | 4 | `issue-workflow push-changes` | Push review fixes (commit + push, skip PR creation) |
 | 5 | `issue-workflow respond-comments [number]` | Respond to human PR review comments |
 | 6 | `issue-workflow merge-pr [number]` | Wait for CI checks, then merge PR |
-| 7 | `issue-workflow run <number>` | Run full workflow (steps 1-6 sequentially) |
+| 7 | `issue-workflow run <issues>` | Run full workflow (steps 1-6 sequentially) |
 
 **Common options** (all workflow subcommands):
 
@@ -131,7 +131,13 @@ Automate the development workflow via `claude -p` subprocess execution. Each sub
 # Run all steps automatically for Issue #199
 issue-workflow run 199
 
-# With worktree isolation
+# Multiple issues (range)
+issue-workflow run 30-35
+
+# Mixed format: ranges + individual numbers
+issue-workflow run 30-35,40,42-45
+
+# With worktree isolation (each issue gets its own worktree)
 issue-workflow run 199 --worktree
 ```
 
