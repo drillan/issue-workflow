@@ -10,6 +10,7 @@ from issue_workflow.cli import ui
 from issue_workflow.cli.commands._common import EXIT_SUCCESS, log_execution, on_tool_use
 from issue_workflow.cli.commands.push_changes import PUSH_CHANGES_PROMPT
 from issue_workflow.cli.commands.start_issue import _prepare_worktree
+from issue_workflow.lib.issue_range import IssueRangeError, parse_issue_range
 from issue_workflow.models.workflow_context import WorkflowContext
 from issue_workflow.services.claude_runner import DEFAULT_TIMEOUT_SECONDS, ClaudeRunner
 from issue_workflow.services.dependency_checker import (
@@ -242,10 +243,57 @@ def _run_workflow_steps(
     return EXIT_SUCCESS
 
 
+def _run_multi_workflow(
+    issue_numbers: list[int],
+    worktree: bool,
+    verbose: bool,
+    timeout: int,
+) -> int:
+    """Execute the workflow for multiple issues sequentially.
+
+    Stops on first failure. When a single issue is provided,
+    output is identical to the existing single-issue behavior.
+
+    Args:
+        issue_numbers: List of GitHub Issue numbers to process.
+        worktree: Whether to use worktree for each issue.
+        verbose: Whether to show verbose output.
+        timeout: Timeout in seconds for claude -p execution.
+
+    Returns:
+        Exit code (0 for success, non-zero for failure).
+    """
+    total = len(issue_numbers)
+    for index, issue_number in enumerate(issue_numbers, start=1):
+        if total > 1:
+            ui.console.print(
+                f"\n\\[{COMMAND_NAME}] Issue {issue_number} ({index}/{total}): Starting workflow"
+            )
+        exit_code = _run_workflow(
+            issue_number=issue_number,
+            worktree=worktree,
+            verbose=verbose,
+            timeout=timeout,
+        )
+        if exit_code != EXIT_SUCCESS:
+            if total > 1:
+                ui.console.print(
+                    f"\\[{COMMAND_NAME}] Issue {issue_number} ({index}/{total}): "
+                    f"Failed. Stopping. ({index - 1}/{total} completed)"
+                )
+            return exit_code
+
+    if total > 1:
+        ui.console.print(f"\\[{COMMAND_NAME}] All {total} issues completed successfully.")
+    return EXIT_SUCCESS
+
+
 def run(
-    issue_number: Annotated[
-        int,
-        typer.Argument(help="GitHub Issue number"),
+    issues: Annotated[
+        str,
+        typer.Argument(
+            help="GitHub Issue number(s) (e.g., 30 or 30-35,40,42-45)",
+        ),
     ],
     worktree: Annotated[
         bool,
@@ -262,15 +310,23 @@ def run(
 ) -> None:
     """Run full workflow: start-issue -> create-pr -> review+respond+push -> merge-pr.
 
-    Executes all workflow steps sequentially. Stops on first failure.
+    Executes all workflow steps sequentially for each issue. Stops on first failure.
+    Supports single issues (e.g., 30), ranges (e.g., 30-35), and mixed formats
+    (e.g., 30-35,40,42-45).
 
     \u26a0\ufe0f  Security: This command uses --dangerously-skip-permissions to bypass
     Claude Code's permission checks for automated execution. Only run in
     trusted environments.
     """
     try:
-        exit_code = _run_workflow(
-            issue_number=issue_number,
+        issue_numbers = parse_issue_range(issues)
+    except IssueRangeError as e:
+        ui.print_error(f"Invalid issue number format: {e}")
+        raise typer.Exit(code=1) from None
+
+    try:
+        exit_code = _run_multi_workflow(
+            issue_numbers=issue_numbers,
             worktree=worktree,
             verbose=verbose,
             timeout=timeout,

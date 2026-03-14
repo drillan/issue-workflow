@@ -582,3 +582,132 @@ class TestRunTimeout:
 
         mock_subprocess.assert_called_once()
         assert mock_subprocess.call_args.kwargs.get("timeout") == 600
+
+
+class TestRunMultiWorkflow:
+    """Tests for multi-issue orchestration."""
+
+    def test_single_issue_calls_run_workflow_once(
+        self,
+        all_mocks: None,
+        mock_runner: MagicMock,
+    ) -> None:
+        """Single issue calls _run_workflow once."""
+        from issue_workflow.cli.commands.run import _run_multi_workflow
+
+        exit_code = _run_multi_workflow(
+            issue_numbers=[199], worktree=False, verbose=False, timeout=3600
+        )
+
+        assert exit_code == 0
+        # _run_workflow is called via _run_multi_workflow which calls _run_workflow internally
+        # ClaudeRunner.run is called 5 times (all steps for one issue)
+        assert mock_runner.run.call_count == 5
+
+    def test_multiple_issues_calls_run_workflow_sequentially(
+        self,
+        all_mocks: None,
+        mock_runner: MagicMock,
+    ) -> None:
+        """Multiple issues execute sequentially."""
+        from issue_workflow.cli.commands.run import _run_multi_workflow
+
+        exit_code = _run_multi_workflow(
+            issue_numbers=[30, 31, 32], worktree=False, verbose=False, timeout=3600
+        )
+
+        assert exit_code == 0
+        # 5 Claude calls per issue * 3 issues = 15
+        assert mock_runner.run.call_count == 15
+
+    def test_multiple_issues_uses_correct_issue_numbers(
+        self,
+        all_mocks: None,
+        mock_runner: MagicMock,
+    ) -> None:
+        """Each issue uses the correct issue number in start-issue prompt."""
+        from issue_workflow.cli.commands.run import _run_multi_workflow
+
+        _run_multi_workflow(issue_numbers=[30, 31], worktree=False, verbose=False, timeout=3600)
+
+        # First issue: call 0 is start-issue 30
+        assert mock_runner.run.call_args_list[0][0][0] == "/start-issue 30 --force"
+        # Second issue: call 5 is start-issue 31
+        assert mock_runner.run.call_args_list[5][0][0] == "/start-issue 31 --force"
+
+    def test_stops_on_first_failure(
+        self,
+        mock_deps: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """Stops at the first failing issue."""
+        with patch(f"{_MOD}.ClaudeRunner") as cls:
+            instance = MagicMock()
+            # First issue step 1 fails
+            instance.run.return_value = make_claude_result(exit_code=1, is_error=True)
+            cls.return_value = instance
+
+            from issue_workflow.cli.commands.run import _run_multi_workflow
+
+            exit_code = _run_multi_workflow(
+                issue_numbers=[30, 31, 32], worktree=False, verbose=False, timeout=3600
+            )
+
+            assert exit_code == 1
+            # Only 1 Claude call (first issue, first step fails)
+            assert instance.run.call_count == 1
+
+    def test_returns_nonzero_from_failed_issue(
+        self,
+        mock_deps: MagicMock,
+        mock_log_execution: MagicMock,
+        mock_pr_detector: MagicMock,
+        mock_subprocess: MagicMock,
+    ) -> None:
+        """Returns the exit code from the failing issue."""
+        with patch(f"{_MOD}.ClaudeRunner") as cls:
+            instance = MagicMock()
+            instance.run.return_value = make_claude_result(exit_code=1, is_error=True)
+            cls.return_value = instance
+
+            from issue_workflow.cli.commands.run import _run_multi_workflow
+
+            exit_code = _run_multi_workflow(
+                issue_numbers=[30], worktree=False, verbose=False, timeout=3600
+            )
+
+            assert exit_code == 1
+
+    def test_single_issue_no_extra_banner(
+        self,
+        all_mocks: None,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Single issue does not print 'Issue X (1/1)' banner."""
+        from issue_workflow.cli.commands.run import _run_multi_workflow
+
+        _run_multi_workflow(issue_numbers=[199], worktree=False, verbose=False, timeout=3600)
+
+        captured = capsys.readouterr().out
+        assert "Issue 199 (1/1)" not in captured
+
+    def test_multi_issue_worktree_creates_separate_worktrees(
+        self,
+        all_mocks: None,
+        mock_runner: MagicMock,
+    ) -> None:
+        """Each issue gets its own worktree."""
+        worktree_calls: list[int] = []
+
+        def track_prepare(issue_number: int) -> Path:
+            worktree_calls.append(issue_number)
+            return Path(f"/tmp/wt-{issue_number}")
+
+        with patch(f"{_MOD}._prepare_worktree", side_effect=track_prepare):
+            from issue_workflow.cli.commands.run import _run_multi_workflow
+
+            _run_multi_workflow(issue_numbers=[30, 31], worktree=True, verbose=False, timeout=3600)
+
+        assert worktree_calls == [30, 31]
