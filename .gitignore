@@ -215,8 +215,9 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# ai working directory
+# working directory
 ai_working
+work
 
 # draft files
 /drafts
