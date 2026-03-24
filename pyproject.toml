@@ -1,6 +1,6 @@
 [project]
 name = "issue-workflow"
-version = "0.2.6"
+version = "0.2.7"
 description = "GitHub Issue-driven development workflow toolkit for Claude Code"
 readme = "README.md"
 license = { text = "MIT" }
